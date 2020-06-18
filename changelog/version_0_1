@@ -1,0 +1,5 @@
+# This details the important differences introduced in sarpy_apps 0.1
+# NB: bump the version number in __about__.py to reflect the below.
+
+
+* .00 - Initialization.
