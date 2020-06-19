@@ -12,7 +12,7 @@ from sarpy_apps.supporting_classes.metaicon.sicd_metaicon_helper import SicdMeta
 
 
 class MetaIcon(ImageCanvasPanel):
-    __slots__ = ('fname', 'reader_object', "meta")
+    __slots__ = ('fname', 'reader_object', "meta")  # TODO: this is incomplete. Omit?
 
     class AngleTypes:
         azimuth = "azimuth"
@@ -35,10 +35,10 @@ class MetaIcon(ImageCanvasPanel):
         north_width = 2
 
     def __init__(self, master):
-        super().__init__(master)
+        super(MetaIcon, self).__init__(master)
         self.parent = master
         self.fname = None                              # type: str
-        self._metadata_container = MetaIconDataContainer()         # type: MetaIconDataContainer
+        self._metadata_container = MetaIconDataContainer()
 
         self._azimuth_decimals = 1
         self._graze_decimals = 1
@@ -53,32 +53,67 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def font_family(self):
+        """
+        str: The font family name.
+        """
+
         return self._font_family
 
     @property
     def font(self):
+        """
+        font.Font: The font object.
+        """
+
         text_height = int((self.line_positions[1][1] - self.line_positions[0][1]) * 0.7)
         return font.Font(family=self._font_family, size=-text_height)
 
     @property
     def arrows_origin(self):
-        return self.canvas.variables.canvas_width * 0.75, self.canvas.variables.canvas_height * 0.6
+        """
+        Tuple[float, float]: The arrow origin location.
+        """
+
+        return self.canvas.variables.canvas_width*0.75, self.canvas.variables.canvas_height*0.6
 
     @property
-    def data_container(self,
-                       ):                   # type: (...) -> MetaIconDataContainer
+    def data_container(self):
+        """
+        MetaIconDataContainer: The data container object.
+        """
+
         return self._metadata_container
 
     @data_container.setter
     def data_container(self, value):
+        if not isinstance(value, MetaIconDataContainer):
+            raise TypeError('Got unexpected type {}'.format(type(value)))
         self._metadata_container = value
 
     def close_window(self):
+        """
+        Close the meta-icon window.
+
+        Returns
+        -------
+        None
+        """
+
         self.parent.withdraw()
 
-    def create_from_metaicon_data_container(self,
-                                            data_container,         # type: MetaIconDataContainer
-                                            ):
+    def create_from_metaicon_data_container(self, data_container):
+        """
+        Reinitialize from a metaicon data container.
+
+        Parameters
+        ----------
+        data_container : MetaIconDataContainer
+
+        Returns
+        -------
+        None
+        """
+
         self.data_container = data_container
         metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width))
         numpy_reader = NumpyImageReader(metaicon_background)
@@ -114,6 +149,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def line_positions(self):
+        """
+        List[Tuple[float, float]]: The line positions.
+        """
+
         n_lines = 9
         height = self.canvas.variables.canvas_height
         width = self.canvas.variables.canvas_width
@@ -132,6 +171,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def cdp_line(self):
+        """
+        str: The collection duration/polarization line value.
+        """
+
         collect_duration = self.data_container.collect_duration
         cdp_line = "CDP: " + "{:.1f}".format(collect_duration) + " s"
         if self.data_container.polarization:
@@ -140,6 +183,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def geo_line(self):
+        """
+        str: The geographic location line data.
+        """
+
         lat, lon = self.data_container.lat, self.data_container.lon
         lat_str = latlon.string(lat, "lat", include_symbols=False)
         lon_str = latlon.string(lon, "lon", include_symbols=False)
@@ -148,6 +195,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def res_line(self):
+        """
+        str: The impulse response data line.
+        """
+
         res_line = "IPR: "
         if self.data_container.col_impulse_response_width:
             az_ipr = self.data_container.col_impulse_response_width / constants.foot
@@ -169,6 +220,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def iid_line(self):
+        """
+        str: The data/time data.
+        """
+
         if self.data_container.collector_name:
             if self.data_container.collect_start:
                 date_str_1 = self.data_container.collect_start.astype(datetime.datetime).strftime("%d%b%y").upper()
@@ -190,78 +245,134 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def azimuth_line(self):
+        """
+        str: The azimuth angle line.
+        """
+
         return self._angle_line(self.AngleTypes.azimuth)
 
     @property
     def graze_line(self):
+        """
+        str: The graze angle line.
+        """
+
         return self._angle_line(self.AngleTypes.graze)
 
     @property
     def layover_line(self):
+        """
+        str: The layover angle line.
+        """
+
         return self._angle_line(self.AngleTypes.layover)
 
     @property
     def shadow_line(self):
+        """
+        str: The shadow angle line.
+        """
+
         return self._angle_line(self.AngleTypes.shadow)
 
     @property
     def multipath_line(self):
+        """
+        str: The multipath angle line.
+        """
+
         return self._angle_line(self.AngleTypes.multipath)
 
     def _angle_line(self, angle_type):
+        """
+        Extracts proper angle line formatting.
+
+        Parameters
+        ----------
+        angle_type : str
+
+        Returns
+        -------
+        str
+        """
+
         angle_description_text = angle_type.capitalize()
         n_decimals = getattr(self, "_" + angle_type + "_decimals")
         angle = getattr(self.data_container, angle_type)
-        if angle:
+        if angle is not None:
             if n_decimals > 0:
-                return angle_description_text + ": " + str(round(angle, 1)) + "\xB0"
+                return '{0:s}:{1:0.1f}\xB0'.format(angle_description_text, angle)
             else:
-                return angle_description_text + ": " + str(int(round(angle))) + "\xB0"
+                return '{0:s}:{1:0.0f}\xB0'.format(angle_description_text, angle)
         else:
             return angle_description_text + ": No data"
 
     @property
     def azimuth_decimals(self):
+        """
+        int: The number of decimals to include in the azimuth angle formatting.
+        """
+
         return self._azimuth_decimals
 
     @azimuth_decimals.setter
     def azimuth_decimals(self, value):
-        self._azimuth_decimals = value
+        self._azimuth_decimals = int(value)
 
     @property
     def graze_decimals(self):
+        """
+        int: The number of decimals to include in the graze angle formatting.
+        """
+
         return self._graze_decimals
 
     @graze_decimals.setter
     def graze_decimals(self, value):
-        self._graze_decimals = value
+        self._graze_decimals = int(value)
 
     @property
     def layover_decimals(self):
+        """
+        int: The number of decimals to include in the azimuth angle formatting.
+        """
+
         return self._layover_decimals
 
     @layover_decimals.setter
     def layover_decimals(self, value):
-        self._layover_decimals = value
+        self._layover_decimals = int(value)
 
     @property
     def shadow_decimals(self):
+        """
+        int: The number of decimals to include in the azimuth angle formatting.
+        """
+
         return self._shadow_decimals
 
     @shadow_decimals.setter
     def shadow_decimals(self, value):
-        self._shadow_decimals = value
+        self._shadow_decimals = int(value)
 
     @property
     def multipath_decimals(self):
+        """
+        int: The number of decimals to include in the azimuth angle formatting.
+        """
+
         return self._multipath_decimals
 
     @multipath_decimals.setter
     def multipath_decimals(self, value):
-        self._multipath_decimals = value
+        self._multipath_decimals = int(value)
 
     @property
     def layover_arrow_angle(self):
+        """
+        None|float: The layover arrow angle.
+        """
+
         azimuth = self.data_container.azimuth
         layover = self.data_container.layover
 
@@ -276,6 +387,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def shadow_arrow_angle(self):
+        """
+        None|float: The shadow arrow angle.
+        """
+
         shadow = self.data_container.shadow
         azimuth = self.data_container.azimuth
         if self.data_container.is_grid or \
@@ -286,6 +401,10 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def multipath_arrow_angle(self):
+        """
+        None|float: The multipath arrow angle.
+        """
+
         multipath = self.data_container.multipath
         azimuth = self.data_container.azimuth
         if self.data_container.is_grid or \
@@ -297,52 +416,119 @@ class MetaIcon(ImageCanvasPanel):
 
     @property
     def north_arrow_angle(self):
+        """
+        float: The north arrow angle.
+        """
+
         return self.data_container.azimuth + 90
 
     @property
     def arrow_lengths(self):
+        """
+        float: The arrow lengths in pixels.
+        """
+
         return self.canvas.variables.canvas_width * 0.15
 
     @property
     def layover_arrow_coords(self):
+        """
+        Tuple[float, float, float, float]: The layover arrow coordinates.
+        """
+
         return self._get_arrow_coords(self.layover_arrow_angle)
 
     @property
     def shadow_arrow_coords(self):
+        """
+        Tuple[float, float, float, float]: The shadow arrow coordinates.
+        """
+
         return self._get_arrow_coords(self.shadow_arrow_angle)
 
     @property
     def multipath_arrow_coords(self):
+        """
+        Tuple[float, float, float, float]: The multipath arrow coordinates.
+        """
+
         return self._get_arrow_coords(self.multipath_arrow_angle)
 
     @property
     def north_arrow_coords(self):
+        """
+        Tuple[float, float, float, float]: The north arrow coordinates.
+        """
+
         return self._get_arrow_coords(self.north_arrow_angle)
 
     def _get_arrow_coords(self, arrow_angle):
-        arrow_rad = numpy.deg2rad(arrow_angle)
+        """
+        Gets the arrow coordinates.
 
+        Parameters
+        ----------
+        arrow_angle : float
+
+        Returns
+        -------
+        Tuple[float, float, float, float]
+        """
+
+        arrow_rad = numpy.deg2rad(arrow_angle)
         x_end, y_end = self._adjust_arrow_aspect_ratio(self.arrow_lengths, arrow_rad)
         x_end = self.arrows_origin[0] + x_end
         y_end = self.arrows_origin[1] - y_end
         return self.arrows_origin[0], self.arrows_origin[1], x_end, y_end
 
     def draw_layover_arrow(self):
+        """
+        Render the layover arrow.
+
+        Returns
+        -------
+        None
+        """
+
         self.canvas.create_new_arrow(self.layover_arrow_coords,
                                      fill=self.Colors.layover,
                                      width=self.ArrowWidths.layover_width)
 
     def draw_shadow_arrow(self):
+        """
+        Render the shadow arrow.
+
+        Returns
+        -------
+        None
+        """
+
         self.canvas.create_new_arrow(self.shadow_arrow_coords,
                                      fill=self.Colors.shadow,
                                      width=self.ArrowWidths.shadow_width)
 
     def draw_multipath_arrow(self):
+        """
+        Render the multipath arrow.
+
+        Returns
+        -------
+        None
+        """
+
         self.canvas.create_new_arrow(self.multipath_arrow_coords,
                                      fill=self.Colors.multipath,
                                      width=self.ArrowWidths.multipath_width)
 
     def draw_north_arrow(self):
+        """
+        Render the north arrow.
+
+        Returns
+        -------
+        None
+        """
+
         self.canvas.create_new_arrow(self.north_arrow_coords,
                                      fill=self.Colors.north,
                                      width=self.ArrowWidths.north_width)
@@ -358,6 +544,14 @@ class MetaIcon(ImageCanvasPanel):
                                 font=self.font)
 
     def draw_direction_arrow(self):
+        """
+        Render the direction arrow.
+
+        Returns
+        -------
+        None
+        """
+
         flight_direction_arrow_start = (
             self.canvas.variables.canvas_width * 0.65, self.canvas.variables.canvas_height * 0.9)
         flight_direction_arrow_end = (self.canvas.variables.canvas_width * 0.95, flight_direction_arrow_start[1])
@@ -378,6 +572,19 @@ class MetaIcon(ImageCanvasPanel):
                                 font=self.font)
 
     def _adjust_arrow_aspect_ratio(self, arrow_length, arrow_angle_radians):
+        """
+        Adjust the arrow aspect ratios.
+
+        Parameters
+        ----------
+        arrow_length : float
+        arrow_angle_radians : float
+
+        Returns
+        -------
+        Tuple[float, float]
+        """
+
         # adjust aspect ratio in the case we're dealing with circular polarization from RCM
         aspect_ratio = 1.0
         if self.data_container.is_grid:

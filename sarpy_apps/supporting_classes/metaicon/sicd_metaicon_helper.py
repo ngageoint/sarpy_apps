@@ -7,6 +7,7 @@ from scipy.constants import constants
 from typing import Union
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
+# TODO: this should be dropped, and we should rely on the classmethod constructor for the container.
 
 class SicdMetaIconHelper:
     def __init__(self,
