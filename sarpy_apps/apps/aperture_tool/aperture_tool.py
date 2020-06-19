@@ -25,8 +25,6 @@ from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import
 from sarpy.io.complex.base import BaseReader
 import scipy.constants.constants as scipy_constants
 from tkinter.filedialog import asksaveasfilename
-from sarpy_apps.supporting_classes.metaicon.sicd_metaicon_helper import SicdMetaIconHelper
-
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
 
@@ -330,10 +328,8 @@ class ApertureTool(AbstractWidgetPanel):
         self.app_variables.sicd_fname = sicd_fname
         self.app_variables.sicd_reader_object = sarpy_complex.open(sicd_fname)
 
-        meticon_helper = SicdMetaIconHelper(self.app_variables.sicd_reader_object.sicd_meta)
-        data_container = meticon_helper.data_container
-
-        self.metaicon.create_from_metaicon_data_container(data_container)
+        # TODO: handle index, and generalize what sicd_reader_object could be...
+        self.metaicon.create_from_reader(self.app_variables.sicd_reader_object, index=0)
 
         popup = tkinter.Toplevel(self.master)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
