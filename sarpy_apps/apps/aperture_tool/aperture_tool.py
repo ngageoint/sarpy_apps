@@ -72,7 +72,7 @@ class ApertureTool(AbstractWidgetPanel):
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
         self.metaicon.set_canvas_size(800, 600)
         self.metaicon.pack()
-        # self.metaicon_popup_panel.withdraw()
+        self.metaicon_popup_panel.withdraw()
 
         self.metaviewer_popup_panel = tkinter.Toplevel(self.master)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
@@ -118,9 +118,6 @@ class ApertureTool(AbstractWidgetPanel):
 
         master_frame.pack()
         self.pack()
-
-    def callback_select_resolution_mode(self, event):
-        print("selection resolution mode")
 
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
