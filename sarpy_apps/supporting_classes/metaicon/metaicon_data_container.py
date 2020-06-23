@@ -4,9 +4,12 @@ The container object for the metaicon object.
 
 import logging
 from datetime import datetime
+
+import numpy
 from scipy.constants import foot
 
 from sarpy.geometry import latlon
+from sarpy.geometry.geocoords import ecf_to_geodetic, geodetic_to_ecf
 from sarpy.io.complex.sicd_elements.SICD import SICDType
 from sarpy.io.complex.sidd_elements.SIDD import SIDDType  # version 2.0
 from sarpy.io.complex.sidd_elements.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
@@ -16,21 +19,12 @@ from sarpy.io.complex.cphd_elements.cphd0_3.CPHD import CPHDType as CPHDType0_3 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
 
 
-class Constants:  # TODO: what role does this play?
-    class ImagePlaneTypes:
-        slant = "slant"
-
-    class SideOfTrackTypes:
-        R = "R"
-
-
 class MetaIconDataContainer(object):
     """
     Container object for rendering the metaicon element.
     """
 
     def __init__(self,
-                 iid=None,
                  lat=None,
                  lon=None,
                  collect_start=None,
@@ -46,18 +40,16 @@ class MetaIconDataContainer(object):
                  side_of_track=None,
                  col_impulse_response_width=None,
                  row_impulse_response_width=None,
+                 grid_column_sample_spacing=None,
+                 grid_row_sample_spacing=None,
+                 image_plane=None,
                  tx_rf_bandwidth=None,
                  rniirs=None,
-                 polarization=None,
-                 image_plane=None,  # TODO: what are these last 4?
-                 is_grid=None,
-                 grid_column_sample_spacing=None,
-                 grid_row_sample_spacing=None):
+                 polarization=None):
         """
 
         Parameters
         ----------
-        iid
         lat : None|float
         lon : None|float
         collect_start : None|numpy.datetime64
@@ -76,20 +68,22 @@ class MetaIconDataContainer(object):
             In feet.
         row_impulse_response_width : None|float
             In feet.
+        grid_column_sample_spacing : None|float
+            Assumed to be in meters, but the units are not important provided
+            that they are the same for row and column.
+        grid_row_sample_spacing : None|float
+            Assumed to be in meters, but the units are not important provided
+            that they are the same for row and column.
+        image_plane : None|str
+            The image plane value.
         tx_rf_bandwidth : None|float
             In MHz.
         rniirs : None|str
+            RNIIRS value.
         polarization : None|str
-
-        image_plane : None|str
-        is_grid : None|bool
-        grid_column_sample_spacing : None|float
-        grid_row_sample_spacing : None|float
+            The polarization string.
         """
         # TODO: beef up the documentation describing the above variables
-
-        # TODO: is this variable overtaken by events?
-        self.iid = iid
 
         self.lat = lat
         self.lon = lon
@@ -110,18 +104,21 @@ class MetaIconDataContainer(object):
 
         self.col_impulse_response_width = col_impulse_response_width
         self.row_impulse_response_width = row_impulse_response_width
+        self.grid_column_sample_spacing = grid_column_sample_spacing
+        self.grid_row_sample_spacing = grid_row_sample_spacing
+        self.image_plane = image_plane
         self.tx_rf_bandwidth = tx_rf_bandwidth
 
         self.rniirs = rniirs
         self.polarization = polarization
 
-        # TODO: these last 4 need to be set for sicd
-        self.image_plane = image_plane
-        self.is_grid = is_grid
-        self.grid_column_sample_spacing = grid_column_sample_spacing
-        self.grid_row_sample_spacing = grid_row_sample_spacing
+    @property
+    def is_grid(self):
+        """
+        bool: This is a grid collection
+        """
 
-        self.constants = Constants()  # TODO: what role does this play?
+        return self.grid_row_sample_spacing is not None
 
     @property
     def cdp_line(self):
@@ -233,56 +230,67 @@ class MetaIconDataContainer(object):
         def extract_scp():
             try:
                 llh = sicd.GeoData.SCP.LLH.get_array()
-                vars['lat'] = float(llh[0])
-                vars['lon'] = float(llh[1])
+                variables['lat'] = float(llh[0])
+                variables['lon'] = float(llh[1])
             except AttributeError:
                 pass
 
         def extract_timeline():
             try:
-                vars['collect_start'] = sicd.Timeline.CollectStart
+                variables['collect_start'] = sicd.Timeline.CollectStart
             except AttributeError:
                 pass
 
             try:
-                vars['collect_duration'] = sicd.Timeline.CollectDuration
+                variables['collect_duration'] = sicd.Timeline.CollectDuration
             except AttributeError:
                 pass
 
         def extract_collectioninfo():
             try:
-                vars['collector_name'] = sicd.CollectionInfo.CollectorName
-                vars['core_name'] = sicd.CollectionInfo.CoreName
+                variables['collector_name'] = sicd.CollectionInfo.CollectorName
+                variables['core_name'] = sicd.CollectionInfo.CoreName
             except AttributeError:
                 pass
 
         def extract_scpcoa():
             try:
-                vars['azimuth'] = sicd.SCPCOA.AzimAng
-                vars['graze'] = sicd.SCPCOA.GrazeAng
-                vars['layover'] = sicd.SCPCOA.LayoverAng
-                vars['shadow'] = sicd.SCPCOA.Shadow
-                vars['multipath'] = sicd.SCPCOA.Multipath
-                vars['multipath_ground'] = sicd.SCPCOA.MultipathGround
-                vars['side_of_track'] = sicd.SCPCOA.SideOfTrack
+                variables['azimuth'] = sicd.SCPCOA.AzimAng
+                variables['graze'] = sicd.SCPCOA.GrazeAng
+                variables['layover'] = sicd.SCPCOA.LayoverAng
+                variables['shadow'] = sicd.SCPCOA.Shadow
+                variables['multipath'] = sicd.SCPCOA.Multipath
+                variables['multipath_ground'] = sicd.SCPCOA.MultipathGround
+                variables['side_of_track'] = sicd.SCPCOA.SideOfTrack
             except AttributeError:
                 pass
 
         def extract_imp_resp():
-            try:
-                vars['row_impulse_response_width'] = sicd.Grid.Row.ImpRespWid/foot
-                vars['col_impulse_response_width'] = sicd.Grid.Col.ImpRespWid/foot
-            except AttributeError:
-                pass
+            if sicd.Grid is not None:
+                try:
+                    variables['image_plane'] = sicd.Grid.ImagePlane
+                except AttributeError:
+                    pass
 
+                try:
+                    variables['row_impulse_response_width'] = sicd.Grid.Row.ImpRespWid/foot
+                    variables['col_impulse_response_width'] = sicd.Grid.Col.ImpRespWid/foot
+                except AttributeError:
+                    pass
+
+                try:
+                    variables['grid_row_sample_spacing'] = sicd.Grid.Row.SS
+                    variables['grid_column_sample_spacing'] = sicd.Grid.Col.SS
+                except AttributeError:
+                    pass
             try:
-                vars['tx_rf_bandwidth'] = sicd.RadarCollection.Waveform[0].TxRFBandwidth*1e-6
+                variables['tx_rf_bandwidth'] = sicd.RadarCollection.Waveform[0].TxRFBandwidth*1e-6
             except AttributeError:
                 pass
 
         def extract_rniirs():
             try:
-                vars['rniirs'] = sicd.CollectionInfo.Parameters.get('PREDICTED_RNIIRS', None)
+                variables['rniirs'] = sicd.CollectionInfo.Parameters.get('PREDICTED_RNIIRS', None)
             except AttributeError:
                 pass
 
@@ -290,17 +298,17 @@ class MetaIconDataContainer(object):
             try:
                 proc_pol = sicd.ImageFormation.TxRcvPolarizationProc
                 if proc_pol is not None:
-                    vars['polarization'] = proc_pol
+                    variables['polarization'] = proc_pol
                 return
             except AttributeError:
                 pass
 
             try:
-                vars['polarization'] = sicd.RadarCollection.TxPolarization
+                variables['polarization'] = sicd.RadarCollection.TxPolarization
             except AttributeError:
                 logging.error('No polarization found.')
 
-        vars = {}
+        variables = {}
         extract_scp()
         extract_timeline()
         extract_collectioninfo()
@@ -308,16 +316,18 @@ class MetaIconDataContainer(object):
         extract_imp_resp()
         extract_rniirs()
         extract_polarization()
-        return cls(**vars)
+        return cls(**variables)
 
     @classmethod
-    def from_cphd(cls, cphd):
+    def from_cphd(cls, cphd, index):
         """
         Create an instance from a CPHD object.
 
         Parameters
         ----------
         cphd : CPHDType|CPHDType0_3
+        index
+            The index for the data channel.
 
         Returns
         -------
@@ -325,20 +335,22 @@ class MetaIconDataContainer(object):
         """
 
         if isinstance(cphd, CPHDType):
-            return cls._from_cphd1_0(cphd)
+            return cls._from_cphd1_0(cphd, index)
         elif isinstance(cphd, CPHDType0_3):
-            return cls._from_cphd0_3(cphd)
+            return cls._from_cphd0_3(cphd, index)
         else:
             raise TypeError('Expected a CPHD type, and got type {}'.format(type(cphd)))
 
     @classmethod
-    def _from_cphd1_0(cls, cphd):
+    def _from_cphd1_0(cls, cphd, index):
         """
         Create an instance from a CPHD version 1.0 object.
 
         Parameters
         ----------
         cphd : CPHDType
+        index
+            The index of the data channel.
 
         Returns
         -------
@@ -349,17 +361,91 @@ class MetaIconDataContainer(object):
             raise TypeError(
                 'cphd is expected to be an instance of CPHDType, got type {}'.format(type(cphd)))
 
-        # TODO: finish this
-        raise NotImplementedError
+        def extract_collection_id():
+            if cphd.CollectionID is None:
+                return
+
+            try:
+                variables['collector_name'] = cphd.CollectionID.CollectorName
+            except AttributeError:
+                pass
+
+            try:
+                variables['core_name'] = cphd.CollectionID.CoreName
+            except AttributeError:
+                pass
+
+        def extract_coords():
+            try:
+                coords = cphd.SceneCoordinates.IARP.LLH.get_array()
+                variables['lat'] = coords[0]
+                variables['lon'] = coords[1]
+            except AttributeError:
+                pass
+
+        def extract_global():
+            if cphd.Global is None:
+                return
+
+            try:
+                variables['collect_start'] = cphd.Global.Timeline.CollectionStart
+            except AttributeError:
+                pass
+
+            try:
+                variables['collect_duration'] = (cphd.Global.Timeline.TxTime2 - cphd.Global.Timeline.TxTime1)
+            except AttributeError:
+                pass
+
+        def extract_reference_geometry():
+            if cphd.ReferenceGeometry is None:
+                return
+
+            if cphd.ReferenceGeometry.Monostatic is not None:
+                mono = cphd.ReferenceGeometry.Monostatic
+                variables['azimuth'] = mono.AzimuthAngle
+                variables['graze'] = mono.GrazeAngle
+                variables['layover'] = mono.LayoverAngle
+                variables['shadow'] = mono.Shadow
+                variables['multipath'] = mono.Multipath
+                variables['multipath_ground'] = mono.MultipathGround
+                variables['side_of_track'] = mono.SideOfTrack
+            elif cphd.ReferenceGeometry.Bistatic is not None:
+                bi = cphd.ReferenceGeometry.Bistatic
+                variables['azimuth'] = bi.AzimuthAngle
+                variables['graze'] = bi.GrazeAngle
+                variables['layover'] = bi.LayoverAngle
+
+        def extract_channel():
+            if cphd.TxRcv is None:
+                return
+
+            try:
+                tx = cphd.TxRcv.TxWFParameters[index]
+                rcv = cphd.TxRcv.RcvParameters[index]
+                variables['tx_rf_bandwidth'] = tx.RFBandwidth*1e-6
+                variables['polarization'] = tx.Polarization + ":" + rcv.Polarization
+            except AttributeError:
+                pass
+
+        variables = {}
+        extract_collection_id()
+        extract_coords()
+        extract_global()
+        extract_reference_geometry()
+        extract_channel()
+        return cls(**variables)
 
     @classmethod
-    def _from_cphd0_3(cls, cphd):
+    def _from_cphd0_3(cls, cphd, index):
         """
         Create an instance from a CPHD version 0.3 object.
 
         Parameters
         ----------
         cphd : CPHDType0_3
+        index
+            The index of the data channel.
 
         Returns
         -------
@@ -370,8 +456,62 @@ class MetaIconDataContainer(object):
             raise TypeError(
                 'cphd is expected to be an instance of CPHDType version 0.3, got type {}'.format(type(cphd)))
 
-        # TODO: finish this
-        raise NotImplementedError
+        def extract_collection_info():
+            if cphd.CollectionInfo is None:
+                return
+
+            try:
+                variables['collector_name'] = cphd.CollectionInfo.CollectorName
+            except AttributeError:
+                pass
+
+            try:
+                variables['core_name'] = cphd.CollectionInfo.CoreName
+            except AttributeError:
+                pass
+
+        def extract_global():
+            if cphd.Global is None:
+                return
+
+            try:
+                variables['collect_start'] = cphd.Global.CollectStart
+            except AttributeError:
+                pass
+
+            try:
+                variables['collect_duration'] = cphd.Global.CollectDuration
+            except AttributeError:
+                pass
+
+            try:
+                llh_coords = cphd.Global.ImageArea.Corner.get_array(dtype=numpy.dtype('float64'))
+                ecf_coords = geodetic_to_ecf(llh_coords)
+                coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
+                variables['lat'] = coords[0]
+                variables['lon'] = coords[1]
+            except AttributeError:
+                pass
+
+        def extract_channel():
+            if cphd.RadarCollection is not None:
+                rc = cphd.RadarCollection
+                try:
+                    variables['tx_rf_bandwidth'] = (rc.TxFrequency.Max - rc.TxFrequency.Min)*1e-6
+                    variables['polarization'] = rc.RcvChannels[index].TxRcvPolarization
+                except AttributeError:
+                    pass
+            elif cphd.Channel is not None:
+                try:
+                    variables['tx_rf_bandwidth'] = cphd.Channel.Parameters[index].BWSavedNom*1e-6
+                except AttributeError:
+                    pass
+
+        variables = {}
+        extract_collection_info()
+        extract_global()
+        extract_channel()
+        return cls(**variables)
 
     @classmethod
     def from_sidd(cls, sidd):
@@ -380,58 +520,86 @@ class MetaIconDataContainer(object):
 
         Parameters
         ----------
-        cphd : SIDDType|SIDDType1
+        sidd : SIDDType|SIDDType1
 
         Returns
         -------
         MetaIconDataContainer
         """
 
-        if isinstance(sidd, SIDDType):
-            return cls._from_sidd2(sidd)
-        elif isinstance(sidd, SIDDType1):
-            return cls._from_sidd1(sidd)
-        else:
-            raise TypeError('Expected a SIDD type, and got type {}'.format(type(sidd)))
-
-    @classmethod
-    def _from_sidd2(cls, sidd):
-        """
-        Create an instance from a SIDD 2.0 object.
-
-        Parameters
-        ----------
-        cphd : SIDDType
-
-        Returns
-        -------
-        MetaIconDataContainer
-        """
-
-        if not isinstance(sidd, SIDDType):
+        if not isinstance(sidd, (SIDDType, SIDDType1)):
             raise TypeError(
-                'sidd is expected to be an instance of SIDDType, got type {}'.format(type(sidd)))
+                'sidd is expected to be an instance of SIDD type, got type {}'.format(type(sidd)))
 
-        # TODO: finish this
-        raise NotImplementedError
+        def extract_location():
+            if isinstance(sidd, SIDDType):
+                try:
+                    llh_coords = sidd.GeoData.ImageCorners.get_array(dtype=numpy.dtype('float64'))
+                    ecf_coords = geodetic_to_ecf(llh_coords)
+                    coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
+                    variables['lat'] = coords[0]
+                    variables['lon'] = coords[1]
+                except AttributeError:
+                    pass
+            elif isinstance(sidd, SIDDType1):
+                try:
+                    ll_coords = sidd.GeographicAndTarget.GeographicCoverage.Footprint.get_array(
+                        dtype=numpy.dtype('float64'))
+                    llh_coords = numpy.zeros((ll_coords.shape[0], 3), dtype=numpy.float64)
+                    llh_coords[:, :2] = ll_coords
+                    ecf_coords = geodetic_to_ecf(llh_coords)
+                    coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
+                    variables['lat'] = coords[0]
+                    variables['lon'] = coords[1]
+                except AttributeError:
+                    pass
 
-    @classmethod
-    def _from_sidd1(cls, sidd):
-        """
-        Create an instance from a SIDD version 1.0 object.
+        def extract_exploitation_features():
+            if sidd.ExploitationFeatures is None:
+                return
 
-        Parameters
-        ----------
-        cphd : SIDDType1
+            try:
+                exp_info = sidd.ExploitationFeatures.Collections[0].Information
+                variables['collect_start'] = exp_info.CollectionDateTime
+                variables['collect_duration'] = exp_info.CollectionDuration
+                variables['collector_name'] = exp_info.SensorName
+                if len(exp_info.Polarizations) == 1:
+                    variables['polarization'] = exp_info.Polarizations[0].TxPolarization + ':' + \
+                                                exp_info.Polarizations[0].RcvPolarization
+            except AttributeError:
+                pass
 
-        Returns
-        -------
-        MetaIconDataContainer
-        """
+            try:
+                exp_geom = sidd.ExploitationFeatures.Collections[0].Geometry
+                variables['azimuth'] = exp_geom.Azimuth
+                variables['graze'] = exp_geom.Graze
+            except AttributeError:
+                pass
 
-        if not isinstance(sidd, SIDDType1):
-            raise TypeError(
-                'sidd is expected to be an instance of SIDDType version 1.0, got type {}'.format(type(sidd)))
+            try:
+                exp_phen = sidd.ExploitationFeatures.Collections[0].Phenomenology
+                variables['layover'] = exp_phen.Layover.Angle
+                variables['shadow'] = exp_phen.Shadow.Angle
+                variables['multipath'] = exp_phen.MultiPath
+            except AttributeError:
+                pass
 
-        # TODO: finish this
-        raise NotImplementedError
+        def extract_spacing():
+            if sidd.Measurement is None:
+                return
+            meas = sidd.Measurement
+            if meas.PlaneProjection is not None:
+                variables['grid_row_sample_spacing'] = meas.PlaneProjection.SampleSpacing.Row
+                variables['grid_column_sample_spacing'] = meas.PlaneProjection.SampleSpacing.Row
+            elif meas.CylindricalProjection is not None:
+                variables['grid_row_sample_spacing'] = meas.CylindricalProjection.SampleSpacing.Row
+                variables['grid_column_sample_spacing'] = meas.CylindricalProjection.SampleSpacing.Row
+            elif meas.GeographicProjection is not None:
+                variables['grid_row_sample_spacing'] = meas.GeographicProjection.SampleSpacing.Row
+                variables['grid_column_sample_spacing'] = meas.GeographicProjection.SampleSpacing.Row
+
+        variables = {'image_plane': 'GROUND'}
+        extract_location()
+        extract_exploitation_features()
+        extract_spacing()
+        return cls(**variables)

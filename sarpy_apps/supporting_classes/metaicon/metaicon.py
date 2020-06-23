@@ -212,8 +212,7 @@ class MetaIcon(ImageCanvasPanel):
         layover = self.data_container.layover
 
         if azimuth and layover:
-            if self.data_container.is_grid or \
-                    self.data_container.image_plane == self.data_container.constants.ImagePlaneTypes.slant:
+            if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
                 layover = layover - self.data_container.multipath_ground
             layover = 90 - (layover - azimuth)
             return layover
@@ -228,8 +227,7 @@ class MetaIcon(ImageCanvasPanel):
 
         shadow = self.data_container.shadow
         azimuth = self.data_container.azimuth
-        if self.data_container.is_grid or \
-                self.data_container.image_plane == self.data_container.constants.ImagePlaneTypes.slant:
+        if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
             shadow = azimuth - 180 - self.data_container.multipath_ground
         shadow = 90 - (shadow - azimuth)
         return shadow
@@ -242,8 +240,7 @@ class MetaIcon(ImageCanvasPanel):
 
         multipath = self.data_container.multipath
         azimuth = self.data_container.azimuth
-        if self.data_container.is_grid or \
-                self.data_container.image_plane == self.data_container.constants.ImagePlaneTypes.slant:
+        if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
             multipath = azimuth - 180
         north = azimuth + 90
         multipath = north - multipath
@@ -390,7 +387,7 @@ class MetaIcon(ImageCanvasPanel):
         flight_direction_arrow_start = (
             self.canvas.variables.canvas_width * 0.65, self.canvas.variables.canvas_height * 0.9)
         flight_direction_arrow_end = (self.canvas.variables.canvas_width * 0.95, flight_direction_arrow_start[1])
-        if self.data_container.side_of_track == self.data_container.constants.SideOfTrackTypes.R:
+        if self.data_container.side_of_track == 'R':
             self.canvas.create_new_arrow((flight_direction_arrow_start[0],
                                           flight_direction_arrow_start[1],
                                           flight_direction_arrow_end[0],
