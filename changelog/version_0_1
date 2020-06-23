@@ -2,4 +2,5 @@
 # NB: bump the version number in __about__.py to reflect the below.
 
 
-* .00 - Initialization.
+* .1 - Refactored metaicon components.
+* .0 - Initialization.
