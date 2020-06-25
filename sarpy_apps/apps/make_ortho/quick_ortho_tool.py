@@ -41,10 +41,12 @@ class Ortho(AbstractWidgetPanel):
         self.button_panel.pan.on_left_mouse_click(self.callback_set_to_pan)
         self.button_panel.display_ortho.on_left_mouse_click(self.callback_display_ortho_image)
 
+    # noinspection PyUnusedLocal
     def callback_set_to_pan(self, event):
         self.raw_frame_image_panel.canvas.set_current_tool_to_pan()
         self.raw_frame_image_panel.canvas.hide_shape(self.raw_frame_image_panel.canvas.variables.zoom_rect_id)
 
+    # noinspection PyUnusedLocal
     def callback_set_filename(self, event):
         image_file_extensions = ['*.nitf', '*.NITF']
         ftypes = [
@@ -57,6 +59,7 @@ class Ortho(AbstractWidgetPanel):
             self.image_reader = ComplexImageReader(new_fname)
             self.raw_frame_image_panel.canvas.set_image_reader(self.image_reader)
 
+    # noinspection PyUnusedLocal
     def callback_display_ortho_image(self, event):
         ortho_object = QuickOrtho(self.raw_frame_image_panel, self.image_reader)
         orthod_image = ortho_object.create_ortho(self.ortho_image_panel.canvas.variables.canvas_height, self.ortho_image_panel.canvas.variables.canvas_width)

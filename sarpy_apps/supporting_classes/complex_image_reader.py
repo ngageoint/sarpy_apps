@@ -45,6 +45,8 @@ class ComplexImageReader(ImageReader):
             pix = remap.pedf(complex_data)
         elif self.remap_type == 'nrl':
             pix = remap.nrl(complex_data)
+        else:
+            raise ValueError('Got unexpected remap_type {}'.format(self.remap_type))
         return pix
 
     def set_remap_type(self,

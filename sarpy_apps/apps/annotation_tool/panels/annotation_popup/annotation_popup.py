@@ -1,15 +1,17 @@
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.widgets import basic_widgets
-from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
+from tk_builder.base_elements import StringDescriptor
+from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables as MainAppVariables
 from sarpy.annotation.annotate import AnnotationMetadata
 from sarpy.annotation.annotate import Annotation
 from sarpy.annotation.annotate import FileAnnotationCollection
 import tkinter
 
 
-# TODO: did you mean to do the import above and then redefine here?
-class AppVariables:
-    parent_types_main_text = ""
+class AppVariables(object):
+    parent_types_main_text = StringDescriptor(
+        'parent_types_main_text', default_value='',
+        docstring='The parent types main text.')  # type: str
 
 
 class AnnotationPopup(AbstractWidgetPanel):
@@ -24,10 +26,16 @@ class AnnotationPopup(AbstractWidgetPanel):
     comment_label = basic_widgets.Label         # type: basic_widgets.Label
     confidence_label = basic_widgets.Label            # type: basic_widgets.Label
 
-    def __init__(self,
-                 parent,
-                 main_app_variables,    # type: AppVariables
-                 ):
+    def __init__(self, parent, main_app_variables):
+        """
+
+        Parameters
+        ----------
+        parent
+            The app parent.
+        main_app_variables : MainAppVariables
+        """
+
         self.label_schema = main_app_variables.label_schema
         self.main_app_variables = main_app_variables
         self.variables = AppVariables
@@ -81,6 +89,7 @@ class AnnotationPopup(AbstractWidgetPanel):
             self.comment.set_text("")
             self.confidence.set("")
 
+    # noinspection PyUnusedLocal
     def callback_update_selection(self, event):
         selection_id = [key for key, val in self.label_schema.labels.items() if val == self.thing_type.get()][0]
         children_ids = []
@@ -97,17 +106,19 @@ class AnnotationPopup(AbstractWidgetPanel):
         else:
             new_parent_text = current_parent_text + " -> " + self.label_schema.labels[selection_id]
         if children_ids:
-            for id in children_ids:
-                child_labels.append(self.label_schema.labels[id])
+            for child_id in children_ids:
+                child_labels.append(self.label_schema.labels[child_id])
             self.thing_type.update_combobox_values(child_labels)
             self.parent_types.set_text(new_parent_text)
         else:
             self.thing_type.configure(state="disabled")
 
+    # noinspection PyUnusedLocal
     def callback_reset(self, event):
         self.thing_type.configure(state="normal")
         self.setup_main_parent_selections()
 
+    # noinspection PyUnusedLocal
     def callback_submit(self, event):
         if not 'disabled' in self.thing_type.state():
             print("please select a valid type.")
