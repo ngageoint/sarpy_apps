@@ -1,6 +1,6 @@
 # This details the important differences introduced in sarpy_apps 0.1
 # NB: bump the version number in __about__.py to reflect the below.
 
-
+* .2 - Simple refactor for accomodation with tk_builder update
 * .1 - Refactored metaicon components.
 * .0 - Initialization.

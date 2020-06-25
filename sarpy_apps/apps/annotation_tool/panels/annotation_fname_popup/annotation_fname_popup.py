@@ -2,8 +2,6 @@ import tkinter
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.widgets import basic_widgets
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
-from sarpy.annotation.annotate import AnnotationMetadata
-from sarpy.annotation.annotate import Annotation
 
 
 class AnnotationFnamePopup(AbstractWidgetPanel):
@@ -29,10 +27,12 @@ class AnnotationFnamePopup(AbstractWidgetPanel):
         self.new_annotation.on_left_mouse_click(self.callback_new)
         self.edit_existing_annotation.on_left_mouse_click(self.callback_existing)
 
+    # noinspection PyUnusedLocal
     def callback_new(self, event):
         self.main_app_variables.new_annotation = True
         self.parent.destroy()
 
+    # noinspection PyUnusedLocal
     def callback_existing(self, event):
         self.main_app_variables.new_annotation = False
         self.parent.destroy()

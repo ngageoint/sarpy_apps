@@ -115,7 +115,7 @@ class AnnotationTool(AbstractWidgetPanel):
 
                     # disable the original file controls so the user can't go back and select a different annotation
                     # file during the labeling process
-                    self.context_panel.context_dashboard.file_selector.disable_all_buttons
+                    self.context_panel.context_dashboard.file_selector.disable_all_buttons()
                     self.context_panel.context_dashboard.annotation_selector.disable_all_buttons()
 
                 else:
@@ -144,7 +144,11 @@ class AnnotationTool(AbstractWidgetPanel):
                     # create canvas shapes from existing annotations and create dictionary to keep track of canvas geometries
                     # that are mapped to the annotations
                     for feature in self.variables.file_annotation_collection.annotations.features:
-                        image_coords = feature.geometry.get_coordinate_list()[0]
+                        geometry = feature.geometry
+                        if isinstance(geometry, Polygon):
+                            image_coords = geometry.get_coordinate_list()[0]  # the "outer" ring is always first
+                        else:
+                            raise TypeError('Unhandled geometry type {}'.format(type(geometry)))
                         image_coords_1d = list(np.reshape(image_coords, np.asarray(image_coords).size))
                         tmp_shape_id = self.annotate_panel.image_canvas_panel.canvas.create_new_polygon((0, 0, 1, 1))
                         self.annotate_panel.image_canvas_panel.canvas.set_shape_pixel_coords(tmp_shape_id, image_coords_1d)
@@ -153,26 +157,30 @@ class AnnotationTool(AbstractWidgetPanel):
                 else:
                     print("the image filename and the filename of the annotation do not match.  Select an annotation")
                     print("that matches the input filename.")
-
             else:
                 print("select a valid label file annotation collection.")
 
+    # noinspection PyUnusedLocal
     def callback_context_set_to_select(self, event):
         self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.select)
         self.context_panel.image_canvas_panel.canvas.set_current_tool_to_selection_tool()
 
+    # noinspection PyUnusedLocal
     def callback_context_set_to_pan(self, event):
         self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.pan)
         self.context_panel.image_canvas_panel.canvas.set_current_tool_to_pan()
 
+    # noinspection PyUnusedLocal
     def callback_context_set_to_zoom_in(self, event):
         self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.zoom_in)
         self.context_panel.image_canvas_panel.canvas.set_current_tool_to_zoom_in()
 
+    # noinspection PyUnusedLocal
     def callback_context_set_to_zoom_out(self, event):
         self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.zoom_out)
         self.context_panel.image_canvas_panel.canvas.set_current_tool_to_zoom_out()
 
+    # noinspection PyUnusedLocal
     def callback_context_set_to_move_rect(self, event):
         self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.move_rect)
         self.context_panel.image_canvas_panel.canvas.set_current_tool_to_translate_shape()
@@ -195,10 +203,12 @@ class AnnotationTool(AbstractWidgetPanel):
         self.update_context_decimation_value()
 
     # annotate callbacks
+    # noinspection PyUnusedLocal
     def callback_set_to_select_closest_shape(self, event):
         self.annotate_panel.annotate_dashboard.controls.set_active_button(self.annotate_panel.annotate_dashboard.controls.select_closest_shape)
         self.annotate_panel.image_canvas_panel.canvas.set_current_tool_to_select_closest_shape()
 
+    # noinspection PyUnusedLocal
     def callback_annotate_set_to_pan(self, event):
         self.annotate_panel.annotate_dashboard.controls.set_active_button(self.annotate_panel.annotate_dashboard.controls.pan)
         self.annotate_panel.image_canvas_panel.canvas.set_current_tool_to_pan()
@@ -228,6 +238,7 @@ class AnnotationTool(AbstractWidgetPanel):
 
             self.variables.canvas_geom_ids_to_annotations_id_dict[str(current_canvas_shape_id)] = annotation
 
+    # noinspection PyUnusedLocal
     def callback_set_to_draw_polygon(self, event):
         self.annotate_panel.annotate_dashboard.controls.set_active_button(self.annotate_panel.annotate_dashboard.controls.draw_polygon)
         self.annotate_panel.image_canvas_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
@@ -237,6 +248,7 @@ class AnnotationTool(AbstractWidgetPanel):
         self.draw_context_rect()
         self.update_annotate_decimation_value()
 
+    # noinspection PyUnusedLocal
     def callback_delete_shape(self, event):
         self.annotate_panel.annotate_dashboard.controls.set_active_button(self.annotate_panel.annotate_dashboard.controls.delete_shape)
         tool_shape_ids = self.annotate_panel.image_canvas_panel.canvas.get_tool_shape_ids()
@@ -251,6 +263,7 @@ class AnnotationTool(AbstractWidgetPanel):
         else:
             print("no shape selected")
 
+    # noinspection PyUnusedLocal
     def callback_annotation_popup(self, event):
         current_canvas_shape_id = self.annotate_panel.image_canvas_panel.canvas.variables.current_shape_id
         if current_canvas_shape_id:
@@ -283,6 +296,7 @@ class AnnotationTool(AbstractWidgetPanel):
 
 def main():
     root = tkinter.Tk()
+    # noinspection PyUnusedLocal
     app = AnnotationTool(root)
     root.mainloop()
 

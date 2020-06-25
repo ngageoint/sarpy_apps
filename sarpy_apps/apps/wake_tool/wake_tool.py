@@ -1,27 +1,31 @@
 import tkinter
-from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 import tkinter.colorchooser as colorchooser
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
-import sarpy.geometry.point_projection as point_projection
-import sarpy.geometry.geocoords as geocoords
+from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 import numpy as np
-import math
 
 
-class AppVariables:
-    def __init__(self):
-        self.image_fname = "None"       # type: str
-        self.image_reader = None        # type: ComplexImageReader
-
-        self.arrow_id = None             # type: int
-        self.point_id = None            # type: int
-        self.horizontal_line_id = None      # type: int
-
-        self.line_width = 3
-        self.horizontal_line_width = 2
-        self.horizontal_line_color = "green"
+class AppVariables(object):
+    image_fname = StringDescriptor(
+        'image_fname', default_value='None', docstring='')  # type: str
+    image_reader = TypedDescriptor(
+        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
+    arrow_id = IntegerDescriptor(
+        'arrow_id', docstring='')  # type: int
+    point_id = IntegerDescriptor(
+        'point_id', docstring='')  # type: int
+    horizontal_line_id = IntegerDescriptor(
+        'horizontal_line_id', docstring='')  # type: int
+    line_width = IntegerDescriptor(
+        'line_width', default_value=3, docstring='')  # type: int
+    horizontal_line_width = IntegerDescriptor(
+        'horizontal_line_width', default_value=2, docstring='')  # type: int
+    horizontal_line_color = StringDescriptor(
+        'horizontal_line_color', default_value='green',
+        docstring='A hexidecimal or named color.')  # type: str
 
 
 class WakeTool(AbstractWidgetPanel):
@@ -64,24 +68,29 @@ class WakeTool(AbstractWidgetPanel):
         self.variables.image_reader = ComplexImageReader(self.variables.image_fname)
         self.image_canvas.canvas.set_image_reader(self.variables.image_reader)
 
+    # noinspection PyUnusedLocal
     def callback_press_line_button(self, event):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.line_draw)
         self.image_canvas.canvas.set_current_tool_to_draw_arrow_by_dragging()
         self.image_canvas.canvas.variables.current_shape_id = self.variables.arrow_id
 
+    # noinspection PyUnusedLocal
     def callback_press_point_button(self, event):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.point_draw)
         self.image_canvas.canvas.set_current_tool_to_draw_point()
         self.image_canvas.canvas.variables.current_shape_id = self.variables.point_id
 
+    # noinspection PyUnusedLocal
     def callback_set_to_zoom_in(self, event):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.zoom_in)
         self.image_canvas.canvas.set_current_tool_to_zoom_in()
 
+    # noinspection PyUnusedLocal
     def callback_set_to_zoom_out(self, event):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.zoom_out)
         self.image_canvas.canvas.set_current_tool_to_zoom_out()
 
+    # noinspection PyUnusedLocal
     def callback_select_color(self, event):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.foreground_color)
         color = colorchooser.askcolor()[1]
@@ -132,13 +141,8 @@ class WakeTool(AbstractWidgetPanel):
         horizontal_line_image_coords = self.image_canvas.canvas.canvas_shape_coords_to_image_coords(self.variables.horizontal_line_id)
         sicd_meta = self.variables.image_reader.base_reader.sicd_meta
         points = np.asarray(np.reshape(horizontal_line_image_coords, (2, 2)))
-        ecf_ground_points = point_projection.image_to_ground(points, sicd_meta)
-        geo_ground_point_1 = geocoords.ecf_to_geodetic((ecf_ground_points[0, 0], ecf_ground_points[0, 1], ecf_ground_points[0, 2]))
-        geo_ground_point_2 = geocoords.ecf_to_geodetic((ecf_ground_points[1, 0], ecf_ground_points[1, 1], ecf_ground_points[1, 2]))
-        distance = math.sqrt( (ecf_ground_points[0, 0] - ecf_ground_points[1, 0])**2 +
-                              (ecf_ground_points[0, 1] - ecf_ground_points[1, 1])**2 +
-                              (ecf_ground_points[0, 2] - ecf_ground_points[1, 2])**2)
-        return distance
+        ecf_ground_points = sicd_meta.project_image_to_ground(points)
+        return float(np.linalg.norm(ecf_ground_points[0, :] - ecf_ground_points[1, :]))
 
     def get_line_slope_and_intercept(self):
         line_coords = self.image_canvas.canvas.coords(self.variables.arrow_id)

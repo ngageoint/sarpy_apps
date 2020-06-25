@@ -7,6 +7,7 @@ from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import Pyp
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.base_elements import StringDescriptor, IntegerDescriptor
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
@@ -14,11 +15,19 @@ from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReade
 import numpy
 
 
-class AppVariables:
+class AppVariables(object):
+    """
+    The canvas demo app variables.
+    """
+
+    fname = StringDescriptor(
+        'fname', default_value='None', docstring='')  # type: str
+    remap_type = StringDescriptor(
+        'remap_type', default_value='density', docstring='')  # type: str
+    selection_rect_id = IntegerDescriptor(
+        'selection_rect_id', docstring='')  # type: int
+
     def __init__(self):
-        self.fname = "None"       # type: str
-        self.remap_type = "density"
-        self.selection_rect_id = None           # type: int
         self.shapes_in_selector = []
 
 

@@ -7,7 +7,7 @@ from sarpy.io.complex.sicd import SICDType
 class Metaviewer(ttk.Treeview):
     def __init__(self, master,      # type: tk.Tk
                  ):
-        super().__init__(master)
+        super(Metaviewer, self).__init__(master)
         self.parent = master
         self.parent.geometry("800x600")
         self.pack(expand=True, fill='both')
@@ -28,6 +28,8 @@ class Metaviewer(ttk.Treeview):
     def create_w_sicd(self,
                       sicd_meta,            # type: SICDType
                       ):
+        # TODO: what if we had a list of sicds?
+        #   If you select a new file, do you not have to reinitialize or something?
         for k, v in sicd_meta.to_dict().items():
             self.insert("", 1, k, text=k)
             self.add_node(k, v)

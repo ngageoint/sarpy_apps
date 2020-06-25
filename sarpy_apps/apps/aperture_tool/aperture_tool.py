@@ -119,6 +119,7 @@ class ApertureTool(AbstractWidgetPanel):
 
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
+        # TODO: what is wrong here?
         self.metaicon.save_full_canvas_as_png(save_fname)
 
     def exit(self):
@@ -132,10 +133,12 @@ class ApertureTool(AbstractWidgetPanel):
         self.app_variables.animation_min_aperture_percent = float(self.animation_panel.resolution_settings.min_res.get()) * 0.01
         self.app_variables.animation_max_aperture_percent = float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
 
+    # noinspection PyUnusedLocal
     def callback_step_forward(self, event):
         mode = self.animation_panel.mode_panel.get_mode()
         self.step_animation("forward", mode)
 
+    # noinspection PyUnusedLocal
     def callback_step_back(self, event):
         mode = self.animation_panel.mode_panel.get_mode()
         self.step_animation("back", mode)
@@ -258,10 +261,12 @@ class ApertureTool(AbstractWidgetPanel):
         self.update_filtered_image()
         self.update_phase_history_selection()
 
+    # noinspection PyUnusedLocal
     def callback_stop_animation(self, event):
         self.app_variables.animation_stop_pressed = True
         self.animation_panel.animation_settings.unpress_all_buttons()
 
+    # noinspection PyUnusedLocal
     def callback_play_animation_fast_slow(self, event):
         self.update_animation_params()
         mode = self.animation_panel.mode_panel.get_mode()
@@ -445,6 +450,7 @@ class ApertureTool(AbstractWidgetPanel):
         ft_cdata = fftshift(ft_cdata)
         return ft_cdata
 
+    # noinspection PyUnusedLocal
     def callback_save_animation(self, event):
         filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
                                                 filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))

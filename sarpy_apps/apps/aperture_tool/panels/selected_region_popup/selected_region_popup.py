@@ -35,15 +35,19 @@ class SelectedRegionPanel(AbstractWidgetPanel):
         self.toolbar.select_aoi.on_left_mouse_click(self.set_current_tool_to_selection_tool)
         self.toolbar.submit_aoi.on_left_mouse_click(self.submit_aoi)
 
+    # noinspection PyUnusedLocal
     def set_current_tool_to_zoom_in(self, event):
         self.image_canvas.canvas.set_current_tool_to_zoom_in()
 
+    # noinspection PyUnusedLocal
     def set_current_tool_to_zoom_out(self, event):
         self.image_canvas.canvas.set_current_tool_to_zoom_out()
 
+    # noinspection PyUnusedLocal
     def set_current_tool_to_pan(self, event):
         self.image_canvas.canvas.set_current_tool_to_pan()
 
+    # noinspection PyUnusedLocal
     def set_current_tool_to_selection_tool(self, event):
         self.image_canvas.canvas.set_current_tool_to_selection_tool()
 
@@ -59,4 +63,5 @@ class SelectedRegionPanel(AbstractWidgetPanel):
             self.app_variables.selected_region_complex_data = complex_data
             self.parent.destroy()
         else:
+            # TODO: where would this go? Should be a popup or something?
             print("need to select region first")

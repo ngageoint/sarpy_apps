@@ -5,16 +5,18 @@ from tkinter.filedialog import askopenfilename
 from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
-
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from sarpy_apps.apps.taser_tool.panels.taser_button_panel import TaserButtonPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 
-class AppVariables:
-    def __init__(self):
-        self.fname = "None"       # type: str
-        self.remap_type = "density"
-        self.image_reader = None     # type: ComplexImageReader
+class AppVariables(object):
+    fname = StringDescriptor(
+        'fname', default_value='None', docstring='')  # type: str
+    remap_type = StringDescriptor(
+        'remap_type', default_value='density', docstring='')  # type: str
+    image_reader = TypedDescriptor(
+        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
 
 
 class Taser(AbstractWidgetPanel):
@@ -32,7 +34,8 @@ class Taser(AbstractWidgetPanel):
 
         # define panels widget_wrappers in master frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.taser_image_panel.canvas.variables.canvas_image_object = ImageCanvasPanel  # type: ImageCanvasPanel
+        # TODO: I don't think this line does anything useful - delete?
+        #   self.taser_image_panel.canvas.variables.canvas_image_object = ImageCanvasPanel  # type: ImageCanvasPanel
         self.taser_image_panel.canvas.set_canvas_size(700, 400)
 
         # need to pack both master frame and self, since this is the main app window.
@@ -55,20 +58,25 @@ class Taser(AbstractWidgetPanel):
             self.taser_image_panel.canvas.zoom_to_selection((0, 0, self.taser_image_panel.canvas.variables.canvas_width, self.taser_image_panel.canvas.variables.canvas_height), animate=False)
             self.display_canvas_rect_selection_in_pyplot_frame()
 
+    # noinspection PyUnusedLocal
     def callback_set_to_zoom_in(self, event):
         self.taser_image_panel.canvas.set_current_tool_to_zoom_in()
 
+    # noinspection PyUnusedLocal
     def callback_set_to_zoom_out(self, event):
         self.taser_image_panel.canvas.set_current_tool_to_zoom_out()
 
+    # noinspection PyUnusedLocal
     def callback_set_to_pan(self, event):
         self.taser_image_panel.canvas.set_current_tool_to_pan()
         self.taser_image_panel.canvas.hide_shape(self.taser_image_panel.canvas.variables.zoom_rect_id)
 
+    # noinspection PyUnusedLocal
     def callback_set_to_select(self, event):
         self.taser_image_panel.canvas.set_current_tool_to_selection_tool()
 
     # define custom callbacks here
+    # noinspection PyUnusedLocal
     def callback_remap(self, event):
         remap_dict = {"density": "density",
                       "brighter": "brighter",
@@ -84,6 +92,7 @@ class Taser(AbstractWidgetPanel):
         self.display_canvas_rect_selection_in_pyplot_frame()
         self.taser_image_panel.canvas.update_current_image()
 
+    # noinspection PyUnusedLocal
     def callback_initialize_canvas_image(self, event):
         image_file_extensions = ['*.nitf', '*.NITF']
         ftypes = [
