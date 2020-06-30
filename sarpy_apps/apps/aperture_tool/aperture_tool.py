@@ -19,7 +19,6 @@ from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_history_selection_panel import PhaseHistoryPanel
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.apps.aperture_tool.panels.frequency_vs_degree_panel.frequency_vs_degree_panel import FrequencyVsDegreePanel
 from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
 
 from sarpy.io.complex.base import BaseReader
@@ -29,7 +28,7 @@ from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
 
 class ApertureTool(AbstractWidgetPanel):
-    frequency_vs_degree_panel = FrequencyVsDegreePanel         # type: FrequencyVsDegreePanel
+    frequency_vs_degree_panel = ImageCanvasPanel         # type: ImageCanvasPanel
     filtered_panel = ImageCanvasPanel                    # type: ImageCanvasPanel
     image_info_panel = ImageInfoPanel                          # type: ImageInfoPanel
     metaicon = MetaIcon                             # type: MetaIcon
@@ -47,10 +46,9 @@ class ApertureTool(AbstractWidgetPanel):
 
         widgets_list = ["frequency_vs_degree_panel", "filtered_panel"]
         self.init_w_horizontal_layout(widgets_list)
-        self.frequency_vs_degree_panel.pack(expand=tkinter.Y, fill=tkinter.BOTH)
-        self.filtered_panel.pack()
 
         self.filtered_panel.canvas.set_canvas_size(900, 700)
+        self.frequency_vs_degree_panel.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.canvas.on_left_mouse_motion(self.callback_frequency_vs_degree_left_mouse_motion)
 
@@ -366,6 +364,8 @@ class ApertureTool(AbstractWidgetPanel):
         self.update_phase_history_selection()
 
         self.metaviewer.create_w_sicd(self.app_variables.sicd_reader_object.base_reader.sicd_meta)
+
+        self.frequency_vs_degree_panel.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.update()
         self.frequency_vs_degree_panel.update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
