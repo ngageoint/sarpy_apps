@@ -13,8 +13,9 @@ distribution rights are stipulated within the MIT license.
 
 Dependencies
 ------------
-The core library functionality depends on the `sarpy` and `tk_builder` projects. 
-These will be available in PyPI in early July 2020.
+The core library functionality depends on the [sarpy](https://github.com/ngageoint/sarpy) 
+and [tk_builder](https://github.com/ngageoint/tk_builder) projects. These will be 
+available in PyPI in early July 2020.
 
 Python 2.7
 ----------
