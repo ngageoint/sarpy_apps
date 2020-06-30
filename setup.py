@@ -25,7 +25,7 @@ tests_require = []
 if sys.version_info[0] < 3:
     tests_require.append('unittest2')
     # unittest2 only for Python2.7, we rely on subTest usage
-    install_requires.append('typing')
+    install_requires.extend(['typing', 'future'])
 
 setup(name=parameters['__title__'],
       version=parameters['__version__'],
