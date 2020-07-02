@@ -5,6 +5,7 @@ from sarpy.io.complex.converter import open_complex
 from sarpy.io.complex.base import BaseReader, string_types
 from sarpy.io.complex.sidd import SIDDReader
 from sarpy.io.complex.cphd import CPHDReader
+from sarpy.io.complex.sicd import SICDReader
 
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 import tk_builder.utils.color_utils.color_converter as color_converter
@@ -160,7 +161,7 @@ class MetaIcon(ImageCanvasPanel):
         if not isinstance(reader, BaseReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
-        if reader.is_sicd_type:
+        if isinstance(reader, SICDReader):
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
         elif isinstance(reader, CPHDReader):

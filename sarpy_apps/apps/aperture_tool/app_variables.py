@@ -4,6 +4,7 @@ from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReade
 from tk_builder.base_elements import TypedDescriptor, IntegerTupleDescriptor, \
     IntegerDescriptor, BooleanDescriptor, FloatDescriptor, StringDescriptor
 
+
 class AppVariables(object):
     sicd_fname = StringDescriptor(
         'sicd_fname', docstring='')  # type: str
