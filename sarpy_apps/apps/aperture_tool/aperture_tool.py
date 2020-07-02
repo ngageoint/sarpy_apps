@@ -11,7 +11,6 @@ from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
-import sarpy.io.complex as sarpy_complex
 import sarpy.visualization.remap as remap
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
