@@ -2,9 +2,10 @@ from tkinter import font
 
 import numpy
 from sarpy.io.complex.converter import open_complex
-from sarpy.io.complex.base import BaseReader, string_types
-from sarpy.io.complex.sidd import SIDDReader
-from sarpy.io.complex.cphd import CPHDReader
+from sarpy.io.general.base import BaseReader
+from sarpy.io.general.utils import string_types
+from sarpy.io.product.sidd import SIDDReader
+from sarpy.io.phase_history.cphd import CPHDReader
 
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 import tk_builder.utils.color_utils.color_converter as color_converter

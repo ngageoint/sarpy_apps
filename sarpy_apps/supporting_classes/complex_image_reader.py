@@ -1,6 +1,6 @@
 from tk_builder.image_readers.image_reader import ImageReader
 import sarpy.io.complex as sarpy_complex
-from sarpy.io.complex.base import BaseReader
+from sarpy.io.general.base import BaseReader
 import sarpy.visualization.remap as remap
 import numpy
 
