@@ -6,6 +6,7 @@ from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import Pyp
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
+from tk_builder.widgets.image_canvas import TOOLS
 from sarpy_apps.apps.taser_tool.panels.taser_button_panel import TaserButtonPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
@@ -34,8 +35,6 @@ class Taser(AbstractWidgetPanel):
 
         # define panels widget_wrappers in master frame
         self.button_panel.set_spacing_between_buttons(0)
-        # TODO: I don't think this line does anything useful - delete?
-        #   self.taser_image_panel.canvas.variables.canvas_image_object = ImageCanvasPanel  # type: ImageCanvasPanel
         self.taser_image_panel.canvas.set_canvas_size(700, 400)
 
         # need to pack both master frame and self, since this is the main app window.
@@ -54,8 +53,8 @@ class Taser(AbstractWidgetPanel):
 
     def callback_left_mouse_release(self, event):
         self.taser_image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.taser_image_panel.canvas.variables.current_tool == self.taser_image_panel.canvas.TOOLS.SELECT_TOOL:
-            self.taser_image_panel.canvas.zoom_to_selection((0, 0, self.taser_image_panel.canvas.variables.canvas_width, self.taser_image_panel.canvas.variables.canvas_height), animate=False)
+        if self.taser_image_panel.canvas.variables.current_tool == TOOLS.SELECT_TOOL:
+            self.taser_image_panel.canvas.zoom_to_selection((0, 0, self.taser_image_panel.canvas.variables.canvas_width, self.taser_image_panel.canvas.variables.canvas_height))
             self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal

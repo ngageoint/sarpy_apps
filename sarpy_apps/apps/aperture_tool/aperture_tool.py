@@ -11,7 +11,6 @@ from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
-import sarpy.io.complex as sarpy_complex
 import sarpy.visualization.remap as remap
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
@@ -326,14 +325,13 @@ class ApertureTool(AbstractWidgetPanel):
     def callback_select_file(self, event):
         sicd_fname = self.image_info_panel.file_selector.event_select_file(event)
         self.app_variables.sicd_fname = sicd_fname
-        self.app_variables.sicd_reader_object = sarpy_complex.open(sicd_fname)
+        self.app_variables.sicd_reader_object = ComplexImageReader(self.app_variables.sicd_fname)
 
         # TODO: handle index, and generalize what sicd_reader_object could be...
-        self.metaicon.create_from_reader(self.app_variables.sicd_reader_object, index=0)
+        self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
 
         popup = tkinter.Toplevel(self.master)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
-        self.app_variables.sicd_reader_object = ComplexImageReader(self.app_variables.sicd_fname)
         selected_region_popup.image_canvas.canvas.set_image_reader(self.app_variables.sicd_reader_object)
 
         self.master.wait_window(popup)
