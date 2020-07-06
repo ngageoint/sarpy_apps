@@ -1,8 +1,8 @@
 import tkinter
-import tkinter.colorchooser as colorchooser
 from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 import numpy as np
@@ -50,7 +50,6 @@ class WakeTool(AbstractWidgetPanel):
         # set up event listeners
         self.side_panel.buttons.line_draw.on_left_mouse_click(self.callback_press_line_button)
         self.side_panel.buttons.point_draw.on_left_mouse_click(self.callback_press_point_button)
-        self.side_panel.buttons.foreground_color.on_left_mouse_click(self.callback_select_color)
         self.side_panel.buttons.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
         self.side_panel.buttons.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
 
@@ -90,19 +89,13 @@ class WakeTool(AbstractWidgetPanel):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.zoom_out)
         self.image_canvas.canvas.set_current_tool_to_zoom_out()
 
-    # noinspection PyUnusedLocal
-    def callback_select_color(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.foreground_color)
-        color = colorchooser.askcolor()[1]
-        self.image_canvas.canvas.change_shape_color(self.image_canvas.canvas.variables.current_shape_id, color)
-
     def callback_handle_left_mouse_click(self, event):
         # first do all the normal mouse click functionality of the canvas
         self.image_canvas.canvas.callback_handle_left_mouse_click(event)
         # now set the object ID's accordingly, we do this so we don't draw multiple arrows or points
-        if self.image_canvas.canvas.variables.current_tool == self.image_canvas.canvas.TOOLS.DRAW_ARROW_BY_DRAGGING:
+        if self.image_canvas.canvas.variables.current_tool == TOOLS.DRAW_ARROW_BY_DRAGGING:
             self.variables.arrow_id = self.image_canvas.canvas.variables.current_shape_id
-        if self.image_canvas.canvas.variables.current_tool == self.image_canvas.canvas.TOOLS.DRAW_POINT_BY_CLICKING:
+        if self.image_canvas.canvas.variables.current_tool == TOOLS.DRAW_POINT_BY_CLICKING:
             self.variables.point_id = self.image_canvas.canvas.variables.current_shape_id
         if self.variables.point_id is not None and self.variables.arrow_id is not None:
             self.update_distance()

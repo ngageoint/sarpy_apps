@@ -45,7 +45,6 @@ class CanvasDemoButtonPanel(AbstractWidgetPanel):
                     "save_kml",
                     "color_selector",
                     "rect_select",
-                    "update_rect_image",
                     "remap_dropdown"]
 
         self.init_w_box_layout(controls, 4, column_widths=20)
