@@ -22,7 +22,7 @@ from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.apps.aperture_tool.panels.frequency_vs_degree_panel.frequency_vs_degree_panel import FrequencyVsDegreePanel
 from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
 
-from sarpy.io.complex.base import BaseReader
+from sarpy.io.general.base import BaseReader
 import scipy.constants.constants as scipy_constants
 from tkinter.filedialog import asksaveasfilename
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
