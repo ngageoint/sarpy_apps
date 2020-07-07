@@ -3,7 +3,8 @@ from tk_builder.widgets import basic_widgets
 
 
 class TaserButtonPanel(AbstractWidgetPanel):
-    fname_select = basic_widgets.Button
+    single_channel_fname_select = basic_widgets.Button
+    quad_pole_fname_select = basic_widgets.Button
     zoom_in = basic_widgets.Button
     zoom_out = basic_widgets.Button
     rect_select = basic_widgets.Button
@@ -13,7 +14,8 @@ class TaserButtonPanel(AbstractWidgetPanel):
     def __init__(self, parent):
         AbstractWidgetPanel.__init__(self, parent)
 
-        self.init_w_vertical_layout(["fname_select",
+        self.init_w_vertical_layout(["single_channel_fname_select",
+                                     "quad_pole_fname_select",
                                      "zoom_in",
                                      "zoom_out",
                                      "pan",

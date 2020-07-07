@@ -5,18 +5,18 @@ from tkinter.filedialog import askopenfilename
 from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
-from tk_builder.base_elements import StringDescriptor, TypedDescriptor
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
 from sarpy_apps.apps.taser_tool.panels.taser_button_panel import TaserButtonPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 
 class AppVariables(object):
-    fname = StringDescriptor(
-        'fname', default_value='None', docstring='')  # type: str
+    fnames = StringTupleDescriptor(
+        'fnames', default_value='None', docstring='')  # type: [str]
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
-    image_reader = TypedDescriptor(
+    image_readers = TypedDescriptor(
         'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
 
 
@@ -35,14 +35,14 @@ class Taser(AbstractWidgetPanel):
 
         # define panels widget_wrappers in master frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.taser_image_panel.canvas.set_canvas_size(700, 400)
+        self.taser_image_panel.set_canvas_size(700, 400)
 
         # need to pack both master frame and self, since this is the main app window.
         master_frame.pack()
         self.pack()
 
         # bind events to callbacks here
-        self.button_panel.fname_select.on_left_mouse_click(self.callback_initialize_canvas_image)
+        self.button_panel.single_channel_fname_select.on_left_mouse_click(self.callback_select_single_channel_file)
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
         self.button_panel.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
@@ -87,12 +87,12 @@ class Taser(AbstractWidgetPanel):
                       "nrl": "nrl"}
         selection = self.button_panel.remap_dropdown.get()
         remap_type = remap_dict[selection]
-        self.variables.image_reader.remap_type = remap_type
+        self.variables.image_readers.remap_type = remap_type
         self.display_canvas_rect_selection_in_pyplot_frame()
         self.taser_image_panel.canvas.update_current_image()
 
     # noinspection PyUnusedLocal
-    def callback_initialize_canvas_image(self, event):
+    def callback_select_single_channel_file(self, event):
         image_file_extensions = ['*.nitf', '*.NITF']
         ftypes = [
             ('image files', image_file_extensions),
@@ -100,9 +100,22 @@ class Taser(AbstractWidgetPanel):
         ]
         new_fname = askopenfilename(initialdir=os.path.expanduser("~"), filetypes=ftypes)
         if new_fname:
-            self.variables.fname = new_fname
-            self.variables.image_reader = ComplexImageReader(self.variables.fname)
-            self.taser_image_panel.canvas.set_image_reader(self.variables.image_reader)
+            self.variables.fnames = [new_fname]
+            self.variables.image_readers = ComplexImageReader(self.variables.fnames[0])
+            self.taser_image_panel.set_image_reader(self.variables.image_readers)
+
+    # noinspection PyUnusedLocal
+    def callback_select_quadpole_files(self, event):
+        image_file_extensions = ['*.nitf', '*.NITF']
+        ftypes = [
+            ('image files', image_file_extensions),
+            ('All files', '*'),
+        ]
+        new_fname = askopenfilename(initialdir=os.path.expanduser("~"), filetypes=ftypes)
+        if new_fname:
+            self.variables.fnames = new_fname
+            self.variables.image_readers = ComplexImageReader(self.variables.fnames)
+            self.taser_image_panel.set_image_reader(self.variables.image_readers)
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(self.taser_image_panel.canvas.variables.select_rect_id)
