@@ -366,8 +366,8 @@ class ApertureTool(AbstractWidgetPanel):
         self.frequency_vs_degree_panel.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.update()
-        self.frequency_vs_degree_panel.update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
-        self.frequency_vs_degree_panel.update_y_axis(start_val=7.409, stop_val=11.39, label="Frequency (GHz)")
+        self.frequency_vs_degree_panel._update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
+        self.frequency_vs_degree_panel._update_y_axis(start_val=7.409, stop_val=11.39, label="Frequency (GHz)")
 
     def get_fft_image_bounds(self,
                              ):             # type: (...) -> (int, int, int, int)
