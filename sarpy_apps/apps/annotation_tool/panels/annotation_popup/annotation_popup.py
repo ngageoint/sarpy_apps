@@ -143,7 +143,6 @@ class AnnotationPopup(AbstractWidgetPanel):
             self.main_app_variables.file_annotation_collection.to_file(self.main_app_variables.file_annotation_fname)
             self.parent.destroy()
 
-
     def setup_main_parent_selections(self):
         base_type_ids = []
         for type_id, parents in self.label_schema.parent_types.items():
