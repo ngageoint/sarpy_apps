@@ -1,6 +1,6 @@
 from sarpy_apps.apps.annotation_tool.panels.context_image_panel.master_dashboard.context_dashboard import ContextMasterDash
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 
 
 class AppVariables:

@@ -6,9 +6,9 @@ from scipy.fftpack import fft2, ifft2, fftshift
 import tkinter
 from tkinter import filedialog
 from tkinter import Menu
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
 import sarpy.visualization.remap as remap

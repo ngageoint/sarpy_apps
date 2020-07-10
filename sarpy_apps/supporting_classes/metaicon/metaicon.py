@@ -7,7 +7,7 @@ from sarpy.io.complex.sidd import SIDDReader
 from sarpy.io.complex.cphd import CPHDReader
 from sarpy.io.complex.sicd import SICDReader
 
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer

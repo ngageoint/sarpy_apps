@@ -1,4 +1,4 @@
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.base_elements import StringDescriptor
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables as MainAppVariables

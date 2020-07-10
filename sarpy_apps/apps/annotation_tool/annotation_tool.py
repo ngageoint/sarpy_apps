@@ -9,7 +9,7 @@ from sarpy_apps.apps.annotation_tool.panels.annotation_fname_popup.annotation_fn
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 
 import tkinter
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 from sarpy.geometry.geometry_elements import Polygon
 from sarpy.annotation.annotate import FileAnnotationCollection

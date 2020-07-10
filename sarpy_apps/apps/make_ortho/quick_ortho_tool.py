@@ -3,9 +3,9 @@ import os
 import tkinter
 from tkinter.filedialog import askopenfilename
 from sarpy_apps.apps.make_ortho.panels.ortho_button_panel import OrthoButtonPanel
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from sarpy_apps.supporting_classes.quick_ortho import QuickOrtho
 
 

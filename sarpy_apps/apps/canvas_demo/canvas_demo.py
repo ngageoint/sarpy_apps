@@ -3,10 +3,10 @@ import os
 import tkinter
 from tkinter.filedialog import askopenfilename
 from sarpy_apps.apps.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
-from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
+from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords

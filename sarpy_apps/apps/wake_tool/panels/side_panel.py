@@ -1,7 +1,7 @@
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from sarpy_apps.apps.wake_tool.panels.button_panel import ButtonPanel
 from sarpy_apps.apps.wake_tool.panels.info_panel import InfoPanel
-from tk_builder.panel_templates.file_selector.file_selector import FileSelector
+from tk_builder.panels.file_selector.file_selector import FileSelector
 
 
 class SidePanel(AbstractWidgetPanel):

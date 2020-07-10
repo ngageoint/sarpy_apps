@@ -2,7 +2,7 @@ import numpy as np
 from sarpy.geometry import point_projection
 from sarpy.geometry import geocoords
 from scipy.interpolate import griddata
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 

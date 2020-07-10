@@ -2,9 +2,9 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor, TypedTupleDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.image_readers.image_reader import ImageReader
