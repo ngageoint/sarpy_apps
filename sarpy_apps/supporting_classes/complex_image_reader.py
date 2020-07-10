@@ -12,6 +12,7 @@ class ComplexImageReader(ImageReader):
 
     def __init__(self, fname):
         self.base_reader = sarpy_complex.open(fname)
+        # TODO: change to get_data_size_as_tuple
         self.full_image_nx = self.base_reader.sicd_meta.ImageData.FullImage.NumCols
         self.full_image_ny = self.base_reader.sicd_meta.ImageData.FullImage.NumRows
 
