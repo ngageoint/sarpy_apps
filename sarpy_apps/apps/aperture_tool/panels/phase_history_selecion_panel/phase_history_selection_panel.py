@@ -16,13 +16,13 @@ resolution_range = widget_descriptors.EntryDescriptor("resolution_range")  # typ
 sample_spacing_range = widget_descriptors.EntryDescriptor("sample_spacing_range")  # type: basic_widgets.Entry
 ground_resolution_range = widget_descriptors.EntryDescriptor("ground_resolution_range")  # type: basic_widgets.Entry
 
-resolution_cross_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")   # type: basic_widgets.Label
-sample_spacing_cross_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")    # type: basic_widgets.Label
-ground_resolution_cross_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")  # type: basic_widgets.Label
+resolution_cross_units = widget_descriptors.LabelDescriptor("resolution_cross_units")   # type: basic_widgets.Label
+sample_spacing_cross_units = widget_descriptors.LabelDescriptor("resolution_cross_units")    # type: basic_widgets.Label
+ground_resolution_cross_units = widget_descriptors.LabelDescriptor("resolution_cross_units")  # type: basic_widgets.Label
 
-resolution_range_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")       # type: basic_widgets.Label
-sample_spacing_range_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")   # type: basic_widgets.Label
-ground_resolution_range_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")   # type: basic_widgets.Label
+resolution_range_units = widget_descriptors.LabelDescriptor("resolution_cross_units")       # type: basic_widgets.Label
+sample_spacing_range_units = widget_descriptors.LabelDescriptor("resolution_cross_units")   # type: basic_widgets.Label
+ground_resolution_range_units = widget_descriptors.LabelDescriptor("resolution_cross_units")   # type: basic_widgets.Label
 
 full_aperture_button = widget_descriptors.ButtonDescriptor("full_aperture_button")   # type: basic_widgets.Button
 english_units_checkbox = widget_descriptors.CheckButtonDescriptor("english_units_checkbox")   # type: basic_widgets.CheckButton
