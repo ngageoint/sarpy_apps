@@ -1,33 +1,34 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel_2 import AbstractWidgetPanel
+from tk_builder.widgets.widget_elements import widget_descriptors
 from tk_builder.widgets import basic_widgets
+
+start_percent_cross = widget_descriptors.EntryDescriptor("start_percent_cross")  # type: basic_widgets.Entry
+stop_percent_cross = widget_descriptors.EntryDescriptor("stop_percent_cross")  # type: basic_widgets.Entry
+fraction_cross = widget_descriptors.EntryDescriptor("fraction_cross")  # type: basic_widgets.Entry
+resolution_cross = widget_descriptors.EntryDescriptor("resolution_cross")  # type: basic_widgets.Entry
+sample_spacing_cross = widget_descriptors.EntryDescriptor("sample_spacing_cross")  # type: basic_widgets.Entry
+ground_resolution_cross = widget_descriptors.EntryDescriptor("ground_resolution_cross")  # type: basic_widgets.Entry
+
+start_percent_range = widget_descriptors.EntryDescriptor("start_percent_range")  # type: basic_widgets.Entry
+stop_percent_range = widget_descriptors.EntryDescriptor("stop_percent_range")  # type: basic_widgets.Entry
+fraction_range = widget_descriptors.EntryDescriptor("fraction_range")  # type: basic_widgets.Entry
+resolution_range = widget_descriptors.EntryDescriptor("resolution_range")  # type: basic_widgets.Entry
+sample_spacing_range = widget_descriptors.EntryDescriptor("sample_spacing_range")  # type: basic_widgets.Entry
+ground_resolution_range = widget_descriptors.EntryDescriptor("ground_resolution_range")  # type: basic_widgets.Entry
+
+resolution_cross_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")   # type: basic_widgets.Label
+sample_spacing_cross_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")    # type: basic_widgets.Label
+ground_resolution_cross_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")  # type: basic_widgets.Label
+
+resolution_range_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")       # type: basic_widgets.Label
+sample_spacing_range_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")   # type: basic_widgets.Label
+ground_resolution_range_units = widget_descriptors.LabelDesctriptor("resolution_cross_units")   # type: basic_widgets.Label
+
+full_aperture_button = widget_descriptors.ButtonDescriptor("full_aperture_button")   # type: basic_widgets.Button
+english_units_checkbox = widget_descriptors.CheckButtonDescriptor("english_units_checkbox")   # type: basic_widgets.CheckButton
 
 
 class PhaseHistoryPanel(AbstractWidgetPanel):
-
-    start_percent_cross = basic_widgets.Entry
-    stop_percent_cross = basic_widgets.Entry
-    fraction_cross = basic_widgets.Entry
-    resolution_cross = basic_widgets.Entry
-    sample_spacing_cross = basic_widgets.Entry
-    ground_resolution_cross = basic_widgets.Entry
-
-    start_percent_range = basic_widgets.Entry
-    stop_percent_range = basic_widgets.Entry
-    fraction_range = basic_widgets.Entry
-    resolution_range = basic_widgets.Entry
-    sample_spacing_range = basic_widgets.Entry
-    ground_resolution_range = basic_widgets.Entry
-
-    resolution_cross_units = basic_widgets.Label            # type: basic_widgets.Label
-    sample_spacing_cross_units = basic_widgets.Label        # type: basic_widgets.Label
-    ground_resolution_cross_units = basic_widgets.Label     # type: basic_widgets.Label
-
-    resolution_range_units = basic_widgets.Label            # type: basic_widgets.Label
-    sample_spacing_range_units = basic_widgets.Label        # type: basic_widgets.Label
-    ground_resolution_range_units = basic_widgets.Label     # type: basic_widgets.Label
-
-    full_aperture_button = basic_widgets.Button             # type: basic_widgets.Button
-    english_units_checkbox = basic_widgets.CheckButton      # type: basic_widgets.CheckButton
 
     def __init__(self, parent):
         AbstractWidgetPanel.__init__(self, parent)
@@ -35,13 +36,13 @@ class PhaseHistoryPanel(AbstractWidgetPanel):
         self.config(borderwidth=2)
 
         widget_list = ["", "Cross-Range", "", "Range", "",
-                       "Start %", "start_percent_cross", "", "start_percent_range", "",
-                       "Stop %", "stop_percent_cross", "", "stop_percent_range", "",
-                       "Fraction", "fraction_cross", "", "fraction_range", "",
-                       "Resolution", "resolution_cross", "resolution_cross_units", "resolution_range", "resolution_range_units",
-                       "Sample Spacing", "sample_spacing_cross", "sample_spacing_cross_units", "sample_spacing_range", "sample_spacing_range_units",
-                       "Ground Resolution", "ground_resolution_cross", "ground_resolution_cross_units", "ground_resolution_range", "ground_resolution_range_units",
-                       "full_aperture_button", "english_units_checkbox"]
+                       "Start %", start_percent_cross, "", start_percent_range, "",
+                       "Stop %", stop_percent_cross, "", stop_percent_range, "",
+                       "Fraction", fraction_cross, "", fraction_range, "",
+                       "Resolution", resolution_cross, resolution_cross_units, resolution_range, resolution_range_units,
+                       "Sample Spacing", sample_spacing_cross, sample_spacing_cross_units, sample_spacing_range, sample_spacing_range_units,
+                       "Ground Resolution", ground_resolution_cross, ground_resolution_cross_units, ground_resolution_range, ground_resolution_range_units,
+                       full_aperture_button, english_units_checkbox]
         self.init_w_box_layout(widget_list, 5, column_widths=20)
 
         self.resolution_cross_units.set_text("Units")

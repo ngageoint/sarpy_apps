@@ -6,10 +6,12 @@ from scipy.fftpack import fft2, ifft2, fftshift
 import tkinter
 from tkinter import filedialog
 from tkinter import Menu
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel_2 import AbstractWidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
+
+from tk_builder.widgets.widget_elements import widget_descriptors
 
 import sarpy.visualization.remap as remap
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
@@ -27,23 +29,23 @@ from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
 
 class ApertureTool(AbstractWidgetPanel):
-    frequency_vs_degree_panel = ImageCanvasPanel         # type: ImageCanvasPanel
-    filtered_panel = ImageCanvasPanel                    # type: ImageCanvasPanel
-    image_info_panel = ImageInfoPanel                          # type: ImageInfoPanel
-    metaicon = MetaIcon                             # type: MetaIcon
-    phase_history = PhaseHistoryPanel               # type: PhaseHistoryPanel
+    image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)                          # type: ImageInfoPanel
+    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)                             # type: MetaIcon
+    phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)               # type: PhaseHistoryPanel
     metaviewer = Metaviewer                         # type: Metaviewer
     animation_panel = AnimationPanel                # type: AnimationPanel
 
     def __init__(self, master):
         self.app_variables = AppVariables()
-
         self.master = master
 
         master_frame = tkinter.Frame(master)
         AbstractWidgetPanel.__init__(self, master_frame)
 
-        widgets_list = ["frequency_vs_degree_panel", "filtered_panel"]
+        self.frequency_vs_degree_panel = widget_descriptors.ImageCanvasPanelDescriptor("frequency_vs_degree_panel")  # type: ImageCanvasPanel
+        self.filtered_panel = widget_descriptors.ImageCanvasPanelDescriptor("filtered_panel")  # type: ImageCanvasPanel
+
+        widgets_list = [self.frequency_vs_degree_panel, self.filtered_panel]
         self.init_w_horizontal_layout(widgets_list)
 
         self.filtered_panel.canvas.set_canvas_size(900, 700)
