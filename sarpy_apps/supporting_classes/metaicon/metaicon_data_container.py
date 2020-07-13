@@ -11,10 +11,10 @@ from scipy.constants import foot
 from sarpy.geometry import latlon
 from sarpy.geometry.geocoords import ecf_to_geodetic, geodetic_to_ecf
 from sarpy.io.complex.sicd_elements.SICD import SICDType
-from sarpy.io.complex.sidd_elements.SIDD import SIDDType  # version 2.0
-from sarpy.io.complex.sidd_elements.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
-from sarpy.io.complex.cphd_elements.CPHD import CPHDType  # version 1.0
-from sarpy.io.complex.cphd_elements.cphd0_3.CPHD import CPHDType as CPHDType0_3  # version 0.3
+from sarpy.io.product.sidd2_elements.SIDD import SIDDType  # version 2.0
+from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
+from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
+from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
 
