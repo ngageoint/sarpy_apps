@@ -1,4 +1,4 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.base_elements import StringDescriptor
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables as MainAppVariables
@@ -14,7 +14,7 @@ class AppVariables(object):
         docstring='The parent types main text.')  # type: str
 
 
-class AnnotationPopup(AbstractWidgetPanel):
+class AnnotationPopup(WidgetPanel):
     parent_types = basic_widgets.Label      # type: basic_widgets.Label
     thing_type = basic_widgets.Combobox  # type: basic_widgets.Combobox
     reset = basic_widgets.Button        # type: basic_widgets.Button
@@ -42,7 +42,7 @@ class AnnotationPopup(AbstractWidgetPanel):
 
         self.parent = parent
         self.master_frame = tkinter.Frame(parent)
-        AbstractWidgetPanel.__init__(self, self.master_frame)
+        WidgetPanel.__init__(self, self.master_frame)
 
         widget_rows_list = [["parent_types"],
                             ["thing_type_label", "thing_type"],

@@ -9,7 +9,7 @@ from sarpy_apps.apps.annotation_tool.panels.annotation_fname_popup.annotation_fn
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 
 import tkinter
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 from sarpy.geometry.geometry_elements import Polygon
 from sarpy.annotation.annotate import FileAnnotationCollection
@@ -19,17 +19,17 @@ from sarpy.annotation.annotate import LabelSchema
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 
-class AnnotationTool(AbstractWidgetPanel):
+class AnnotationTool(WidgetPanel):
     context_panel = ContextImagePanel
     annotate_panel = AnnotateImagePanel
 
-    def __init__(self, master):
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+    def __init__(self, primary):
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
 
         widgets_list = ["context_panel", "annotate_panel"]
         self.init_w_horizontal_layout(widgets_list)
-        master_frame.pack()
+        primary_frame.pack()
         self.pack()
 
         self.variables = AppVariables()
@@ -81,16 +81,16 @@ class AnnotationTool(AbstractWidgetPanel):
     def callback_content_select_annotation_file(self, event):
         popup = tkinter.Toplevel(self.parent)
         AnnotationFnamePopup(popup, self.variables)
-        master_ul_x = self.parent.winfo_rootx()
-        master_ul_y = self.parent.winfo_rooty()
-        master_height = self.parent.winfo_height()
-        master_width = self.parent.winfo_width()
+        primary_ul_x = self.parent.winfo_rootx()
+        primary_ul_y = self.parent.winfo_rooty()
+        primary_height = self.parent.winfo_height()
+        primary_width = self.parent.winfo_width()
         popup_height = popup.winfo_height()
         popup_width = popup.winfo_width()
 
         # TODO: The popup window thinks it has a height and width of 1 pixel
-        popup_x_ul = int(master_ul_x + master_width/2 - popup_width)
-        popup_y_ul = int(master_ul_y + master_height/2 - popup_height)
+        popup_x_ul = int(primary_ul_x + primary_width/2 - popup_width)
+        popup_y_ul = int(primary_ul_y + primary_height/2 - popup_height)
 
         popup.geometry("+" + str(popup_x_ul) + "+" + str(popup_y_ul))
 

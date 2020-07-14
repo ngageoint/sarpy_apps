@@ -6,7 +6,7 @@ from sarpy_apps.apps.canvas_demo.panels.canvas_demo_button_panel import CanvasDe
 from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
@@ -31,14 +31,14 @@ class AppVariables(object):
         self.shapes_in_selector = []
 
 
-class CanvasDemo(AbstractWidgetPanel):
+class CanvasDemo(WidgetPanel):
     button_panel = CanvasDemoButtonPanel         # type: CanvasDemoButtonPanel
     pyplot_panel = PyplotImagePanel         # type: PyplotImagePanel
     canvas_demo_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
 
     def __init__(self, master):
         master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+        WidgetPanel.__init__(self, master_frame)
         self.variables = AppVariables()
 
         widget_list = ["canvas_demo_image_panel", "pyplot_panel", "button_panel", ]

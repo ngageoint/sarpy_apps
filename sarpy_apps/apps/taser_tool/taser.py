@@ -4,14 +4,13 @@ import tkinter
 from tkinter.filedialog import askopenfilename
 from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
-from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor, TypedTupleDescriptor
+from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.image_readers.image_reader import ImageReader
 from sarpy_apps.apps.taser_tool.panels.taser_button_panel import TaserButtonPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.quad_pol_image_reader import QuadPolImageReader
-from typing import Union
 
 
 class AppVariables(object):
@@ -23,25 +22,25 @@ class AppVariables(object):
         'image_reader', ImageReader, docstring='')  # type: ImageReader
 
 
-class Taser(AbstractWidgetPanel):
+class Taser(WidgetPanel):
     button_panel = TaserButtonPanel         # type: TaserButtonPanel
     pyplot_panel = PyplotImagePanel         # type: PyplotImagePanel
     taser_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
 
-    def __init__(self, master):
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+    def __init__(self, primary):
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
         widget_list = ["button_panel", "taser_image_panel", "pyplot_panel"]
         self.init_w_horizontal_layout(widget_list)
 
-        # define panels widget_wrappers in master frame
+        # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
         self.taser_image_panel.set_canvas_size(700, 400)
 
-        # need to pack both master frame and self, since this is the main app window.
-        master_frame.pack()
+        # need to pack both primary frame and self, since this is the main app window.
+        primary_frame.pack()
         self.pack()
 
         # bind events to callbacks here

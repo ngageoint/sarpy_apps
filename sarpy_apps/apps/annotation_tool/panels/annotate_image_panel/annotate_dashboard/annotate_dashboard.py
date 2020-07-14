@@ -1,10 +1,10 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 
 
-class ButtonPanel(AbstractWidgetPanel):
+class ButtonPanel(WidgetPanel):
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.pan = basic_widgets.Button                         # type: basic_widgets.Button
         self.draw_polygon = basic_widgets.Button                # type: basic_widgets.Button
         self.select_closest_shape = basic_widgets.Button        # type: basic_widgets.Button
@@ -16,9 +16,9 @@ class ButtonPanel(AbstractWidgetPanel):
         self.set_label_text("annotate controls")
 
 
-class AnnotateInfoPanel(AbstractWidgetPanel):
+class AnnotateInfoPanel(WidgetPanel):
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.decimation_label = basic_widgets.Label
         self.annotate_decimation_val = basic_widgets.Entry
 
@@ -30,11 +30,11 @@ class AnnotateInfoPanel(AbstractWidgetPanel):
         self.annotate_decimation_val.config(state='disabled')
 
 
-class AnnotateDash(AbstractWidgetPanel):
+class AnnotateDash(WidgetPanel):
     controls = ButtonPanel
     info_panel = AnnotateInfoPanel
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         widget_list = ["controls", "info_panel"]
         self.init_w_basic_widget_list(widget_list, 2, [1, 2])

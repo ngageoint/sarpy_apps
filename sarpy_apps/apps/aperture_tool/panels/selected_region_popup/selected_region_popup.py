@@ -1,11 +1,11 @@
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.toolbar import Toolbar
 
 
-class SelectedRegionPanel(AbstractWidgetPanel):
+class SelectedRegionPanel(WidgetPanel):
     image_canvas = ImageCanvasPanel      # type: ImageCanvasPanel
     toolbar = Toolbar                   # type: Toolbar
 
@@ -13,8 +13,8 @@ class SelectedRegionPanel(AbstractWidgetPanel):
                  parent,
                  app_variables,         # type: AppVariables
                  ):
-        # set the master frame
-        AbstractWidgetPanel.__init__(self, parent)
+        # set the parent frame
+        WidgetPanel.__init__(self, parent)
         widgets_list = ["toolbar", "image_canvas"]
 
         self.parent = parent

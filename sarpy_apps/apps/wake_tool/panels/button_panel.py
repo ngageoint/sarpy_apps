@@ -1,10 +1,10 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 
 
-class ButtonPanel(AbstractWidgetPanel):
+class ButtonPanel(WidgetPanel):
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.rect_draw = basic_widgets.Button
         self.line_draw = basic_widgets.Button
         self.point_draw = basic_widgets.Button

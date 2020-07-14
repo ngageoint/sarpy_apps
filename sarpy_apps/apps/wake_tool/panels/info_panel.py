@@ -1,10 +1,10 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 
 
-class InfoPanel(AbstractWidgetPanel):
+class InfoPanel(WidgetPanel):
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.canvas_distance_val = basic_widgets.Entry
         self.pixel_distance_val = basic_widgets.Entry
         self.geo_distance_val = basic_widgets.Entry

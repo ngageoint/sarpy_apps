@@ -1,10 +1,10 @@
 import tkinter
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 
 
-class AnnotationFnamePopup(AbstractWidgetPanel):
+class AnnotationFnamePopup(WidgetPanel):
     new_annotation = basic_widgets.Button        # type: basic_widgets.Button
     edit_existing_annotation = basic_widgets.Button       # type: basic_widgets.Button
 
@@ -16,7 +16,7 @@ class AnnotationFnamePopup(AbstractWidgetPanel):
 
         self.parent = parent
         self.master_frame = tkinter.Frame(parent)
-        AbstractWidgetPanel.__init__(self, self.master_frame)
+        WidgetPanel.__init__(self, self.master_frame)
         widget_list = ["new_annotation", "edit_existing_annotation"]
         self.init_w_horizontal_layout(widget_list)
 

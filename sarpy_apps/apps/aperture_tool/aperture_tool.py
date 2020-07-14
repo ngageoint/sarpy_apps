@@ -6,12 +6,12 @@ from scipy.fftpack import fft2, ifft2, fftshift
 import tkinter
 from tkinter import filedialog
 from tkinter import Menu
-from tk_builder.panels.widget_panel.widget_panel_2 import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
-from tk_builder.widgets.widget_elements import widget_descriptors
+from tk_builder.widgets import widget_descriptors
 
 import sarpy.visualization.remap as remap
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
@@ -28,55 +28,57 @@ from tkinter.filedialog import asksaveasfilename
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
 
-class ApertureTool(AbstractWidgetPanel):
-    image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)                          # type: ImageInfoPanel
-    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)                             # type: MetaIcon
-    phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)               # type: PhaseHistoryPanel
+class ApertureTool(WidgetPanel):
+    _widget_list = ("frequency_vs_degree_panel", "filtered_panel")
+
+    frequency_vs_degree_panel = widget_descriptors.ImageCanvasPanelDescriptor(
+        "frequency_vs_degree_panel")  # type: ImageCanvasPanel
+    filtered_panel = widget_descriptors.ImageCanvasPanelDescriptor("filtered_panel")  # type: ImageCanvasPanel
+
+    image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)   # type: ImageInfoPanel
+    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)                        # type: MetaIcon
+    phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)    # type: PhaseHistoryPanel
     metaviewer = Metaviewer                         # type: Metaviewer
     animation_panel = AnimationPanel                # type: AnimationPanel
 
-    def __init__(self, master):
+    def __init__(self, primary):
         self.app_variables = AppVariables()
-        self.master = master
+        self.primary = primary
 
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
 
-        self.frequency_vs_degree_panel = widget_descriptors.ImageCanvasPanelDescriptor("frequency_vs_degree_panel")  # type: ImageCanvasPanel
-        self.filtered_panel = widget_descriptors.ImageCanvasPanelDescriptor("filtered_panel")  # type: ImageCanvasPanel
-
-        widgets_list = [self.frequency_vs_degree_panel, self.filtered_panel]
-        self.init_w_horizontal_layout(widgets_list)
+        self.init_w_horizontal_layout()
 
         self.filtered_panel.canvas.set_canvas_size(900, 700)
         self.frequency_vs_degree_panel.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.canvas.on_left_mouse_motion(self.callback_frequency_vs_degree_left_mouse_motion)
 
-        self.image_info_popup_panel = tkinter.Toplevel(self.master)
+        self.image_info_popup_panel = tkinter.Toplevel(self.primary)
         self.image_info_panel = ImageInfoPanel(self.image_info_popup_panel)
         self.image_info_panel.pack()
         self.image_info_popup_panel.withdraw()
 
         self.image_info_panel.file_selector.select_file.on_left_mouse_click(self.callback_select_file)
 
-        self.ph_popup_panel = tkinter.Toplevel(self.master)
+        self.ph_popup_panel = tkinter.Toplevel(self.primary)
         self.phase_history = PhaseHistoryPanel(self.ph_popup_panel)
         self.phase_history.pack()
         self.ph_popup_panel.withdraw()
 
-        self.metaicon_popup_panel = tkinter.Toplevel(self.master)
+        self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
         self.metaicon.set_canvas_size(800, 600)
         self.metaicon.pack()
         self.metaicon_popup_panel.withdraw()
 
-        self.metaviewer_popup_panel = tkinter.Toplevel(self.master)
+        self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
         self.metaviewer.pack()
         self.metaviewer_popup_panel.withdraw()
 
-        self.animation_popup_panel = tkinter.Toplevel(self.master)
+        self.animation_popup_panel = tkinter.Toplevel(self.primary)
         self.animation_panel = AnimationPanel(self.animation_popup_panel)
         self.animation_panel.pack()
         self.animation_popup_panel.withdraw()
@@ -111,9 +113,9 @@ class ApertureTool(AbstractWidgetPanel):
         menubar.add_cascade(label="Popups", menu=popups_menu)
         menubar.add_cascade(label="Save", menu=save_menu)
 
-        master.config(menu=menubar)
+        primary.config(menu=menubar)
 
-        master_frame.pack()
+        primary_frame.pack()
         self.pack()
 
     def save_metaicon(self):
@@ -332,11 +334,11 @@ class ApertureTool(AbstractWidgetPanel):
         # TODO: handle index, and generalize what sicd_reader_object could be...
         self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
 
-        popup = tkinter.Toplevel(self.master)
+        popup = tkinter.Toplevel(self.primary)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
         selected_region_popup.image_canvas.canvas.set_image_reader(self.app_variables.sicd_reader_object)
 
-        self.master.wait_window(popup)
+        self.primary.wait_window(popup)
 
         selected_region_complex_data = self.app_variables.selected_region_complex_data
 

@@ -1,8 +1,8 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 
 
-class CanvasDemoButtonPanel(AbstractWidgetPanel):
+class CanvasDemoButtonPanel(WidgetPanel):
     fname_select = basic_widgets.Button
     zoom_in = basic_widgets.Button
     zoom_out = basic_widgets.Button
@@ -25,7 +25,7 @@ class CanvasDemoButtonPanel(AbstractWidgetPanel):
     remap_dropdown = basic_widgets.Combobox         # type: basic_widgets.Combobox
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
 
         controls = ["fname_select",
                     "zoom_in",
@@ -61,4 +61,4 @@ class CanvasDemoButtonPanel(AbstractWidgetPanel):
 
 
 if __name__ == '__main__':
-    print(dir(AbstractWidgetPanel))
+    print(dir(WidgetPanel))

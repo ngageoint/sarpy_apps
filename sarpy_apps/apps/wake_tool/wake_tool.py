@@ -3,7 +3,7 @@ from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.widgets.image_canvas import TOOLS
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 import numpy as np
 
@@ -28,14 +28,13 @@ class AppVariables(object):
         docstring='A hexidecimal or named color.')  # type: str
 
 
-class WakeTool(AbstractWidgetPanel):
+class WakeTool(WidgetPanel):
     side_panel = SidePanel          # type: SidePanel
     image_canvas = ImageCanvasPanel      # type: ImageCanvasPanel
 
-    def __init__(self, master):
-        # set the master frame
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+    def __init__(self, primary):
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
         widget_list = ["image_canvas", "side_panel"]
         self.init_w_vertical_layout(widget_list)
         self.variables = AppVariables()
@@ -43,8 +42,8 @@ class WakeTool(AbstractWidgetPanel):
         self.side_panel.set_spacing_between_buttons(0)
         self.image_canvas.set_canvas_size(600, 400)
 
-        # need to pack both master frame and self, since this is the main app window.
-        master_frame.pack()
+        # need to pack both primary frame and self, since this is the main app window.
+        primary_frame.pack()
         self.pack()
 
         # set up event listeners

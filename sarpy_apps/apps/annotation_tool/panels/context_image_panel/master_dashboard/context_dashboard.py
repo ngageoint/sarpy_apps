@@ -1,11 +1,11 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.panels.file_selector.file_selector import FileSelector
 from tk_builder.widgets import basic_widgets
 
 
-class ButtonPanel(AbstractWidgetPanel):
+class ButtonPanel(WidgetPanel):
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.zoom_in = basic_widgets.Button
         self.zoom_out = basic_widgets.Button
         self.pan = basic_widgets.Button
@@ -17,9 +17,9 @@ class ButtonPanel(AbstractWidgetPanel):
         self.set_label_text("controls")
 
 
-class ContextInfoPanel(AbstractWidgetPanel):
+class ContextInfoPanel(WidgetPanel):
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.decimation_label = basic_widgets.Label
         self.decimation_val = basic_widgets.Entry
 
@@ -32,14 +32,14 @@ class ContextInfoPanel(AbstractWidgetPanel):
         self.decimation_val.config(state='disabled')
 
 
-class ContextMasterDash(AbstractWidgetPanel):
+class ContextMasterDash(WidgetPanel):
     buttons = ButtonPanel                   # type: ButtonPanel
     file_selector = FileSelector            # type: FileSelector
     annotation_selector = FileSelector      # type: FileSelector
     info_panel = ContextInfoPanel           # type: ContextInfoPanel
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         widget_list = ["file_selector", "annotation_selector", "buttons", "info_panel"]
         self.init_w_basic_widget_list(widget_list, 3, [1, 1, 2])
         self.set_label_text("wake tool controls")

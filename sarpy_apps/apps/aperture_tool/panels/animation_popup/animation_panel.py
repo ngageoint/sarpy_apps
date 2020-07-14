@@ -1,9 +1,10 @@
 import tkinter
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets import widget_descriptors
 
 
-class ModePanel(AbstractWidgetPanel):
+class ModePanel(WidgetPanel):
     slow_time = basic_widgets.RadioButton          # type: basic_widgets.RadioButton
     fast_time = basic_widgets.RadioButton          # type: basic_widgets.RadioButton
     aperture_percent = basic_widgets.RadioButton     # type: basic_widgets.RadioButton
@@ -12,7 +13,7 @@ class ModePanel(AbstractWidgetPanel):
     reverse = basic_widgets.CheckButton             # type: basic_widgets.CheckButton
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.init_w_horizontal_layout(["slow_time", "fast_time", "aperture_percent", "full_range_bandwidth", "full_az_bandwidth", "reverse"])
         self.selected_value = tkinter.IntVar()
         self.selected_value.set(1)
@@ -44,22 +45,23 @@ class ModePanel(AbstractWidgetPanel):
             return self.Modes.full_azimuth_bandwidth
 
 
-class FastSlowSettingsPanel(AbstractWidgetPanel):
-    aperture_fraction = basic_widgets.Entry
+class FastSlowSettingsPanel(WidgetPanel):
+    _widget_list = ("label", "aperture_fraction")
+    label = widget_descriptors.LabelDescriptor("label", default_text="Aperture Fraction:")
+    aperture_fraction = widget_descriptors.EntryDescriptor("aperture_fraction", default_text="0.25")
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
 
-        self.init_w_box_layout(["Aperture Fraction:", "aperture_fraction"], n_columns=2, column_widths=[20, 10])
-        self.aperture_fraction.set_text("0.25")
+        self.init_w_box_layout(n_columns=2, column_widths=[20, 10])
 
 
-class ResolutionSettingsPanel(AbstractWidgetPanel):
+class ResolutionSettingsPanel(WidgetPanel):
     min_res = basic_widgets.Entry
     max_res = basic_widgets.Entry
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
 
         self.init_w_box_layout(["Min Res", "min_res",
                                 "Max Res", "max_res"],
@@ -69,7 +71,7 @@ class ResolutionSettingsPanel(AbstractWidgetPanel):
         self.max_res.set_text("100")
 
 
-class AnimationSettingsPanel(AbstractWidgetPanel):
+class AnimationSettingsPanel(WidgetPanel):
 
     number_of_frames = basic_widgets.Entry
     aperture_fraction = basic_widgets.Entry
@@ -81,7 +83,7 @@ class AnimationSettingsPanel(AbstractWidgetPanel):
     stop = basic_widgets.Button
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
 
         self.init_w_box_layout(["Number of Frames:", "number_of_frames", "", "",
                                 "Frame Rate:", "frame_rate", "fps", "",
@@ -92,15 +94,14 @@ class AnimationSettingsPanel(AbstractWidgetPanel):
         self.frame_rate.set_text("5")
 
 
-class AnimationPanel(AbstractWidgetPanel):
+class AnimationPanel(WidgetPanel):
     mode_panel = ModePanel         # type: ModePanel
     animation_settings = AnimationSettingsPanel     # type: AnimationSettingsPanel
     fast_slow_settings = FastSlowSettingsPanel      # type: FastSlowSettingsPanel
     resolution_settings = ResolutionSettingsPanel       # type: ResolutionSettingsPanel
 
     def __init__(self, parent):
-        # set the master frame
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.parent = parent
         widgets_list = ["mode_panel", "animation_settings", "fast_slow_settings", "resolution_settings"]
 
