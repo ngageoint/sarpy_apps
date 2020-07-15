@@ -18,7 +18,8 @@ from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel impo
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_history_selection_panel import PhaseHistoryPanel
+from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_history_selection_panel \
+    import PhaseHistoryPanel
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
 
@@ -121,18 +122,22 @@ class ApertureTool(WidgetPanel):
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
         # TODO: what is wrong here?
-        self.metaicon.save_full_canvas_as_png(save_fname)
+        self.metaicon.canvas.save_full_canvas_as_png(save_fname)
 
     def exit(self):
         self.quit()
 
     def update_animation_params(self):
         self.app_variables.animation_n_frames = int(self.animation_panel.animation_settings.number_of_frames.get())
-        self.app_variables.animation_aperture_faction = float(self.animation_panel.fast_slow_settings.aperture_fraction.get())
+        self.app_variables.animation_aperture_faction = \
+            float(self.animation_panel.fast_slow_settings.aperture_fraction.get())
         self.app_variables.animation_frame_rate = float(self.animation_panel.animation_settings.frame_rate.get())
-        self.app_variables.animation_cycle_continuously = self.animation_panel.animation_settings.cycle_continuously.is_selected()
-        self.app_variables.animation_min_aperture_percent = float(self.animation_panel.resolution_settings.min_res.get()) * 0.01
-        self.app_variables.animation_max_aperture_percent = float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
+        self.app_variables.animation_cycle_continuously = \
+            self.animation_panel.animation_settings.cycle_continuously.is_selected()
+        self.app_variables.animation_min_aperture_percent = \
+            float(self.animation_panel.resolution_settings.min_res.get()) * 0.01
+        self.app_variables.animation_max_aperture_percent = \
+            float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
 
     # noinspection PyUnusedLocal
     def callback_step_forward(self, event):
@@ -188,15 +193,23 @@ class ApertureTool(WidgetPanel):
             yul = self.app_variables.fft_canvas_bounds[1]
             ylr = self.app_variables.fft_canvas_bounds[3]
 
-            canvas_xul_start = (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
-            canvas_xlr_start = (xul + xlr) / 2 + full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
-            canvas_yul_start = (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
-            canvas_ylr_start = (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_xul_start = \
+                (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_xlr_start = \
+                (xul + xlr) / 2 + full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_yul_start = \
+                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_ylr_start = \
+                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
 
-            canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * self.app_variables.animation_min_aperture_percent / 2
-            canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * self.app_variables.animation_min_aperture_percent / 2
-            canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * self.app_variables.animation_min_aperture_percent / 2
-            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * self.app_variables.animation_min_aperture_percent / 2
+            canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
+            canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
+            canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
+            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture *\
+                              self.app_variables.animation_min_aperture_percent / 2
 
             x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation_n_frames)
             x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation_n_frames)
@@ -213,13 +226,17 @@ class ApertureTool(WidgetPanel):
             yul = self.app_variables.fft_canvas_bounds[1]
             ylr = self.app_variables.fft_canvas_bounds[3]
 
-            canvas_xul_start = (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
-            canvas_xlr_start = (xul + xlr) / 2 + full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_xul_start = (xul + xlr) / 2 - full_canvas_x_aperture * \
+                               self.app_variables.animation_max_aperture_percent / 2
+            canvas_xlr_start = (xul + xlr) / 2 + full_canvas_x_aperture * \
+                               self.app_variables.animation_max_aperture_percent / 2
             canvas_yul_start = yul
             canvas_ylr_start = ylr
 
-            canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * self.app_variables.animation_min_aperture_percent / 2
-            canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * self.app_variables.animation_min_aperture_percent / 2
+            canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
+            canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
             canvas_yul_stop = yul
             canvas_ylr_stop = ylr
 
@@ -240,13 +257,17 @@ class ApertureTool(WidgetPanel):
 
             canvas_xul_start = xul
             canvas_xlr_start = xlr
-            canvas_yul_start = (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
-            canvas_ylr_start = (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_yul_start = (yul + ylr) / 2 - full_canvas_y_aperture * \
+                               self.app_variables.animation_max_aperture_percent / 2
+            canvas_ylr_start = (yul + ylr) / 2 + full_canvas_y_aperture * \
+                               self.app_variables.animation_max_aperture_percent / 2
 
             canvas_xul_stop = xul
             canvas_xlr_stop = xlr
-            canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * self.app_variables.animation_min_aperture_percent / 2
-            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * self.app_variables.animation_min_aperture_percent / 2
+            canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
+            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * \
+                              self.app_variables.animation_min_aperture_percent / 2
 
             x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation_n_frames)
             x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation_n_frames)
@@ -345,7 +366,8 @@ class ApertureTool(WidgetPanel):
 
         selected_region_complex_data = self.app_variables.selected_region_complex_data
 
-        fft_complex_data = self.get_fft_complex_data(self.app_variables.sicd_reader_object.base_reader, selected_region_complex_data)
+        fft_complex_data = \
+            self.get_fft_complex_data(self.app_variables.sicd_reader_object.base_reader, selected_region_complex_data)
         self.app_variables.fft_complex_data = fft_complex_data
 
         self.app_variables.fft_display_data = remap.density(fft_complex_data)
@@ -353,12 +375,18 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.set_image_reader(fft_reader)
 
         self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
-        self.frequency_vs_degree_panel.canvas.variables.current_shape_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
-        self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_image_coords(self.frequency_vs_degree_panel.canvas.variables.select_rect_id, self.get_fft_image_bounds())
-        canvas_drawing_bounds = self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
-        self.frequency_vs_degree_panel.canvas.variables.shape_drag_xy_limits[str(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)] = canvas_drawing_bounds
-        self.app_variables.fft_canvas_bounds = self.frequency_vs_degree_panel.canvas.get_shape_canvas_coords(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
-        self.frequency_vs_degree_panel.canvas.show_shape(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+        self.frequency_vs_degree_panel.canvas.variables.current_shape_id = \
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id
+        self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_image_coords(
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id, self.get_fft_image_bounds())
+        canvas_drawing_bounds = self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+        self.frequency_vs_degree_panel.canvas.variables.shape_drag_xy_limits[
+            str(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)] = canvas_drawing_bounds
+        self.app_variables.fft_canvas_bounds = self.frequency_vs_degree_panel.canvas.get_shape_canvas_coords(
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+        self.frequency_vs_degree_panel.canvas.show_shape(
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
 
         filtered_numpy_reader = NumpyImageReader(self.get_filtered_image())
         self.filtered_panel.set_image_reader(filtered_numpy_reader)
@@ -517,17 +545,20 @@ class ApertureTool(WidgetPanel):
             y1 = start_fft_select_box[1]
             x2 = start_fft_select_box[2] + step
             y2 = start_fft_select_box[3]
-            self.filtered_panel.image_canvas.modify_existing_shape_using_canvas_coords(select_box_id, (x1, y1, x2, y2), update_pixel_coords=True)
+            self.filtered_panel.image_canvas.modify_existing_shape_using_canvas_coords(
+                select_box_id, (x1, y1, x2, y2), update_pixel_coords=True)
             self.filtered_panel.image_canvas.update()
             filtered_image = self.get_filtered_image()
             frame_sequence.append(filtered_image)
         frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
-        self.filtered_panel.image_canvas.modify_existing_shape_using_canvas_coords(select_box_id, start_fft_select_box, update_pixel_coords=True)
+        self.filtered_panel.image_canvas.modify_existing_shape_using_canvas_coords(
+            select_box_id, start_fft_select_box, update_pixel_coords=True)
         self.filtered_panel.image_canvas.update()
 
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
-        current_bounds = self.frequency_vs_degree_panel.canvas.canvas_shape_coords_to_image_coords(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+        current_bounds = self.frequency_vs_degree_panel.canvas.canvas_shape_coords_to_image_coords(
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
         x_min = min(current_bounds[1], current_bounds[3])
         x_max = max(current_bounds[1], current_bounds[3])
         y_min = min(current_bounds[0], current_bounds[2])
@@ -554,8 +585,10 @@ class ApertureTool(WidgetPanel):
         # handle units
         self.phase_history.resolution_range_units.set_text("meters")
         self.phase_history.resolution_cross_units.set_text("meters")
-        range_resolution = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.ImpRespWid / (fraction_range / 100.0)
-        cross_resolution = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.ImpRespWid / (fraction_cross / 100.0)
+        range_resolution = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.ImpRespWid / \
+                           (fraction_range / 100.0)
+        cross_resolution = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.ImpRespWid / \
+                           (fraction_cross / 100.0)
 
         tmp_range_resolution = range_resolution
         tmp_cross_resolution = cross_resolution
@@ -615,8 +648,10 @@ class ApertureTool(WidgetPanel):
         if self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.TwistAng and \
                 self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.GrazeAng:
 
-            cross_ground_resolution = cross_resolution / numpy.cos(numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.TwistAng))
-            range_ground_resolution = range_resolution / numpy.cos(numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.GrazeAng))
+            cross_ground_resolution = cross_resolution / numpy.cos(
+                numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.TwistAng))
+            range_ground_resolution = range_resolution / numpy.cos(
+                numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.GrazeAng))
 
             if self.phase_history.english_units_checkbox.is_selected():
                 tmp_cross_ground_res = cross_ground_resolution / scipy_constants.foot

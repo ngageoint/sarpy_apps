@@ -5,6 +5,7 @@ from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasP
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
+from tk_builder.widgets import widget_descriptors
 import numpy as np
 
 
@@ -29,18 +30,19 @@ class AppVariables(object):
 
 
 class WakeTool(WidgetPanel):
-    side_panel = SidePanel          # type: SidePanel
-    image_canvas = ImageCanvasPanel      # type: ImageCanvasPanel
+    _widget_list = ("side_panel", "image_canvas")
+    side_panel = widget_descriptors.PanelDescriptor(
+        "side_panel", SidePanel, default_text="wake tool controls")      # type: SidePanel
+    image_canvas = widget_descriptors.ImageCanvasPanelDescriptor("image_canvas")  # type: ImageCanvasPanel
 
     def __init__(self, primary):
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
-        widget_list = ["image_canvas", "side_panel"]
-        self.init_w_vertical_layout(widget_list)
+        self.init_w_vertical_layout()
         self.variables = AppVariables()
 
         self.side_panel.set_spacing_between_buttons(0)
-        self.image_canvas.set_canvas_size(600, 400)
+        self.image_canvas.set_canvas_size(1200, 800)
 
         # need to pack both primary frame and self, since this is the main app window.
         primary_frame.pack()
@@ -49,8 +51,6 @@ class WakeTool(WidgetPanel):
         # set up event listeners
         self.side_panel.buttons.line_draw.on_left_mouse_click(self.callback_press_line_button)
         self.side_panel.buttons.point_draw.on_left_mouse_click(self.callback_press_point_button)
-        self.side_panel.buttons.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
-        self.side_panel.buttons.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
 
         self.image_canvas.canvas.variables.line_width = self.variables.line_width
         self.image_canvas.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
@@ -64,7 +64,7 @@ class WakeTool(WidgetPanel):
         if self.side_panel.file_selector.fname:
             self.variables.image_fname = self.side_panel.file_selector.fname
         self.variables.image_reader = ComplexImageReader(self.variables.image_fname)
-        self.image_canvas.canvas._set_image_reader(self.variables.image_reader)
+        self.image_canvas.set_image_reader(self.variables.image_reader)
 
     # noinspection PyUnusedLocal
     def callback_press_line_button(self, event):
@@ -77,16 +77,6 @@ class WakeTool(WidgetPanel):
         self.side_panel.buttons.set_active_button(self.side_panel.buttons.point_draw)
         self.image_canvas.canvas.set_current_tool_to_draw_point()
         self.image_canvas.canvas.variables.current_shape_id = self.variables.point_id
-
-    # noinspection PyUnusedLocal
-    def callback_set_to_zoom_in(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.zoom_in)
-        self.image_canvas.canvas.set_current_tool_to_zoom_in()
-
-    # noinspection PyUnusedLocal
-    def callback_set_to_zoom_out(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.zoom_out)
-        self.image_canvas.canvas.set_current_tool_to_zoom_out()
 
     def callback_handle_left_mouse_click(self, event):
         # first do all the normal mouse click functionality of the canvas

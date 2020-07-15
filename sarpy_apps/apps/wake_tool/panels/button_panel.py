@@ -1,16 +1,14 @@
 from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets import widget_descriptors
 
 
 class ButtonPanel(WidgetPanel):
+    _widget_list = ("line_draw", "point_draw")
+    line_draw = widget_descriptors.ButtonDescriptor("line_draw", default_text="line")  # type: basic_widgets.Button
+    point_draw = widget_descriptors.ButtonDescriptor("point_draw", default_text="point")  # type:  basic_widgets.Button
+
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.rect_draw = basic_widgets.Button
-        self.line_draw = basic_widgets.Button
-        self.point_draw = basic_widgets.Button
-        self.zoom_in = basic_widgets.Button
-        self.zoom_out = basic_widgets.Button
 
-        widget_list = ["line_draw", "point_draw", "zoom_in", "zoom_out"]
-        self.init_w_box_layout(widget_list, 2, column_widths=8, row_heights=2)
-        self.set_label_text("wake tool buttons")
+        self.init_w_box_layout(2, column_widths=8, row_heights=2)

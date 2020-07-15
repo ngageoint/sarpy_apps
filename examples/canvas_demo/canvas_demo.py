@@ -2,7 +2,7 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from sarpy_apps.apps.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
+from examples.canvas_demo.panels import CanvasDemoButtonPanel
 from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
