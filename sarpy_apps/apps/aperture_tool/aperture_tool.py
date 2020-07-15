@@ -50,7 +50,7 @@ class ApertureTool(WidgetPanel):
 
         self.init_w_horizontal_layout()
 
-        self.filtered_panel.canvas.set_canvas_size(900, 700)
+        self.filtered_panel.set_canvas_size(900, 700)
         self.frequency_vs_degree_panel.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.canvas.on_left_mouse_motion(self.callback_frequency_vs_degree_left_mouse_motion)
@@ -162,8 +162,8 @@ class ApertureTool(WidgetPanel):
             aperture_distance = full_canvas_x_aperture * self.app_variables.animation_aperture_faction
 
             start_locs = numpy.linspace(self.app_variables.fft_canvas_bounds[0],
-                                      self.app_variables.fft_canvas_bounds[2] - aperture_distance,
-                                      self.app_variables.animation_n_frames)
+                                        self.app_variables.fft_canvas_bounds[2] - aperture_distance,
+                                        self.app_variables.animation_n_frames)
 
             x_start = start_locs[self.app_variables.animation_current_position]
             new_rect = (x_start,
@@ -275,10 +275,11 @@ class ApertureTool(WidgetPanel):
         if self.animation_panel.mode_panel.reverse.is_selected():
             direction_forward_or_back = "back"
         time_between_frames = 1/self.app_variables.animation_frame_rate
-        self.animation_panel.animation_settings.disable_all_buttons()
         self.animation_panel.animation_settings.stop.config(state="normal")
 
         def play_animation():
+            self.animation_panel.animation_settings.disable_all_widgets()
+            self.animation_panel.animation_settings.stop.config(state="normal")
             if direction_forward_or_back == "forward":
                 self.app_variables.animation_current_position = -1
             else:
@@ -286,6 +287,7 @@ class ApertureTool(WidgetPanel):
             for i in range(self.app_variables.animation_n_frames):
                 self.update_animation_params()
                 if self.app_variables.animation_stop_pressed:
+                    self.animation_panel.animation_settings.enable_all_widgets()
                     break
                 tic = time.time()
                 self.step_animation(direction_forward_or_back, mode)
@@ -301,7 +303,8 @@ class ApertureTool(WidgetPanel):
         else:
             play_animation()
         self.app_variables.animation_stop_pressed = False
-        self.animation_panel.animation_settings.activate_all_buttons()
+        self.animation_panel.animation_settings.enable_all_widgets()
+        self.animation_panel.unpress_all_buttons()
 
     def animation_fast_slow_popup(self):
         self.animation_popup_panel.deiconify()
@@ -336,7 +339,7 @@ class ApertureTool(WidgetPanel):
 
         popup = tkinter.Toplevel(self.primary)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
-        selected_region_popup.image_canvas.canvas._set_image_reader(self.app_variables.sicd_reader_object)
+        selected_region_popup.image_canvas.set_image_reader(self.app_variables.sicd_reader_object)
 
         self.primary.wait_window(popup)
 
@@ -347,7 +350,7 @@ class ApertureTool(WidgetPanel):
 
         self.app_variables.fft_display_data = remap.density(fft_complex_data)
         fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-        self.frequency_vs_degree_panel.canvas._set_image_reader(fft_reader)
+        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
 
         self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
         self.frequency_vs_degree_panel.canvas.variables.current_shape_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
@@ -438,7 +441,7 @@ class ApertureTool(WidgetPanel):
     def callback_save_fft_panel_as_png(self, event):
         filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
                                                 filetypes=(("png file", "*.png"), ("all files", "*.*")))
-        self.image_canvas.figure_canvas.save_full_canvas_as_png(filename)
+        self.frequency_vs_degree_panel.canvas.save_full_canvas_as_png(filename)
 
     def callback_get_adjusted_image(self, event):
         filtered_image = self.get_filtered_image()
@@ -497,12 +500,13 @@ class ApertureTool(WidgetPanel):
         return ft_cdata
 
     # noinspection PyUnusedLocal
+    # TODO: update variables, some don't exist in the current form.
     def callback_save_animation(self, event):
         filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
                                                 filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
         select_box_id = self.filtered_panel.canvas.variables.current_shape_id
         start_fft_select_box = self.filtered_panel.canvas.get_shape_canvas_coords(select_box_id)
-        n_steps = int(self.filtered_panel.n_steps.get())
+        n_steps = int(self.animation_panel.animation_settings.number_of_frames.get())
         n_pixel_translate = int(self.filtered_panel.fft_button_panel.n_pixels_horizontal.get())
         step_factor = numpy.linspace(0, n_pixel_translate, n_steps)
         fps = float(self.filtered_panel.fft_button_panel.animation_fps.get())

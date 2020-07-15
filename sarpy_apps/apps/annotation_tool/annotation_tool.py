@@ -76,7 +76,7 @@ class AnnotationTool(WidgetPanel):
             self.update_context_decimation_value()
             self.annotate_panel.image_canvas_panel.canvas._set_image_reader(image_reader)
             self.variables.annotate_canvas = self.annotate_panel.image_canvas_panel
-            self.context_panel.context_dashboard.annotation_selector.activate_all_buttons()
+            self.context_panel.context_dashboard.annotation_selector.enable_all_buttons()
 
     def callback_content_select_annotation_file(self, event):
         popup = tkinter.Toplevel(self.parent)
@@ -110,8 +110,8 @@ class AnnotationTool(WidgetPanel):
                     self.variables.file_annotation_fname = file_annotation_fname
                     self.variables.file_annotation_collection = FileAnnotationCollection(label_schema=self.variables.label_schema,
                                                                                          image_file_name=self.variables.image_fname)
-                    self.context_panel.context_dashboard.buttons.activate_all_buttons()
-                    self.annotate_panel.annotate_dashboard.controls.activate_all_buttons()
+                    self.context_panel.context_dashboard.buttons.enable_all_buttons()
+                    self.annotate_panel.annotate_dashboard.controls.enable_all_buttons()
 
                     # disable the original file controls so the user can't go back and select a different annotation
                     # file during the labeling process
@@ -133,8 +133,8 @@ class AnnotationTool(WidgetPanel):
                 self.variables.file_annotation_collection = FileAnnotationCollection.from_file(annotation_fname)
                 self.variables.label_schema = self.variables.file_annotation_collection.label_schema
                 if self.variables.file_annotation_collection.image_file_name == os.path.basename(self.variables.image_fname):
-                    self.context_panel.context_dashboard.buttons.activate_all_buttons()
-                    self.annotate_panel.annotate_dashboard.controls.activate_all_buttons()
+                    self.context_panel.context_dashboard.buttons.enable_all_buttons()
+                    self.annotate_panel.annotate_dashboard.controls.enable_all_buttons()
 
                     # disable the original file controls so the user can't go back and select a different annotation
                     # file during the labeling process

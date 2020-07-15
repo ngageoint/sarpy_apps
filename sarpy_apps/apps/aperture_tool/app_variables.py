@@ -33,9 +33,9 @@ class AppVariables(object):
     animation_n_frames = IntegerDescriptor(
         'animation_n_frames', docstring='')  # type: int
     # TODO: this one was annotated as int? Is this a typo?
-    animation_aperture_faction = IntegerDescriptor(
+    animation_aperture_faction = FloatDescriptor(
         'animation_aperture_faction', docstring='')  # type: int
-    animation_frame_rate = IntegerDescriptor(
+    animation_frame_rate = FloatDescriptor(
         'animation_frame_rate', docstring='')  # type: int
     animation_cycle_continuously = BooleanDescriptor(
         'animation_cycle_continuously', default_value=False, docstring='')  # type: bool
