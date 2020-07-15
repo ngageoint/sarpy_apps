@@ -336,7 +336,7 @@ class ApertureTool(WidgetPanel):
 
         popup = tkinter.Toplevel(self.primary)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
-        selected_region_popup.image_canvas.canvas.set_image_reader(self.app_variables.sicd_reader_object)
+        selected_region_popup.image_canvas.canvas._set_image_reader(self.app_variables.sicd_reader_object)
 
         self.primary.wait_window(popup)
 
@@ -347,7 +347,7 @@ class ApertureTool(WidgetPanel):
 
         self.app_variables.fft_display_data = remap.density(fft_complex_data)
         fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-        self.frequency_vs_degree_panel.canvas.set_image_reader(fft_reader)
+        self.frequency_vs_degree_panel.canvas._set_image_reader(fft_reader)
 
         self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
         self.frequency_vs_degree_panel.canvas.variables.current_shape_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
@@ -358,7 +358,7 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.canvas.show_shape(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
 
         filtered_numpy_reader = NumpyImageReader(self.get_filtered_image())
-        self.filtered_panel.canvas.set_image_reader(filtered_numpy_reader)
+        self.filtered_panel.set_image_reader(filtered_numpy_reader)
 
         self.image_info_panel.chip_size_panel.nx.set_text(numpy.shape(selected_region_complex_data)[1])
         self.image_info_panel.chip_size_panel.ny.set_text(numpy.shape(selected_region_complex_data)[0])
@@ -369,9 +369,53 @@ class ApertureTool(WidgetPanel):
 
         self.frequency_vs_degree_panel.set_canvas_size(800, 600)
 
-        self.frequency_vs_degree_panel.update()
-        self.frequency_vs_degree_panel._update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
-        self.frequency_vs_degree_panel._update_y_axis(start_val=7.409, stop_val=11.39, label="Frequency (GHz)")
+        self.frequency_vs_degree_panel.x_label = "Polar Angle (degrees)"
+        self.frequency_vs_degree_panel.y_label = "Frequency (GHz)"
+
+        polar_angle_min, polar_angle_max = self.get_polar_angle_bounds()
+
+        self.frequency_vs_degree_panel.image_x_min_val = polar_angle_min
+        self.frequency_vs_degree_panel.image_x_max_val = polar_angle_max
+
+        min_frequency, max_frequency = self.get_frequency_bounds()
+        self.frequency_vs_degree_panel.image_y_min_val = max_frequency
+        self.frequency_vs_degree_panel.image_y_max_val = min_frequency
+
+        self.frequency_vs_degree_panel.update_outer_canvas()
+
+        # self.frequency_vs_degree_panel._update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
+        # self.frequency_vs_degree_panel._update_y_axis(start_val=7.409, stop_val=11.39, label="Frequency (GHz)")
+
+    def get_polar_angle_bounds(self):
+        x1 = self.get_fft_image_bounds()[1]
+        x2 = self.get_fft_image_bounds()[3]
+
+        polar_angle_min = self.app_variables.sicd_reader_object.base_reader.sicd_meta.PFA.Kaz1
+        polar_angle_max = self.app_variables.sicd_reader_object.base_reader.sicd_meta.PFA.Kaz2
+
+        m = (polar_angle_max - polar_angle_min) / (x2 - x1)
+
+        min_polar_angle = polar_angle_min - m * x1
+        max_polar_angle = m * self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx + min_polar_angle
+
+        return min_polar_angle, max_polar_angle
+
+    def get_frequency_bounds(self):
+        y1 = self.get_fft_image_bounds()[0]
+        y2 = self.get_fft_image_bounds()[2]
+
+        frequency_min = self.app_variables.sicd_reader_object.base_reader.sicd_meta.RadarCollection.TxFrequency.Min
+        frequency_max = self.app_variables.sicd_reader_object.base_reader.sicd_meta.RadarCollection.TxFrequency.Max
+
+        m = (frequency_max - frequency_min) / (y2 - y1)
+
+        min_frequency = frequency_min - m * y1
+        max_frequency = m * self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny + min_frequency
+
+        min_frequency = min_frequency / 1e9
+        max_frequency = max_frequency / 1e9
+
+        return min_frequency, max_frequency
 
     def get_fft_image_bounds(self,
                              ):             # type: (...) -> (int, int, int, int)
@@ -398,10 +442,10 @@ class ApertureTool(WidgetPanel):
 
     def callback_get_adjusted_image(self, event):
         filtered_image = self.get_filtered_image()
-        self.frequency_vs_degree_panel.canvas.set_image_reader(NumpyImageReader(filtered_image))
+        self.frequency_vs_degree_panel.set_image_reader(NumpyImageReader(filtered_image))
 
     def update_filtered_image(self):
-        self.filtered_panel.canvas.set_image_reader(NumpyImageReader(self.get_filtered_image()))
+        self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
 
     def get_filtered_image(self):
         select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id

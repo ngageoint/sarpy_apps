@@ -3,11 +3,13 @@ from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasP
 from tk_builder.panel_builder.widget_panel import WidgetPanel
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.toolbar import Toolbar
+from tk_builder.widgets import widget_descriptors
 
 
 class SelectedRegionPanel(WidgetPanel):
-    image_canvas = ImageCanvasPanel      # type: ImageCanvasPanel
-    toolbar = Toolbar                   # type: Toolbar
+    _widget_list = ("toolbar", "image_canvas")
+    image_canvas = widget_descriptors.PanelDescriptor("image_canvas", ImageCanvasPanel)  # type: ImageCanvasPanel
+    toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)                    # type: Toolbar
 
     def __init__(self,
                  parent,
@@ -15,17 +17,15 @@ class SelectedRegionPanel(WidgetPanel):
                  ):
         # set the parent frame
         WidgetPanel.__init__(self, parent)
-        widgets_list = ["toolbar", "image_canvas"]
 
         self.parent = parent
         self.app_variables = app_variables
 
-        self.init_w_vertical_layout(widgets_list)
+        self.init_w_vertical_layout()
 
         sicd_reader = ComplexImageReader(app_variables.sicd_fname)
-        # self.image_canvas_panel = ImageCanvas()
         self.image_canvas.set_canvas_size(1000, 1000)
-        self.image_canvas.canvas.set_image_reader(sicd_reader)
+        self.image_canvas.canvas._set_image_reader(sicd_reader)
 
         self.pack()
 

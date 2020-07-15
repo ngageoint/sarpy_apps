@@ -64,7 +64,7 @@ class WakeTool(WidgetPanel):
         if self.side_panel.file_selector.fname:
             self.variables.image_fname = self.side_panel.file_selector.fname
         self.variables.image_reader = ComplexImageReader(self.variables.image_fname)
-        self.image_canvas.canvas.set_image_reader(self.variables.image_reader)
+        self.image_canvas.canvas._set_image_reader(self.variables.image_reader)
 
     # noinspection PyUnusedLocal
     def callback_press_line_button(self, event):

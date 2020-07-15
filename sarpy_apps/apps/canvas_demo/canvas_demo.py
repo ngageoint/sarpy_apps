@@ -218,7 +218,7 @@ class CanvasDemo(WidgetPanel):
         if new_fname:
             self.variables.fname = new_fname
             self.variables.image_reader = ComplexImageReader(new_fname)
-            self.canvas_demo_image_panel.canvas.set_image_reader(self.variables.image_reader)
+            self.canvas_demo_image_panel.canvas._set_image_reader(self.variables.image_reader)
 
 
 def main():

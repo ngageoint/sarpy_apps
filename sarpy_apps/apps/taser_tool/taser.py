@@ -7,6 +7,7 @@ from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasP
 from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
+from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
 from sarpy_apps.apps.taser_tool.panels.taser_button_panel import TaserButtonPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
@@ -23,17 +24,17 @@ class AppVariables(object):
 
 
 class Taser(WidgetPanel):
-    button_panel = TaserButtonPanel         # type: TaserButtonPanel
-    pyplot_panel = PyplotImagePanel         # type: PyplotImagePanel
-    taser_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
+    _widget_list = ("button_panel", "taser_image_panel", "pyplot_panel")
+    button_panel = widget_descriptors.PanelDescriptor("button_panel", TaserButtonPanel)         # type: TaserButtonPanel
+    taser_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("taser_image_panel")         # type: ImageCanvasPanel
+    pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)         # type: PyplotImagePanel
 
     def __init__(self, primary):
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
-        widget_list = ["button_panel", "taser_image_panel", "pyplot_panel"]
-        self.init_w_horizontal_layout(widget_list)
+        self.init_w_horizontal_layout()
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)

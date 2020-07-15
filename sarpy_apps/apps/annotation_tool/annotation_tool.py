@@ -72,9 +72,9 @@ class AnnotationTool(WidgetPanel):
         if self.context_panel.context_dashboard.file_selector.fname:
             self.variables.image_fname = self.context_panel.context_dashboard.file_selector.fname
             image_reader = ComplexImageReader(self.variables.image_fname)
-            self.context_panel.image_canvas_panel.canvas.set_image_reader(image_reader)
+            self.context_panel.image_canvas_panel.canvas._set_image_reader(image_reader)
             self.update_context_decimation_value()
-            self.annotate_panel.image_canvas_panel.canvas.set_image_reader(image_reader)
+            self.annotate_panel.image_canvas_panel.canvas._set_image_reader(image_reader)
             self.variables.annotate_canvas = self.annotate_panel.image_canvas_panel
             self.context_panel.context_dashboard.annotation_selector.activate_all_buttons()
 

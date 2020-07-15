@@ -57,7 +57,7 @@ class Ortho(WidgetPanel):
         if new_fname:
             self.fname = new_fname
             self.image_reader = ComplexImageReader(new_fname)
-            self.raw_frame_image_panel.canvas.set_image_reader(self.image_reader)
+            self.raw_frame_image_panel.canvas._set_image_reader(self.image_reader)
 
     # noinspection PyUnusedLocal
     def callback_display_ortho_image(self, event):
