@@ -1,46 +1,39 @@
-from tk_builder.panel_builder.widget_panel import WidgetPanel
-from tk_builder.panels.file_selector.file_selector import FileSelector
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets import widget_descriptors
 
 
 class ButtonPanel(WidgetPanel):
+    _widget_list = ("pan", "select", "move_rect")
+
+    pan = widget_descriptors.ButtonDescriptor("pan")  # type: basic_widgets.Button
+    select = widget_descriptors.ButtonDescriptor("select")  # type: basic_widgets.Button
+    move_rect = widget_descriptors.ButtonDescriptor("move_rect")  # type: basic_widgets.Button
+
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.zoom_in = basic_widgets.Button
-        self.zoom_out = basic_widgets.Button
-        self.pan = basic_widgets.Button
-        self.select = basic_widgets.Button
-        self.move_rect = basic_widgets.Button
-
-        widget_list = ["zoom_in", "zoom_out", "pan", "select", "move_rect"]
-        self.init_w_horizontal_layout(widget_list)
-        self.set_label_text("controls")
+        self.init_w_horizontal_layout()
 
 
 class ContextInfoPanel(WidgetPanel):
+    _widget_list = ("decimation_label", "decimation_val")
+    decimation_label = widget_descriptors.LabelDescriptor("decimation_label")  # type: basic_widgets.Label
+    decimation_val = widget_descriptors.EntryDescriptor("decimation_val")  # type: basic_widgets.Entry
+
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.decimation_label = basic_widgets.Label
-        self.decimation_val = basic_widgets.Entry
-
-        widget_list = ["decimation_label", "decimation_val"]
-
-        self.init_w_box_layout(widget_list, n_columns=2, column_widths=[20, 10])
-        self.set_label_text("info panel")
-
-        self.decimation_label.config(text="decimation")
-        self.decimation_val.config(state='disabled')
+        self.init_w_box_layout(n_columns=2, column_widths=[20, 10])
 
 
 class ContextMasterDash(WidgetPanel):
-    buttons = ButtonPanel                   # type: ButtonPanel
-    file_selector = FileSelector            # type: FileSelector
-    annotation_selector = FileSelector      # type: FileSelector
-    info_panel = ContextInfoPanel           # type: ContextInfoPanel
+    _widget_list = ("buttons", "file_selector", "annotation_selector", "info_panel")
+    buttons = widget_descriptors.PanelDescriptor("buttons", ButtonPanel)                   # type: ButtonPanel
+    file_selector = widget_descriptors.FileSelectorDescriptor("file_selector")           # type: FileSelector
+    annotation_selector = widget_descriptors.FileSelectorDescriptor("annotation_selector")  # type: FileSelector
+    info_panel = widget_descriptors.PanelDescriptor("info_panel", ContextInfoPanel)           # type: ContextInfoPanel
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        widget_list = ["file_selector", "annotation_selector", "buttons", "info_panel"]
-        self.init_w_basic_widget_list(widget_list, 3, [1, 1, 2])
-        self.set_label_text("wake tool controls")
+        self.init_w_basic_widget_list(3, [1, 1, 2])
 

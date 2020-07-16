@@ -6,9 +6,9 @@ from scipy.fftpack import fft2, ifft2, fftshift
 import tkinter
 from tkinter import filedialog
 from tkinter import Menu
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
 from tk_builder.widgets import widget_descriptors
@@ -36,11 +36,11 @@ class ApertureTool(WidgetPanel):
         "frequency_vs_degree_panel")  # type: ImageCanvasPanel
     filtered_panel = widget_descriptors.ImageCanvasPanelDescriptor("filtered_panel")  # type: ImageCanvasPanel
 
-    image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)   # type: ImageInfoPanel
-    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)                        # type: MetaIcon
-    phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)    # type: PhaseHistoryPanel
-    metaviewer = Metaviewer                         # type: Metaviewer
-    animation_panel = AnimationPanel                # type: AnimationPanel
+    image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)  # type: ImageInfoPanel
+    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
+    phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)  # type: PhaseHistoryPanel
+    metaviewer = Metaviewer  # type: Metaviewer
+    animation_panel = AnimationPanel  # type: AnimationPanel
 
     def __init__(self, primary):
         self.app_variables = AppVariables()
@@ -141,21 +141,20 @@ class ApertureTool(WidgetPanel):
 
     # noinspection PyUnusedLocal
     def callback_step_forward(self, event):
-        mode = self.animation_panel.mode_panel.get_mode()
-        self.step_animation("forward", mode)
+        self.step_animation("forward")
 
     # noinspection PyUnusedLocal
     def callback_step_back(self, event):
-        mode = self.animation_panel.mode_panel.get_mode()
-        self.step_animation("back", mode)
+        self.step_animation("back")
 
     def step_animation(self,
                        direction_forward_or_back,  # type: str
-                       mode,  # type: str
                        ):
         self.update_animation_params()
         full_canvas_x_aperture = self.app_variables.fft_canvas_bounds[2] - self.app_variables.fft_canvas_bounds[0]
         full_canvas_y_aperture = self.app_variables.fft_canvas_bounds[3] - self.app_variables.fft_canvas_bounds[1]
+
+        mode = self.animation_panel.mode_panel.mode_selections.selection()
 
         if direction_forward_or_back == "forward":
             if self.app_variables.animation_current_position < self.app_variables.animation_n_frames - 1:
@@ -163,7 +162,7 @@ class ApertureTool(WidgetPanel):
         elif direction_forward_or_back == "back":
             if self.app_variables.animation_current_position > 0:
                 self.app_variables.animation_current_position -= 1
-        if mode == self.animation_panel.mode_panel.Modes.slow:
+        if self.animation_panel.mode_panel.mode_selections.selection() == self.animation_panel.mode_panel.mode_selections.slow_time:
             aperture_distance = full_canvas_x_aperture * self.app_variables.animation_aperture_faction
 
             start_locs = numpy.linspace(self.app_variables.fft_canvas_bounds[0],
@@ -175,7 +174,7 @@ class ApertureTool(WidgetPanel):
                         self.app_variables.fft_canvas_bounds[1],
                         x_start + aperture_distance,
                         self.app_variables.fft_canvas_bounds[3])
-        elif mode == self.animation_panel.mode_panel.Modes.fast:
+        elif mode == self.animation_panel.mode_panel.mode_selections.fast_time:
             aperture_distance = full_canvas_y_aperture * self.app_variables.animation_aperture_faction
 
             start_locs = numpy.linspace(self.app_variables.fft_canvas_bounds[1],
@@ -187,7 +186,7 @@ class ApertureTool(WidgetPanel):
                         y_start,
                         self.app_variables.fft_canvas_bounds[2],
                         y_start + aperture_distance)
-        elif mode == self.animation_panel.mode_panel.Modes.aperture_percent:
+        elif mode == self.animation_panel.mode_panel.mode_selections.aperture_percent:
             xul = self.app_variables.fft_canvas_bounds[0]
             xlr = self.app_variables.fft_canvas_bounds[2]
             yul = self.app_variables.fft_canvas_bounds[1]
@@ -208,7 +207,7 @@ class ApertureTool(WidgetPanel):
                               self.app_variables.animation_min_aperture_percent / 2
             canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
                               self.app_variables.animation_min_aperture_percent / 2
-            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture *\
+            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * \
                               self.app_variables.animation_min_aperture_percent / 2
 
             x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation_n_frames)
@@ -220,7 +219,7 @@ class ApertureTool(WidgetPanel):
 
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
-        elif mode == self.animation_panel.mode_panel.Modes.full_range_badwidth:
+        elif mode == self.animation_panel.mode_panel.mode_selections.full_range_bandwidth:
             xul = self.app_variables.fft_canvas_bounds[0]
             xlr = self.app_variables.fft_canvas_bounds[2]
             yul = self.app_variables.fft_canvas_bounds[1]
@@ -249,7 +248,7 @@ class ApertureTool(WidgetPanel):
 
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
-        elif mode == self.animation_panel.mode_panel.Modes.full_azimuth_bandwidth:
+        elif mode == self.animation_panel.mode_panel.mode_selections.full_az_bandwidth:
             xul = self.app_variables.fft_canvas_bounds[0]
             xlr = self.app_variables.fft_canvas_bounds[2]
             yul = self.app_variables.fft_canvas_bounds[1]
@@ -257,10 +256,10 @@ class ApertureTool(WidgetPanel):
 
             canvas_xul_start = xul
             canvas_xlr_start = xlr
-            canvas_yul_start = (yul + ylr) / 2 - full_canvas_y_aperture * \
-                               self.app_variables.animation_max_aperture_percent / 2
-            canvas_ylr_start = (yul + ylr) / 2 + full_canvas_y_aperture * \
-                               self.app_variables.animation_max_aperture_percent / 2
+            canvas_yul_start = \
+                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+            canvas_ylr_start = \
+                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
 
             canvas_xul_stop = xul
             canvas_xlr_stop = xlr
@@ -291,11 +290,11 @@ class ApertureTool(WidgetPanel):
     # noinspection PyUnusedLocal
     def callback_play_animation_fast_slow(self, event):
         self.update_animation_params()
-        mode = self.animation_panel.mode_panel.get_mode()
+
         direction_forward_or_back = "forward"
         if self.animation_panel.mode_panel.reverse.is_selected():
             direction_forward_or_back = "back"
-        time_between_frames = 1/self.app_variables.animation_frame_rate
+        time_between_frames = 1 / self.app_variables.animation_frame_rate
         self.animation_panel.animation_settings.stop.config(state="normal")
 
         def play_animation():
@@ -311,7 +310,7 @@ class ApertureTool(WidgetPanel):
                     self.animation_panel.animation_settings.enable_all_widgets()
                     break
                 tic = time.time()
-                self.step_animation(direction_forward_or_back, mode)
+                self.step_animation(direction_forward_or_back)
                 self.frequency_vs_degree_panel.update()
                 toc = time.time()
                 if (toc - tic) < time_between_frames:
@@ -449,7 +448,7 @@ class ApertureTool(WidgetPanel):
         return min_frequency, max_frequency
 
     def get_fft_image_bounds(self,
-                             ):             # type: (...) -> (int, int, int, int)
+                             ):  # type: (...) -> (int, int, int, int)
         meta = self.app_variables.sicd_reader_object.base_reader.sicd_meta
 
         row_ratio = meta.Grid.Row.ImpRespBW * meta.Grid.Row.SS
@@ -458,10 +457,10 @@ class ApertureTool(WidgetPanel):
         full_n_rows = self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny
         full_n_cols = self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx
 
-        full_im_y_start = int(full_n_rows*(1 - row_ratio)/2)
+        full_im_y_start = int(full_n_rows * (1 - row_ratio) / 2)
         full_im_y_end = full_n_rows - full_im_y_start
 
-        full_im_x_start = int(full_n_cols*(1 - col_ratio)/2)
+        full_im_x_start = int(full_n_cols * (1 - col_ratio) / 2)
         full_im_x_end = full_n_cols - full_im_x_start
 
         return full_im_y_start, full_im_x_start, full_im_y_end, full_im_x_end
@@ -514,7 +513,7 @@ class ApertureTool(WidgetPanel):
 
     @staticmethod
     def get_fft_complex_data(ro,  # type: BaseReader
-                             cdata,     # type: numpy.ndarray
+                             cdata,  # type: numpy.ndarray
                              ):
         # TODO: change this to a tuple sequence to get rid of FutureWarning
         if ro.sicd_meta.Grid.Col.Sgn > 0 and ro.sicd_meta.Grid.Row.Sgn > 0:

@@ -1,4 +1,4 @@
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
 

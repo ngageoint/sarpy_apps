@@ -2,12 +2,13 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from examples.canvas_demo.panels import CanvasDemoButtonPanel
-from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
+from examples.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
+from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
+from tk_builder.widgets import widget_descriptors
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
@@ -32,17 +33,17 @@ class AppVariables(object):
 
 
 class CanvasDemo(WidgetPanel):
-    button_panel = CanvasDemoButtonPanel         # type: CanvasDemoButtonPanel
-    pyplot_panel = PyplotImagePanel         # type: PyplotImagePanel
-    canvas_demo_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
+    _widget_list = ("button_panel", "pyplot_panel", "canvas_demo_image_panel")
+    button_panel = widget_descriptors.PanelDescriptor("button_panel", CanvasDemoButtonPanel)   # type: CanvasDemoButtonPanel
+    pyplot_panel = widget_descriptors.PyplotImagePanelDescriptor("pyplot_panel")   # type: PyplotImagePanel
+    canvas_demo_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("canvas_demo_image_panel")   # type: ImageCanvasPanel
 
     def __init__(self, master):
         master_frame = tkinter.Frame(master)
         WidgetPanel.__init__(self, master_frame)
         self.variables = AppVariables()
 
-        widget_list = ["canvas_demo_image_panel", "pyplot_panel", "button_panel", ]
-        self.init_w_basic_widget_list(widget_list, 2, [2, 1])
+        self.init_w_basic_widget_list(2, [2, 1])
 
         # define panels widget_wrappers in master frame
         self.button_panel.set_spacing_between_buttons(0)
@@ -218,7 +219,7 @@ class CanvasDemo(WidgetPanel):
         if new_fname:
             self.variables.fname = new_fname
             self.variables.image_reader = ComplexImageReader(new_fname)
-            self.canvas_demo_image_panel.canvas._set_image_reader(self.variables.image_reader)
+            self.canvas_demo_image_panel.set_image_reader(self.variables.image_reader)
 
 
 def main():

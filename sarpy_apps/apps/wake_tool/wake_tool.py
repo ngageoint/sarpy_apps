@@ -1,9 +1,9 @@
 import tkinter
 from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
 from tk_builder.widgets.image_canvas import TOOLS
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 from tk_builder.widgets import widget_descriptors
 import numpy as np

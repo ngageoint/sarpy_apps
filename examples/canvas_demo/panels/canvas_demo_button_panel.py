@@ -1,35 +1,14 @@
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets import widget_descriptors
 
 
 class CanvasDemoButtonPanel(WidgetPanel):
-    fname_select = basic_widgets.Button
-    zoom_in = basic_widgets.Button
-    zoom_out = basic_widgets.Button
-    rect_select = basic_widgets.Button
-    update_rect_image = basic_widgets.Button
-    pan = basic_widgets.Button
-    draw_line_w_drag = basic_widgets.Button
-    draw_line_w_click = basic_widgets.Button
-    draw_arrow_w_drag = basic_widgets.Button
-    draw_arrow_w_click = basic_widgets.Button
-    draw_rect_w_drag = basic_widgets.Button
-    draw_rect_w_click = basic_widgets.Button
-    draw_polygon_w_click = basic_widgets.Button
-    draw_point_w_click = basic_widgets.Button
-    modify_existing_shape_coords = basic_widgets.Button
-    edit_existing_shape = basic_widgets.Button
-    color_selector = basic_widgets.Button
-    save_kml = basic_widgets.Button
-    select_existing_shape = basic_widgets.Combobox  # type: basic_widgets.Combobox
-    remap_dropdown = basic_widgets.Combobox         # type: basic_widgets.Combobox
-
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
-
-        controls = ["fname_select",
+    _widget_list = ("fname_select",
                     "zoom_in",
                     "zoom_out",
+                    "rect_select",
+                    "update_rect_image",
                     "pan",
                     "draw_line_w_drag",
                     "draw_line_w_click",
@@ -39,15 +18,38 @@ class CanvasDemoButtonPanel(WidgetPanel):
                     "draw_rect_w_click",
                     "draw_polygon_w_click",
                     "draw_point_w_click",
-                    "select_existing_shape",
                     "modify_existing_shape_coords",
                     "edit_existing_shape",
-                    "save_kml",
                     "color_selector",
-                    "rect_select",
-                    "remap_dropdown"]
+                    "save_kml",
+                    "select_existing_shape",
+                    "remap_dropdown",
+                    )
+    fname_select = widget_descriptors.ButtonDescriptor("fname_select")
+    zoom_in = widget_descriptors.ButtonDescriptor("zoom_in")
+    zoom_out = widget_descriptors.ButtonDescriptor("zoom_out")
+    rect_select = widget_descriptors.ButtonDescriptor("rect_select")
+    update_rect_image = widget_descriptors.ButtonDescriptor("update_rect_image")
+    pan = widget_descriptors.ButtonDescriptor("pan")
+    draw_line_w_drag = widget_descriptors.ButtonDescriptor("draw_line_w_drag")
+    draw_line_w_click = widget_descriptors.ButtonDescriptor("draw_line_w_click")
+    draw_arrow_w_drag = widget_descriptors.ButtonDescriptor("draw_arrow_w_drag")
+    draw_arrow_w_click = widget_descriptors.ButtonDescriptor("draw_arrow_w_click")
+    draw_rect_w_drag = widget_descriptors.ButtonDescriptor("draw_rect_w_drag")
+    draw_rect_w_click = widget_descriptors.ButtonDescriptor("draw_rect_w_click")
+    draw_polygon_w_click = widget_descriptors.ButtonDescriptor("draw_polygon_w_click")
+    draw_point_w_click = widget_descriptors.ButtonDescriptor("draw_point_w_click")
+    modify_existing_shape_coords = widget_descriptors.ButtonDescriptor("modify_existing_shape_coords")
+    edit_existing_shape = widget_descriptors.ButtonDescriptor("edit_existing_shape")
+    color_selector = widget_descriptors.ButtonDescriptor("color_selector")
+    save_kml = widget_descriptors.ButtonDescriptor("save_kml")
+    select_existing_shape = widget_descriptors.ComboboxDescriptor("select_existing_shape")  # type: basic_widgets.Combobox
+    remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")         # type: basic_widgets.Combobox
 
-        self.init_w_box_layout(controls, 4, column_widths=20)
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+
+        self.init_w_box_layout(4, column_widths=20)
 
         self.remap_dropdown.update_combobox_values(["density",
                                                     "brighter",
@@ -57,7 +59,6 @@ class CanvasDemoButtonPanel(WidgetPanel):
                                                     "log",
                                                     "pedf",
                                                     "nrl"])
-        self.set_label_text("taser buttons")
 
 
 if __name__ == '__main__':

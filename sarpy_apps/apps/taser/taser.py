@@ -2,14 +2,14 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from tk_builder.panels.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
-from sarpy_apps.apps.taser_tool.panels.taser_button_panel import TaserButtonPanel
+from sarpy_apps.apps.taser.panels.taser_button_panel import TaserButtonPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.quad_pol_image_reader import QuadPolImageReader
 

@@ -1,6 +1,6 @@
 from sarpy.annotation.annotate import FileAnnotationCollection
 from sarpy.annotation.schema_processing import LabelSchema
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 
 class AppVariables(object):

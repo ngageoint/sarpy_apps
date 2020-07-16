@@ -9,8 +9,9 @@ from sarpy_apps.apps.annotation_tool.panels.annotation_fname_popup.annotation_fn
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 
 import tkinter
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
+from tk_builder.widgets import widget_descriptors
 from sarpy.geometry.geometry_elements import Polygon
 from sarpy.annotation.annotate import FileAnnotationCollection
 from sarpy.annotation.annotate import Annotation
@@ -20,27 +21,25 @@ from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReade
 
 
 class AnnotationTool(WidgetPanel):
-    context_panel = ContextImagePanel
-    annotate_panel = AnnotateImagePanel
+    _widget_list = ("context_panel", "annotate_panel")
+    context_panel = widget_descriptors.PanelDescriptor("context_panel", ContextImagePanel)  # type: ContextImagePanel
+    annotate_panel = widget_descriptors.PanelDescriptor("annotate_panel", AnnotateImagePanel)  # type: AnnotateImagePanel
 
     def __init__(self, primary):
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
 
-        widgets_list = ["context_panel", "annotate_panel"]
-        self.init_w_horizontal_layout(widgets_list)
+        self.init_w_horizontal_layout()
         primary_frame.pack()
         self.pack()
 
         self.variables = AppVariables()
 
-        self.annotate_panel.annotate_dashboard.controls.disable_all_buttons()
-        self.context_panel.context_dashboard.annotation_selector.disable_all_buttons()
-        self.context_panel.context_dashboard.buttons.disable_all_buttons()
+        self.annotate_panel.annotate_dashboard.controls.disable_all_widgets()
+        self.context_panel.context_dashboard.annotation_selector.disable_all_widgets()
+        self.context_panel.context_dashboard.buttons.disable_all_widgets()
 
         # set up context panel event listeners
-        self.context_panel.context_dashboard.buttons.zoom_in.on_left_mouse_click(self.callback_context_set_to_zoom_in)
-        self.context_panel.context_dashboard.buttons.zoom_out.on_left_mouse_click(self.callback_context_set_to_zoom_out)
         self.context_panel.context_dashboard.buttons.pan.on_left_mouse_click(self.callback_context_set_to_pan)
         self.context_panel.context_dashboard.buttons.select.on_left_mouse_click(self.callback_context_set_to_select)
         self.context_panel.context_dashboard.buttons.move_rect.on_left_mouse_click(self.callback_context_set_to_move_rect)
@@ -138,8 +137,8 @@ class AnnotationTool(WidgetPanel):
 
                     # disable the original file controls so the user can't go back and select a different annotation
                     # file during the labeling process
-                    self.context_panel.context_dashboard.file_selector.disable_all_buttons()
-                    self.context_panel.context_dashboard.annotation_selector.disable_all_buttons()
+                    self.context_panel.context_dashboard.file_selector.disable_all_widgets()
+                    self.context_panel.context_dashboard.annotation_selector.disable_all_widgets()
 
                     # create canvas shapes from existing annotations and create dictionary to keep track of canvas geometries
                     # that are mapped to the annotations
@@ -169,16 +168,6 @@ class AnnotationTool(WidgetPanel):
     def callback_context_set_to_pan(self, event):
         self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.pan)
         self.context_panel.image_canvas_panel.canvas.set_current_tool_to_pan()
-
-    # noinspection PyUnusedLocal
-    def callback_context_set_to_zoom_in(self, event):
-        self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.zoom_in)
-        self.context_panel.image_canvas_panel.canvas.set_current_tool_to_zoom_in()
-
-    # noinspection PyUnusedLocal
-    def callback_context_set_to_zoom_out(self, event):
-        self.context_panel.context_dashboard.buttons.set_active_button(self.context_panel.context_dashboard.buttons.zoom_out)
-        self.context_panel.image_canvas_panel.canvas.set_current_tool_to_zoom_out()
 
     # noinspection PyUnusedLocal
     def callback_context_set_to_move_rect(self, event):

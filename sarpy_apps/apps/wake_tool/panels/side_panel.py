@@ -1,7 +1,7 @@
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from sarpy_apps.apps.wake_tool.panels.button_panel import ButtonPanel
 from sarpy_apps.apps.wake_tool.panels.info_panel import InfoPanel
-from tk_builder.panels.file_selector.file_selector import FileSelector
+from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import widget_descriptors
 
 

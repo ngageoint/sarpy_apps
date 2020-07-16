@@ -1,54 +1,36 @@
-import tkinter
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.panel_builder import RadioButtonPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
 
 
-class ModePanel(WidgetPanel):
+class ModeSelections(RadioButtonPanel):
     _widget_list = ("slow_time",
                     "fast_time",
                     "aperture_percent",
                     "full_range_bandwidth",
-                    "full_az_bandwidth",
-                    "reverse")
+                    "full_az_bandwidth")
     slow_time = widget_descriptors.RadioButtonDescriptor("slow_time")          # type: basic_widgets.RadioButton
     fast_time = widget_descriptors.RadioButtonDescriptor("fast_time")          # type: basic_widgets.RadioButton
     aperture_percent = widget_descriptors.RadioButtonDescriptor("aperture_percent")      # type: basic_widgets.RadioButton
     full_range_bandwidth = widget_descriptors.RadioButtonDescriptor("full_range_bandwidth")     # type: basic_widgets.RadioButton
     full_az_bandwidth = widget_descriptors.RadioButtonDescriptor("full_az_bandwidth")       # type: basic_widgets.RadioButton
+
+    def __init__(self, parent):
+        RadioButtonPanel.__init__(self, parent)
+        self.parent = parent
+        self.init_w_horizontal_layout()
+
+
+class ModePanel(WidgetPanel):
+    _widget_list = ("mode_selections",
+                    "reverse")
+    mode_selections = widget_descriptors.PanelDescriptor("mode_selections", ModeSelections)  # type: ModeSelections
     reverse = widget_descriptors.CheckButtonDescriptor("reverse")              # type: basic_widgets.CheckButton
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self.init_w_horizontal_layout()
-        self.selected_value = tkinter.IntVar()
-        self.selected_value.set(1)
-
-        self.slow_time.config(variable=self.selected_value, value=1)
-        self.fast_time.config(variable=self.selected_value, value=2)
-        self.aperture_percent.config(variable=self.selected_value, value=3)
-        self.full_range_bandwidth.config(variable=self.selected_value, value=4)
-        self.full_az_bandwidth.config(variable=self.selected_value, value=5)
-        self.pack()
-
-    class Modes:
-        fast = "fast"
-        slow = "slow"
-        aperture_percent = "aperture_percent"
-        full_range_badwidth = "full range bandwidth"
-        full_azimuth_bandwidth = "full azimuth bandwidth"
-
-    def get_mode(self):
-        if self.selected_value.get() == 1:
-            return self.Modes.slow
-        if self.selected_value.get() == 2:
-            return self.Modes.fast
-        if self.selected_value.get() == 3:
-            return self.Modes.aperture_percent
-        if self.selected_value.get() == 4:
-            return self.Modes.full_range_badwidth
-        if self.selected_value.get() == 5:
-            return self.Modes.full_azimuth_bandwidth
 
 
 class FastSlowSettingsPanel(WidgetPanel):
