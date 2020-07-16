@@ -117,7 +117,6 @@ class ApertureTool(WidgetPanel):
         primary.config(menu=menubar)
 
         primary_frame.pack()
-        self.pack()
 
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])

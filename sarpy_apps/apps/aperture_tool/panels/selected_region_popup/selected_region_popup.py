@@ -25,9 +25,7 @@ class SelectedRegionPanel(WidgetPanel):
 
         sicd_reader = ComplexImageReader(app_variables.sicd_fname)
         self.image_canvas.set_canvas_size(1000, 1000)
-        self.image_canvas.canvas._set_image_reader(sicd_reader)
-
-        self.pack()
+        self.image_canvas.set_image_reader(sicd_reader)
 
         self.toolbar.zoom_in.on_left_mouse_click(self.set_current_tool_to_zoom_in)
         self.toolbar.zoom_out.on_left_mouse_click(self.set_current_tool_to_zoom_out)

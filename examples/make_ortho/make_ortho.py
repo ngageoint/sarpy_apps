@@ -35,7 +35,6 @@ class Ortho(WidgetPanel):
 
         # need to pack both primary frame and self, since this is the main app window.
         primary_frame.pack()
-        self.pack()
 
         # bind events to callbacks here
         self.button_panel.fname_select.on_left_mouse_click(self.callback_set_filename)
@@ -58,7 +57,7 @@ class Ortho(WidgetPanel):
         if new_fname:
             self.fname = new_fname
             self.image_reader = ComplexImageReader(new_fname)
-            self.raw_frame_image_panel.canvas._set_image_reader(self.image_reader)
+            self.raw_frame_image_panel.set_image_reader(self.image_reader)
 
     # noinspection PyUnusedLocal
     def callback_display_ortho_image(self, event):

@@ -48,8 +48,8 @@ class AnnotationPopup(WidgetPanel):
         self.variables = AppVariables
 
         self.parent = parent
-        self.master_frame = tkinter.Frame(parent)
-        WidgetPanel.__init__(self, self.master_frame)
+        self.primary_frame = tkinter.Frame(parent)
+        WidgetPanel.__init__(self, self.primary_frame)
 
         self.init_w_rows()
 
@@ -64,8 +64,7 @@ class AnnotationPopup(WidgetPanel):
         self.comment_label.set_text("comment")
         self.confidence_label.set_text("confidence")
 
-        self.master_frame.pack()
-        self.pack()
+        self.primary_frame.pack()
 
         self.parent_types.set_text(self.variables.parent_types_main_text)
 

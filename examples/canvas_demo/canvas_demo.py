@@ -38,22 +38,21 @@ class CanvasDemo(WidgetPanel):
     pyplot_panel = widget_descriptors.PyplotImagePanelDescriptor("pyplot_panel")   # type: PyplotImagePanel
     canvas_demo_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("canvas_demo_image_panel")   # type: ImageCanvasPanel
 
-    def __init__(self, master):
-        master_frame = tkinter.Frame(master)
-        WidgetPanel.__init__(self, master_frame)
+    def __init__(self, primary):
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
         self.init_w_basic_widget_list(2, [2, 1])
 
-        # define panels widget_wrappers in master frame
+        # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
         self.canvas_demo_image_panel.canvas.variables.canvas_image_object = None
         self.canvas_demo_image_panel.set_canvas_size(700, 400)
         self.canvas_demo_image_panel.canvas.rescale_image_to_fit_canvas = True
 
         # need to pack both master frame and self, since this is the main app window.
-        master_frame.pack()
-        self.pack()
+        primary_frame.pack()
 
         # bind events to callbacks here
         self.button_panel.fname_select.on_left_mouse_click(self.callback_initialize_canvas_image)

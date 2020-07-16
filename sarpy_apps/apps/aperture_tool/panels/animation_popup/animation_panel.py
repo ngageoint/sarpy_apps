@@ -102,5 +102,4 @@ class AnimationPanel(WidgetPanel):
         self.parent = parent
 
         self.init_w_vertical_layout()
-        self.pack()
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)

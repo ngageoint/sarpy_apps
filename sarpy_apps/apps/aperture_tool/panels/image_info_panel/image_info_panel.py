@@ -19,7 +19,6 @@ class ChipSizePanel(WidgetPanel):
 
         self.nx_label.set_text("nx: ")
         self.ny_label.set_text("ny: ")
-        self.pack()
 
 
 class ImageInfoPanel(WidgetPanel):
@@ -32,6 +31,5 @@ class ImageInfoPanel(WidgetPanel):
         self.init_w_basic_widget_list(n_rows=2, n_widgets_per_row_list=[1, 2])
 
         self.file_selector.set_fname_filters([("NITF files", ".nitf .NITF .ntf .NTF")])
-        self.pack()
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 

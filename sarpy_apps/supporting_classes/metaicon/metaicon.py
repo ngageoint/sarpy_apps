@@ -106,7 +106,7 @@ class MetaIcon(ImageCanvasPanel):
         self.data_container = data_container
         metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width))
         numpy_reader = NumpyImageReader(metaicon_background)
-        self.canvas._set_image_reader(numpy_reader)
+        self.set_image_reader(numpy_reader)
 
         line_positions = self.line_positions
 

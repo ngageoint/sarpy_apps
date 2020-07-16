@@ -46,7 +46,6 @@ class WakeTool(WidgetPanel):
 
         # need to pack both primary frame and self, since this is the main app window.
         primary_frame.pack()
-        self.pack()
 
         # set up event listeners
         self.side_panel.buttons.line_draw.on_left_mouse_click(self.callback_press_line_button)

@@ -40,10 +40,6 @@ class Taser(WidgetPanel):
         self.button_panel.set_spacing_between_buttons(0)
         self.taser_image_panel.set_canvas_size(700, 400)
 
-        # need to pack both primary frame and self, since this is the main app window.
-        primary_frame.pack()
-        self.pack()
-
         # bind events to callbacks here
         self.button_panel.single_channel_fname_select.on_left_mouse_click(self.callback_select_single_channel_file)
         self.button_panel.quad_pole_fname_select.on_left_mouse_click(self.callback_select_quadpole_files)
@@ -54,6 +50,7 @@ class Taser(WidgetPanel):
         self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
 
         self.taser_image_panel.canvas.on_left_mouse_release(self.callback_left_mouse_release)
+        primary_frame.pack()
 
     def callback_left_mouse_release(self, event):
         self.taser_image_panel.canvas.callback_handle_left_mouse_release(event)

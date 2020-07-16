@@ -17,12 +17,11 @@ class AnnotationFnamePopup(WidgetPanel):
         self.main_app_variables = main_app_variables
 
         self.parent = parent
-        self.master_frame = tkinter.Frame(parent)
-        WidgetPanel.__init__(self, self.master_frame)
+        self.parent_frame = tkinter.Frame(parent)
+        WidgetPanel.__init__(self, self.parent_frame)
         self.init_w_horizontal_layout()
 
-        self.master_frame.pack()
-        self.pack()
+        self.parent_frame.pack()
 
         # set up callbacks
         self.new_annotation.on_left_mouse_click(self.callback_new)
