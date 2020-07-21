@@ -8,7 +8,7 @@ from tkinter import filedialog
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
-from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
 from tk_builder.widgets import widget_descriptors
@@ -32,15 +32,15 @@ from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 class ApertureTool(WidgetPanel):
     _widget_list = ("frequency_vs_degree_panel", "filtered_panel")
 
-    frequency_vs_degree_panel = widget_descriptors.AxesImageCanvasDescriptor(
-        "frequency_vs_degree_panel")  # type: AxesImageCanvas
-    filtered_panel = widget_descriptors.AxesImageCanvasDescriptor("filtered_panel")  # type: AxesImageCanvas
+    frequency_vs_degree_panel = widget_descriptors.ImagePanelDescriptor(
+        "frequency_vs_degree_panel")  # type: ImagePanel
+    filtered_panel = widget_descriptors.ImagePanelDescriptor("filtered_panel")  # type: ImagePanel
 
     image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)  # type: ImageInfoPanel
     metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
     phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)  # type: PhaseHistoryPanel
-    metaviewer = Metaviewer  # type: Metaviewer
-    animation_panel = AnimationPanel  # type: AnimationPanel
+    metaviewer = widget_descriptors.PanelDescriptor("metaviewer", Metaviewer)  # type: Metaviewer
+    animation_panel = widget_descriptors.PanelDescriptor("animation_panel", AnimationPanel)   # type: AnimationPanel
 
     def __init__(self, primary):
         self.app_variables = AppVariables()
@@ -48,11 +48,14 @@ class ApertureTool(WidgetPanel):
 
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
-
         self.init_w_horizontal_layout()
 
-        self.filtered_panel.set_canvas_size(900, 700)
-        self.frequency_vs_degree_panel.set_canvas_size(800, 600)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.filtered_panel.resizeable = True
+        self.frequency_vs_degree_panel.resizeable = True
+
+        self.filtered_panel.axes_canvas.set_canvas_size(900, 700)
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.canvas.on_left_mouse_motion(self.callback_frequency_vs_degree_left_mouse_motion)
 
@@ -353,7 +356,7 @@ class ApertureTool(WidgetPanel):
 
         popup = tkinter.Toplevel(self.primary)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
-        selected_region_popup.image_canvas.set_image_reader(self.app_variables.sicd_reader_object)
+        selected_region_popup.image_panel.set_image_reader(self.app_variables.sicd_reader_object)
 
         self.primary.wait_window(popup)
 
@@ -391,10 +394,10 @@ class ApertureTool(WidgetPanel):
 
         self.metaviewer.create_w_sicd(self.app_variables.sicd_reader_object.base_reader.sicd_meta)
 
-        self.frequency_vs_degree_panel.set_canvas_size(800, 600)
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
 
-        self.frequency_vs_degree_panel.x_label = "Polar Angle (degrees)"
-        self.frequency_vs_degree_panel.y_label = "Frequency (GHz)"
+        self.frequency_vs_degree_panel.axes_canvas.x_label = "Polar Angle (degrees)"
+        self.frequency_vs_degree_panel.axes_canvas.y_label = "Frequency (GHz)"
 
         polar_angle_min, polar_angle_max = self.get_polar_angle_bounds()
 
@@ -406,9 +409,6 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.image_y_max_val = min_frequency
 
         self.frequency_vs_degree_panel.update_everything()
-
-        # self.frequency_vs_degree_panel._update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
-        # self.frequency_vs_degree_panel._update_y_axis(start_val=7.409, stop_val=11.39, label="Frequency (GHz)")
 
     def get_polar_angle_bounds(self):
         x1 = self.get_fft_image_bounds()[1]

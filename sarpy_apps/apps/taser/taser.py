@@ -3,14 +3,14 @@ import os
 import tkinter
 from tkinter.filedialog import askopenfilename
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
 from tk_builder.widgets import basic_widgets
-from tk_builder.panels.image_canvas_panel import ToolConstants
+from tk_builder.panels.image_panel import ToolConstants
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.quad_pol_image_reader import QuadPolImageReader
 
@@ -50,7 +50,7 @@ class AppVariables(object):
 class Taser(WidgetPanel):
     _widget_list = ("button_panel", "taser_image_panel", "pyplot_panel")
     button_panel = widget_descriptors.PanelDescriptor("button_panel", TaserButtonPanel)   # type: TaserButtonPanel
-    taser_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("taser_image_panel")   # type: ImageCanvasPanel
+    taser_image_panel = widget_descriptors.ImagePanelDescriptor("taser_image_panel")   # type: ImagePanel
     pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
 
     def __init__(self, primary):
