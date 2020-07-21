@@ -54,9 +54,6 @@ class ApertureTool(WidgetPanel):
         self.filtered_panel.resizeable = True
         self.frequency_vs_degree_panel.resizeable = True
 
-        self.filtered_panel.axes_canvas.set_canvas_size(900, 700)
-        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
-
         self.frequency_vs_degree_panel.canvas.on_left_mouse_motion(self.callback_frequency_vs_degree_left_mouse_motion)
 
         self.image_info_popup_panel = tkinter.Toplevel(self.primary)
@@ -113,12 +110,13 @@ class ApertureTool(WidgetPanel):
         menubar.add_cascade(label="Save", menu=save_menu)
 
         primary.config(menu=menubar)
-
-        primary_frame.pack()
+        self.filtered_panel.axes_canvas.set_canvas_size(900, 700)
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
+        self.filtered_panel.image_frame.config(width=900, height=800)
+        self.filtered_panel.callback_resize(None)
 
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
-        # TODO: what is wrong here?
         self.metaicon.canvas.save_full_canvas_as_png(save_fname)
 
     def exit(self):
@@ -550,8 +548,7 @@ class ApertureTool(WidgetPanel):
 
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
-        current_bounds = self.frequency_vs_degree_panel.canvas.canvas_shape_coords_to_image_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+        current_bounds = self.frequency_vs_degree_panel.canvas.canvas_shape_coords_to_image_coords(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
         x_min = min(current_bounds[1], current_bounds[3])
         x_max = max(current_bounds[1], current_bounds[3])
         y_min = min(current_bounds[0], current_bounds[2])
@@ -674,4 +671,7 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
+    root.after(100, app.filtered_panel.update_everything)
+    root.after(100, app.frequency_vs_degree_panel.update_everything)
     root.mainloop()
+
