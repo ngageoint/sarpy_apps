@@ -7,13 +7,13 @@ from sarpy.io.general.utils import string_types
 from sarpy.io.product.sidd import SIDDReader
 from sarpy.io.phase_history.cphd import CPHDReader
 
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 
-class MetaIcon(ImageCanvasPanel):
+class MetaIcon(AxesImageCanvas):
 
     class Colors:
         layover = color_converter.rgb_to_hex([1, 0.65, 0])

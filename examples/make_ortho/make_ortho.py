@@ -3,17 +3,16 @@ import os
 import tkinter
 from tkinter.filedialog import askopenfilename
 from examples.make_ortho.ortho_button_panel import OrthoButtonPanel
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from tk_builder.panel_builder import WidgetPanel
 from sarpy_apps.supporting_classes.quick_ortho import QuickOrtho
-from tk_builder.widgets import widget_descriptors
 
 
 class Ortho(WidgetPanel):
     button_panel = OrthoButtonPanel         # type: OrthoButtonPanel
-    raw_frame_image_panel = ImageCanvasPanel     # type: ImageCanvasPanel
-    ortho_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
+    raw_frame_image_panel = AxesImageCanvas     # type: AxesImageCanvas
+    ortho_image_panel = AxesImageCanvas         # type: AxesImageCanvas
 
     fname = "None"  # type: str
     remap_type = "density"  # type: str

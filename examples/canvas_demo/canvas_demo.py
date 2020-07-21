@@ -5,7 +5,7 @@ from tkinter.filedialog import askopenfilename
 from examples.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 from tk_builder.widgets import widget_descriptors
@@ -36,7 +36,7 @@ class CanvasDemo(WidgetPanel):
     _widget_list = ("button_panel", "pyplot_panel", "canvas_demo_image_panel")
     button_panel = widget_descriptors.PanelDescriptor("button_panel", CanvasDemoButtonPanel)   # type: CanvasDemoButtonPanel
     pyplot_panel = widget_descriptors.PyplotImagePanelDescriptor("pyplot_panel")   # type: PyplotImagePanel
-    canvas_demo_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("canvas_demo_image_panel")   # type: ImageCanvasPanel
+    canvas_demo_image_panel = widget_descriptors.AxesImageCanvasDescriptor("canvas_demo_image_panel")   # type: AxesImageCanvas
 
     def __init__(self, primary):
         primary_frame = tkinter.Frame(primary)
@@ -44,15 +44,13 @@ class CanvasDemo(WidgetPanel):
         self.variables = AppVariables()
 
         self.init_w_basic_widget_list(2, [2, 1])
+        primary_frame.pack(fill=tkinter.BOTH, expand=1)
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.canvas_demo_image_panel.canvas.variables.canvas_image_object = None
         self.canvas_demo_image_panel.set_canvas_size(700, 400)
         self.canvas_demo_image_panel.canvas.rescale_image_to_fit_canvas = True
-
-        # need to pack both master frame and self, since this is the main app window.
-        primary_frame.pack()
+        self.canvas_demo_image_panel.resizeable = True
 
         # bind events to callbacks here
         self.button_panel.fname_select.on_left_mouse_click(self.callback_initialize_canvas_image)

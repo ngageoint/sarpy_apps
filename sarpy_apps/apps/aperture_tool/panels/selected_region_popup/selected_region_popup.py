@@ -1,5 +1,5 @@
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.panel_builder import WidgetPanel
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.toolbar import Toolbar
@@ -8,7 +8,7 @@ from tk_builder.widgets import widget_descriptors
 
 class SelectedRegionPanel(WidgetPanel):
     _widget_list = ("toolbar", "image_canvas")
-    image_canvas = widget_descriptors.PanelDescriptor("image_canvas", ImageCanvasPanel)  # type: ImageCanvasPanel
+    image_canvas = widget_descriptors.PanelDescriptor("image_canvas", AxesImageCanvas)  # type: AxesImageCanvas
     toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)                    # type: Toolbar
 
     def __init__(self,

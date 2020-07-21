@@ -8,7 +8,7 @@ from tkinter import filedialog
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
 from tk_builder.widgets import widget_descriptors
@@ -32,9 +32,9 @@ from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 class ApertureTool(WidgetPanel):
     _widget_list = ("frequency_vs_degree_panel", "filtered_panel")
 
-    frequency_vs_degree_panel = widget_descriptors.ImageCanvasPanelDescriptor(
-        "frequency_vs_degree_panel")  # type: ImageCanvasPanel
-    filtered_panel = widget_descriptors.ImageCanvasPanelDescriptor("filtered_panel")  # type: ImageCanvasPanel
+    frequency_vs_degree_panel = widget_descriptors.AxesImageCanvasDescriptor(
+        "frequency_vs_degree_panel")  # type: AxesImageCanvas
+    filtered_panel = widget_descriptors.AxesImageCanvasDescriptor("filtered_panel")  # type: AxesImageCanvas
 
     image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)  # type: ImageInfoPanel
     metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
@@ -58,30 +58,25 @@ class ApertureTool(WidgetPanel):
 
         self.image_info_popup_panel = tkinter.Toplevel(self.primary)
         self.image_info_panel = ImageInfoPanel(self.image_info_popup_panel)
-        self.image_info_panel.pack()
         self.image_info_popup_panel.withdraw()
 
         self.image_info_panel.file_selector.select_file.on_left_mouse_click(self.callback_select_file)
 
         self.ph_popup_panel = tkinter.Toplevel(self.primary)
         self.phase_history = PhaseHistoryPanel(self.ph_popup_panel)
-        self.phase_history.pack()
         self.ph_popup_panel.withdraw()
 
         self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
         self.metaicon.set_canvas_size(800, 600)
-        self.metaicon.pack()
         self.metaicon_popup_panel.withdraw()
 
         self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer.pack()
         self.metaviewer_popup_panel.withdraw()
 
         self.animation_popup_panel = tkinter.Toplevel(self.primary)
         self.animation_panel = AnimationPanel(self.animation_popup_panel)
-        self.animation_panel.pack()
         self.animation_popup_panel.withdraw()
 
         # callbacks for animation
@@ -410,7 +405,7 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.image_y_min_val = max_frequency
         self.frequency_vs_degree_panel.image_y_max_val = min_frequency
 
-        self.frequency_vs_degree_panel.update_outer_canvas()
+        self.frequency_vs_degree_panel.update_everything()
 
         # self.frequency_vs_degree_panel._update_x_axis(start_val=-10, stop_val=10, label="Polar Angle (degrees)")
         # self.frequency_vs_degree_panel._update_y_axis(start_val=7.409, stop_val=11.39, label="Frequency (GHz)")

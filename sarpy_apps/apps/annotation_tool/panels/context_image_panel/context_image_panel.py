@@ -1,5 +1,5 @@
 from sarpy_apps.apps.annotation_tool.panels.context_image_panel.master_dashboard.context_dashboard import ContextMasterDash
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 
@@ -13,7 +13,7 @@ class AppVariables:
 class ContextImagePanel(WidgetPanel):
     _widget_list = ("context_dashboard", "image_canvas_panel")
     context_dashboard = widget_descriptors.PanelDescriptor("context_dashboard", ContextMasterDash)   # type: ContextMasterDash
-    image_canvas_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_canvas_panel")   # type: ImageCanvasPanel
+    image_canvas_panel = widget_descriptors.AxesImageCanvasDescriptor("image_canvas_panel")   # type: AxesImageCanvas
 
     def __init__(self, parent):
         # set the master frame

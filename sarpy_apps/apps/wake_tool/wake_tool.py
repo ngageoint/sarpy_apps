@@ -1,7 +1,7 @@
 import tkinter
 from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
@@ -33,7 +33,7 @@ class WakeTool(WidgetPanel):
     _widget_list = ("side_panel", "image_canvas")
     side_panel = widget_descriptors.PanelDescriptor(
         "side_panel", SidePanel, default_text="wake tool controls")      # type: SidePanel
-    image_canvas = widget_descriptors.ImageCanvasPanelDescriptor("image_canvas")  # type: ImageCanvasPanel
+    image_canvas = widget_descriptors.AxesImageCanvasDescriptor("image_canvas")  # type: AxesImageCanvas
 
     def __init__(self, primary):
         primary_frame = tkinter.Frame(primary)
