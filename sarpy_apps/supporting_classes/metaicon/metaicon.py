@@ -7,20 +7,20 @@ from sarpy.io.general.utils import string_types
 from sarpy.io.product.sidd import SIDDReader
 from sarpy.io.phase_history.cphd import CPHDReader
 
-from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
+from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 
-class MetaIcon(AxesImageCanvas):
+class MetaIcon(ImagePanel):
 
     class Colors:
-        layover = color_converter.rgb_to_hex([1, 0.65, 0])
-        shadow = color_converter.rgb_to_hex([0, 0.65, 1])
-        multipath = color_converter.rgb_to_hex([1, 0, 0])
-        north = color_converter.rgb_to_hex([0.58, 0.82, 0.31])
-        flight_direction = color_converter.rgb_to_hex([1, 1, 0])
+        layover = color_converter.rgb_to_hex((1, 0.65, 0))
+        shadow = color_converter.rgb_to_hex((0, 0.65, 1))
+        multipath = color_converter.rgb_to_hex((1, 0, 0))
+        north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
+        flight_direction = color_converter.rgb_to_hex((1, 1, 0))
 
     class ArrowWidths:
         layover_width = 2
@@ -31,12 +31,11 @@ class MetaIcon(AxesImageCanvas):
     def __init__(self, master):
         super(MetaIcon, self).__init__(master)
         self.parent = master
-        # TODO: what purpose does fname serve?
-        self.fname = None                              # type: str
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
+        self.resizeable = True
 
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
@@ -437,3 +436,4 @@ class MetaIcon(AxesImageCanvas):
             x_end = arrow_length * numpy.cos(arrow_angle_radians)
             y_end = arrow_length * numpy.sin(arrow_angle_radians) * aspect_ratio
         return x_end, y_end
+

@@ -68,7 +68,6 @@ class ApertureTool(WidgetPanel):
 
         self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon.set_canvas_size(800, 600)
         self.metaicon_popup_panel.withdraw()
 
         self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
@@ -671,7 +670,7 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.after(100, app.filtered_panel.update_everything)
-    root.after(100, app.frequency_vs_degree_panel.update_everything)
+    root.after(200, app.filtered_panel.update_everything)
+    root.after(200, app.frequency_vs_degree_panel.update_everything)
     root.mainloop()
 
