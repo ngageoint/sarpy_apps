@@ -36,8 +36,13 @@ class MetaIcon(ImagePanel):
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
         self.resizeable = True
+        self.on_resize(self.callback_resize)
 
-        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+    def callback_resize(self, event):
+        super().callback_resize(event)
+        if self.data_container:
+            self.canvas.delete("all")
+            self.create_from_metaicon_data_container(self.data_container)
 
     @property
     def font_family(self):
@@ -103,33 +108,34 @@ class MetaIcon(ImagePanel):
         """
 
         self.data_container = data_container
+        # metaicon_background = numpy.zeros((400, 400))
         metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width))
         numpy_reader = NumpyImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
 
         line_positions = self.line_positions
 
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[0], text=self.data_container.iid_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[1], text=self.data_container.geo_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[2], text=self.data_container.res_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[3], text=self.data_container.cdp_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[4], text=self.data_container.get_angle_line('azimuth'),
             fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[5], text=self.data_container.get_angle_line('graze'),
             fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[6], text=self.data_container.get_angle_line('layover'),
             fill=self.Colors.layover, anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[7], text=self.data_container.get_angle_line('shadow'),
             fill=self.Colors.shadow, anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[8], text=self.data_container.get_angle_line('multipath'),
             fill=self.Colors.multipath, anchor="nw", font=self.font)
 
@@ -370,7 +376,7 @@ class MetaIcon(ImagePanel):
         y_start = self.north_arrow_coords[1]
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
-        self.canvas.create_text(text_pos[0], text_pos[1],
+        self.canvas.create_new_text(text_pos[0], text_pos[1],
                                 text="N",
                                 fill=self.Colors.north,
                                 font=self.font)
@@ -397,7 +403,7 @@ class MetaIcon(ImagePanel):
                                           flight_direction_arrow_end[1],
                                           flight_direction_arrow_start[0],
                                           flight_direction_arrow_start[1]), fill=self.Colors.flight_direction, width=3)
-        self.canvas.create_text((flight_direction_arrow_start[0] - self.canvas.variables.canvas_width * 0.04,
+        self.canvas.create_new_text((flight_direction_arrow_start[0] - self.canvas.variables.canvas_width * 0.04,
                                  flight_direction_arrow_start[1]),
                                 text="R",
                                 fill=self.Colors.flight_direction,

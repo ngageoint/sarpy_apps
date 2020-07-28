@@ -4,6 +4,7 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
+from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 
 class MetaIconDemo(WidgetPanel):
@@ -19,11 +20,16 @@ class MetaIconDemo(WidgetPanel):
         self.init_w_horizontal_layout()
         self.metaicon.config(width=800, height=600)
 
+        path_to_sicd = os.path.expanduser("~/sicd_example_1_PFA_RE32F_IM32F_HH.nitf")
+        reader = ComplexImageReader(path_to_sicd)
+        self.metaicon.create_from_reader(reader.base_reader, index=0)
+
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
 
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = MetaIconDemo(root)
-    root.after(200, app.filtered_panel.update_everything)
-    root.after(200, app.frequency_vs_degree_panel.update_everything)
+    root.after(200, app.metaicon.update_everything())
     root.mainloop()
 
