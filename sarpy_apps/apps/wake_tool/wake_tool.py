@@ -119,7 +119,8 @@ class WakeTool(WidgetPanel):
             self.side_panel.info_panel.geo_distance_val.set_text("{:.2f}".format(geo_distance))
 
     def calculate_wake_distance(self):
-        horizontal_line_image_coords = self.image_panel.canvas.canvas_shape_coords_to_image_coords(self.variables.horizontal_line_id)
+        horizontal_line_image_coords = self.image_panel.canvas.get_vector_object(
+            self.variables.horizontal_line_id).image_coords
         sicd_meta = self.variables.image_reader.base_reader.sicd_meta
         points = np.asarray(np.reshape(horizontal_line_image_coords, (2, 2)))
         ecf_ground_points = sicd_meta.project_image_to_ground(points)

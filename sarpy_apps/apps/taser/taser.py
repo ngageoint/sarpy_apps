@@ -148,4 +148,5 @@ class Taser(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = Taser(root)
+    root.after(200, app.taser_image_panel.update_everything)
     root.mainloop()
