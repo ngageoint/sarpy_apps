@@ -403,12 +403,12 @@ class ApertureTool(WidgetPanel):
 
         polar_angle_min, polar_angle_max = self.get_polar_angle_bounds()
 
-        self.frequency_vs_degree_panel.image_x_min_val = polar_angle_min
-        self.frequency_vs_degree_panel.image_x_max_val = polar_angle_max
+        self.frequency_vs_degree_panel.axes_canvas.image_x_min_val = polar_angle_min
+        self.frequency_vs_degree_panel.axes_canvas.image_x_max_val = polar_angle_max
 
         min_frequency, max_frequency = self.get_frequency_bounds()
-        self.frequency_vs_degree_panel.image_y_min_val = max_frequency
-        self.frequency_vs_degree_panel.image_y_max_val = min_frequency
+        self.frequency_vs_degree_panel.axes_canvas.image_y_min_val = max_frequency
+        self.frequency_vs_degree_panel.axes_canvas.image_y_max_val = min_frequency
 
         self.frequency_vs_degree_panel.update_everything()
 
