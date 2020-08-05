@@ -376,7 +376,7 @@ class MetaIcon(ImagePanel):
         y_start = self.north_arrow_coords[1]
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
-        self.canvas.create_new_text(text_pos[0], text_pos[1],
+        self.canvas.create_new_text((text_pos[0], text_pos[1]),
                                 text="N",
                                 fill=self.Colors.north,
                                 font=self.font)

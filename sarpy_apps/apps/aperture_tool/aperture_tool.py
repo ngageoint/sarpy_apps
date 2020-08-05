@@ -109,10 +109,16 @@ class ApertureTool(WidgetPanel):
         menubar.add_cascade(label="Save", menu=save_menu)
 
         primary.config(menu=menubar)
-        self.filtered_panel.axes_canvas.set_canvas_size(900, 700)
-        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
         self.filtered_panel.image_frame.config(width=900, height=800)
-        self.filtered_panel.callback_resize(None)
+        self.frequency_vs_degree_panel.image_frame.config(width=900, height=800)
+        self.filtered_panel.axes_canvas.set_canvas_size(800, 600)
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
+
+        self.frequency_vs_degree_panel.toolbar.zoom_in.pack_forget()
+        self.frequency_vs_degree_panel.toolbar.zoom_out.pack_forget()
+        self.frequency_vs_degree_panel.toolbar.pan.pack_forget()
+        self.frequency_vs_degree_panel.toolbar.margins_checkbox.pack_forget()
+        self.frequency_vs_degree_panel.toolbar.axes_labels_checkbox.pack_forget()
 
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
@@ -372,10 +378,9 @@ class ApertureTool(WidgetPanel):
             self.frequency_vs_degree_panel.canvas.variables.select_rect_id
         self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_image_coords(
             self.frequency_vs_degree_panel.canvas.variables.select_rect_id, self.get_fft_image_bounds())
-        canvas_drawing_bounds = self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(
+        vector_object = self.frequency_vs_degree_panel.canvas.get_vector_object(
             self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
-        self.frequency_vs_degree_panel.canvas.variables.shape_drag_xy_limits[
-            str(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)] = canvas_drawing_bounds
+        vector_object.image_drag_limits = self.get_fft_image_bounds()
         self.app_variables.fft_canvas_bounds = self.frequency_vs_degree_panel.canvas.get_shape_canvas_coords(
             self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
         self.frequency_vs_degree_panel.canvas.show_shape(
@@ -547,7 +552,8 @@ class ApertureTool(WidgetPanel):
 
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
-        current_bounds = self.frequency_vs_degree_panel.canvas.canvas_shape_coords_to_image_coords(self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+        current_bounds = self.frequency_vs_degree_panel.canvas.shape_image_coords_to_canvas_coords(
+            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
         x_min = min(current_bounds[1], current_bounds[3])
         x_max = max(current_bounds[1], current_bounds[3])
         y_min = min(current_bounds[0], current_bounds[2])
