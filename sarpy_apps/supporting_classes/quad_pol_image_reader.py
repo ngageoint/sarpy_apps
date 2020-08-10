@@ -23,19 +23,19 @@ class QuadPolImageReader(ImageReader):
         self.full_image_ny = self.base_readers[0].sicd_meta.ImageData.FullImage.NumRows
 
     def __getitem__(self, key):
-        cdata_1 = self.base_readers[0][key]
-        cdata_2 = self.base_readers[1][key]
-        cdata_3 = self.base_readers[2][key]
-        cdata_4 = self.base_readers[3][key]
+        vv_data = self.base_readers[0][key]
+        vh_data = self.base_readers[1][key]
+        hv_data = self.base_readers[2][key]
+        hh_data = self.base_readers[3][key]
 
-        decimated_red = self.remap_complex_data(cdata_1)
-        decimated_blue = (self.remap_complex_data(cdata_2) + self.remap_complex_data(cdata_3))/2
-        decimated_green = self.remap_complex_data(cdata_4)
+        decimated_red = self.remap_complex_data(vv_data)
+        decimated_green = self.remap_complex_data(hh_data)
+        decimated_blue = (self.remap_complex_data(vh_data) + self.remap_complex_data(hv_data))/2
 
         rgb_image = numpy.zeros((decimated_red.shape[0], decimated_red.shape[1], 3), dtype=decimated_red.dtype)
         rgb_image[:, :, 0] = decimated_red
-        rgb_image[:, :, 1] = decimated_blue
-        rgb_image[:, :, 2] = decimated_green
+        rgb_image[:, :, 1] = decimated_green
+        rgb_image[:, :, 2] = decimated_blue
 
         return rgb_image
 

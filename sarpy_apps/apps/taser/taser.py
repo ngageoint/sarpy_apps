@@ -1,7 +1,7 @@
 import os
 
 import tkinter
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilenames
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
@@ -13,15 +13,14 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.panels.image_panel import ToolConstants
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.quad_pol_image_reader import QuadPolImageReader
+import sarpy.io.complex as sarpy_complex
 
 
 class TaserButtonPanel(WidgetPanel):
-    _widget_list = ("single_channel_fname_select",
-                    "quad_pole_fname_select",
+    _widget_list = ("fname_select",
                     "rect_select",
                     "remap_dropdown")
-    single_channel_fname_select = widget_descriptors.ButtonDescriptor("single_channel_fname_select")  # type: basic_widgets.Button
-    quad_pole_fname_select = widget_descriptors.ButtonDescriptor("quad_pole_fname_select")  # type: basic_widgets.Button
+    fname_select = widget_descriptors.ButtonDescriptor("fname_select")  # type: basic_widgets.Button
     rect_select = widget_descriptors.ButtonDescriptor("rect_select")  # type: basic_widgets.Button
     remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")         # type: basic_widgets.Combobox
 
@@ -64,8 +63,7 @@ class Taser(WidgetPanel):
         self.button_panel.set_spacing_between_buttons(0)
 
         # bind events to callbacks here
-        self.button_panel.single_channel_fname_select.on_left_mouse_click(self.callback_select_single_channel_file)
-        self.button_panel.quad_pole_fname_select.on_left_mouse_click(self.callback_select_quadpole_files)
+        self.button_panel.fname_select.on_left_mouse_click(self.callback_select_files)
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
 
@@ -108,36 +106,33 @@ class Taser(WidgetPanel):
         self.taser_image_panel.image_frame.outer_canvas.canvas.update_current_image()
 
     # noinspection PyUnusedLocal
-    def callback_select_single_channel_file(self, event):
+    def callback_select_files(self, event):
         image_file_extensions = ['*.nitf', '*.NITF']
         ftypes = [
             ('image files', image_file_extensions),
             ('All files', '*'),
         ]
-        new_fname = askopenfilename(initialdir=os.path.expanduser("~"), filetypes=ftypes)
-        if new_fname:
-            self.variables.fnames = [new_fname]
-            self.variables.image_reader = ComplexImageReader(new_fname)
+        fnames = askopenfilenames(initialdir=os.path.expanduser("~"), filetypes=ftypes)
+        if fnames:
+            if len(fnames) == 1:
+                self.variables.image_reader = ComplexImageReader(fnames[0])
+            elif len(fnames) == 4:
+                ordered_fnames = ["", "", "", ""]
+                for fname in fnames:
+                    complex_reader = sarpy_complex.open(fname)
+                    polarization_state = complex_reader.sicd_meta.ImageFormation.TxRcvPolarizationProc
+                    if polarization_state == "V:V":
+                        ordered_fnames[0] = fname
+                    elif polarization_state == "V:H":
+                        ordered_fnames[1] = fname
+                    elif polarization_state == "H:V":
+                        ordered_fnames[2] = fname
+                    elif polarization_state == "H:H":
+                        ordered_fnames[3] = fname
+                self.variables.image_reader = QuadPolImageReader(ordered_fnames)
+            else:
+                print("Please select either 1 file for single channel vieweing, or 4 files to view color-coded quadpole data.")
             self.taser_image_panel.set_image_reader(self.variables.image_reader)
-
-    # noinspection PyUnusedLocal
-    def callback_select_quadpole_files(self, event):
-        image_file_extensions = ['*.nitf', '*.NITF']
-        ftypes = [
-            ('image files', image_file_extensions),
-            ('All files', '*'),
-        ]
-        n_files = 4
-        polarization_states = ['H:H', "H:V", "V:H", "V:V"]
-        fnames = []
-        for i in range(n_files):
-            message = "please select " + polarization_states[i] + " file."
-            new_fname = askopenfilename(initialdir=os.path.expanduser("~"), filetypes=ftypes, title=message)
-            if new_fname:
-                fnames.append(new_fname)
-        self.variables.fnames = fnames
-        self.variables.image_reader = QuadPolImageReader(self.variables.fnames)
-        self.taser_image_panel.set_image_reader(self.variables.image_reader)
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         image_data = self.taser_image_panel.image_frame.outer_canvas.canvas.get_image_data_in_canvas_rect_by_id(

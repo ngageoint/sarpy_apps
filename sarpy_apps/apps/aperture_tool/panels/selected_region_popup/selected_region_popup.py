@@ -4,12 +4,13 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets import basic_widgets
 
 
 class Toolbar(WidgetPanel):
     _widget_list = ("select_aoi", "submit_aoi")
-    select_aoi = widget_descriptors.ButtonDescriptor("select_aoi")
-    submit_aoi = widget_descriptors.ButtonDescriptor("submit_aoi")
+    select_aoi = widget_descriptors.ButtonDescriptor("select_aoi")  # type: basic_widgets.Button
+    submit_aoi = widget_descriptors.ButtonDescriptor("submit_aoi")  # type: basic_widgets.Button
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
