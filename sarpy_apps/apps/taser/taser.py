@@ -62,7 +62,6 @@ class Taser(WidgetPanel):
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.taser_image_panel.image_frame.outer_canvas.set_canvas_size(700, 400)
 
         # bind events to callbacks here
         self.button_panel.single_channel_fname_select.on_left_mouse_click(self.callback_select_single_channel_file)
@@ -70,6 +69,7 @@ class Taser(WidgetPanel):
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
 
+        self.taser_image_panel.image_frame.outer_canvas.set_canvas_size(700, 400)
         self.taser_image_panel.image_frame.outer_canvas.canvas.on_left_mouse_release(self.callback_left_mouse_release)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.button_panel.pack(fill=tkinter.X, expand=tkinter.NO)

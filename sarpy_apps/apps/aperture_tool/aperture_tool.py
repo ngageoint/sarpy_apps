@@ -50,10 +50,6 @@ class ApertureTool(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_horizontal_layout()
 
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.filtered_panel.resizeable = True
-        self.frequency_vs_degree_panel.resizeable = True
-
         self.frequency_vs_degree_panel.canvas.on_left_mouse_motion(self.callback_frequency_vs_degree_left_mouse_motion)
 
         self.image_info_popup_panel = tkinter.Toplevel(self.primary)
@@ -109,16 +105,18 @@ class ApertureTool(WidgetPanel):
         menubar.add_cascade(label="Save", menu=save_menu)
 
         primary.config(menu=menubar)
-        self.filtered_panel.image_frame.config(width=900, height=800)
-        self.frequency_vs_degree_panel.image_frame.config(width=900, height=800)
-        self.filtered_panel.axes_canvas.set_canvas_size(800, 600)
-        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
 
         self.frequency_vs_degree_panel.toolbar.zoom_in.pack_forget()
         self.frequency_vs_degree_panel.toolbar.zoom_out.pack_forget()
         self.frequency_vs_degree_panel.toolbar.pan.pack_forget()
         self.frequency_vs_degree_panel.toolbar.margins_checkbox.pack_forget()
         self.frequency_vs_degree_panel.toolbar.axes_labels_checkbox.pack_forget()
+
+        self.filtered_panel.image_frame.outer_canvas.set_canvas_size(800, 600)
+        self.frequency_vs_degree_panel.image_frame.outer_canvas.set_canvas_size(800, 600)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.frequency_vs_degree_panel.resizeable = True
+        self.filtered_panel.resizeable = True
 
     def save_metaicon(self):
         save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
@@ -151,8 +149,10 @@ class ApertureTool(WidgetPanel):
                        direction_forward_or_back,  # type: str
                        ):
         self.update_animation_params()
-        full_canvas_x_aperture = self.app_variables.fft_canvas_bounds[2] - self.app_variables.fft_canvas_bounds[0]
-        full_canvas_y_aperture = self.app_variables.fft_canvas_bounds[3] - self.app_variables.fft_canvas_bounds[1]
+        fft_canvas_bounds = \
+            self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(self.get_fft_image_bounds())
+        full_canvas_x_aperture = fft_canvas_bounds[2] - fft_canvas_bounds[0]
+        full_canvas_y_aperture = fft_canvas_bounds[3] - fft_canvas_bounds[1]
 
         mode = self.animation_panel.mode_panel.mode_selections.selection()
 
@@ -165,32 +165,32 @@ class ApertureTool(WidgetPanel):
         if self.animation_panel.mode_panel.mode_selections.selection() == self.animation_panel.mode_panel.mode_selections.slow_time:
             aperture_distance = full_canvas_x_aperture * self.app_variables.animation_aperture_faction
 
-            start_locs = numpy.linspace(self.app_variables.fft_canvas_bounds[0],
-                                        self.app_variables.fft_canvas_bounds[2] - aperture_distance,
+            start_locs = numpy.linspace(fft_canvas_bounds[0],
+                                        fft_canvas_bounds[2] - aperture_distance,
                                         self.app_variables.animation_n_frames)
 
             x_start = start_locs[self.app_variables.animation_current_position]
             new_rect = (x_start,
-                        self.app_variables.fft_canvas_bounds[1],
+                        fft_canvas_bounds[1],
                         x_start + aperture_distance,
-                        self.app_variables.fft_canvas_bounds[3])
+                        fft_canvas_bounds[3])
         elif mode == self.animation_panel.mode_panel.mode_selections.fast_time:
             aperture_distance = full_canvas_y_aperture * self.app_variables.animation_aperture_faction
 
-            start_locs = numpy.linspace(self.app_variables.fft_canvas_bounds[1],
-                                        self.app_variables.fft_canvas_bounds[3] - aperture_distance,
+            start_locs = numpy.linspace(fft_canvas_bounds[1],
+                                        fft_canvas_bounds[3] - aperture_distance,
                                         self.app_variables.animation_n_frames)
             start_locs = numpy.flip(start_locs)
             y_start = start_locs[self.app_variables.animation_current_position]
-            new_rect = (self.app_variables.fft_canvas_bounds[0],
+            new_rect = (fft_canvas_bounds[0],
                         y_start,
-                        self.app_variables.fft_canvas_bounds[2],
+                        fft_canvas_bounds[2],
                         y_start + aperture_distance)
         elif mode == self.animation_panel.mode_panel.mode_selections.aperture_percent:
-            xul = self.app_variables.fft_canvas_bounds[0]
-            xlr = self.app_variables.fft_canvas_bounds[2]
-            yul = self.app_variables.fft_canvas_bounds[1]
-            ylr = self.app_variables.fft_canvas_bounds[3]
+            xul = fft_canvas_bounds[0]
+            xlr = fft_canvas_bounds[2]
+            yul = fft_canvas_bounds[1]
+            ylr = fft_canvas_bounds[3]
 
             canvas_xul_start = \
                 (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
@@ -220,10 +220,10 @@ class ApertureTool(WidgetPanel):
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
         elif mode == self.animation_panel.mode_panel.mode_selections.full_range_bandwidth:
-            xul = self.app_variables.fft_canvas_bounds[0]
-            xlr = self.app_variables.fft_canvas_bounds[2]
-            yul = self.app_variables.fft_canvas_bounds[1]
-            ylr = self.app_variables.fft_canvas_bounds[3]
+            xul = fft_canvas_bounds[0]
+            xlr = fft_canvas_bounds[2]
+            yul = fft_canvas_bounds[1]
+            ylr = fft_canvas_bounds[3]
 
             canvas_xul_start = (xul + xlr) / 2 - full_canvas_x_aperture * \
                                self.app_variables.animation_max_aperture_percent / 2
@@ -249,10 +249,10 @@ class ApertureTool(WidgetPanel):
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
         elif mode == self.animation_panel.mode_panel.mode_selections.full_az_bandwidth:
-            xul = self.app_variables.fft_canvas_bounds[0]
-            xlr = self.app_variables.fft_canvas_bounds[2]
-            yul = self.app_variables.fft_canvas_bounds[1]
-            ylr = self.app_variables.fft_canvas_bounds[3]
+            xul = fft_canvas_bounds[0]
+            xlr = fft_canvas_bounds[2]
+            yul = fft_canvas_bounds[1]
+            ylr = fft_canvas_bounds[3]
 
             canvas_xul_start = xul
             canvas_xlr_start = xlr
@@ -360,6 +360,8 @@ class ApertureTool(WidgetPanel):
         popup = tkinter.Toplevel(self.primary)
         selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
         selected_region_popup.image_panel.set_image_reader(self.app_variables.sicd_reader_object)
+        popup.geometry("1000x1000")
+        popup.after(200, selected_region_popup.image_panel.update_everything)
 
         self.primary.wait_window(popup)
 
@@ -381,8 +383,6 @@ class ApertureTool(WidgetPanel):
         vector_object = self.frequency_vs_degree_panel.canvas.get_vector_object(
             self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
         vector_object.image_drag_limits = self.get_fft_image_bounds()
-        self.app_variables.fft_canvas_bounds = self.frequency_vs_degree_panel.canvas.get_shape_canvas_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
         self.frequency_vs_degree_panel.canvas.show_shape(
             self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
 
@@ -676,7 +676,10 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.after(200, app.filtered_panel.update_everything)
-    root.after(200, app.frequency_vs_degree_panel.update_everything)
+    root.geometry("1200x1000")
+    app.frequency_vs_degree_panel.canvas.set_canvas_size(500, 500)
+    app.filtered_panel.canvas.set_canvas_size(500, 500)
+    root.after(400, app.filtered_panel.update_everything)
+    root.after(400, app.frequency_vs_degree_panel.update_everything)
     root.mainloop()
 

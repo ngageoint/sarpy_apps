@@ -23,9 +23,6 @@ class AppVariables(object):
     fft_image_bounds = IntegerTupleDescriptor(
         'fft_image_bounds', length=4,
         docstring='')  # type: tuple[int, int, int, int]
-    fft_canvas_bounds = IntegerTupleDescriptor(
-        'fft_canvas_bounds', length=4,
-        docstring='')  # type: tuple[int, int, int, int]
     selected_region_complex_data = TypedDescriptor(
         'selected_region_complex_data', numpy.ndarray,
         docstring='')  # type: numpy.ndarray
