@@ -33,10 +33,10 @@ class SelectedRegionPanel(WidgetPanel):
 
         self.init_w_vertical_layout()
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
+        self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
         self.image_panel.resizeable = True
 
         sicd_reader = ComplexImageReader(app_variables.sicd_fname)
-        self.image_panel.axes_canvas.set_canvas_size(1000, 1000)
         self.image_panel.set_image_reader(sicd_reader)
 
         self.toolbar.select_aoi.on_left_mouse_click(self.set_current_tool_to_selection_tool)

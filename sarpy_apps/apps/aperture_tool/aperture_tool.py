@@ -80,8 +80,6 @@ class ApertureTool(WidgetPanel):
         self.animation_panel.animation_settings.step_back.on_left_mouse_click(self.callback_step_back)
         self.animation_panel.animation_settings.stop.on_left_mouse_click(self.callback_stop_animation)
 
-        # self.animation_panel.mode_panel.resolution_mode.on_left_mouse_click(self.callback_select_resolution_mode)
-
         menubar = Menu()
 
         filemenu = Menu(menubar, tearoff=0)
@@ -112,8 +110,6 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.toolbar.margins_checkbox.pack_forget()
         self.frequency_vs_degree_panel.toolbar.axes_labels_checkbox.pack_forget()
 
-        self.filtered_panel.image_frame.outer_canvas.set_canvas_size(800, 600)
-        self.frequency_vs_degree_panel.image_frame.outer_canvas.set_canvas_size(800, 600)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
