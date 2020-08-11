@@ -37,6 +37,10 @@ class MetaIcon(ImagePanel):
         self._font_family = 'Times New Roman'
         self.resizeable = True
         self.on_resize(self.callback_resize)
+        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def close_window(self):
+        self.parent.withdraw()
 
     def callback_resize(self, event):
         super().callback_resize(event)

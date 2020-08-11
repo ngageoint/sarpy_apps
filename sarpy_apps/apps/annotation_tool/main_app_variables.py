@@ -3,13 +3,11 @@ from sarpy.annotation.schema_processing import LabelSchema
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 
+
 class AppVariables(object):
     """
     The main application variables for the annotation panel.
     """
-    image_fname = StringDescriptor(
-        'image_fname',
-        docstring='The filename for the annotation tool.')  # type: str
     label_schema = TypedDescriptor(
         'label_schema', LabelSchema,
         docstring='The label schema object.')  # type: LabelSchema

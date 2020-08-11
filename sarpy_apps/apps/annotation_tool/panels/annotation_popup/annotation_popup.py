@@ -136,7 +136,7 @@ class AnnotationPopup(WidgetPanel):
                                                      confidence=confidence_val)
             annotation.add_annotation_metadata(annotation_metadata)
             new_file_annotation_collection = FileAnnotationCollection(self.main_app_variables.label_schema,
-                                                                      image_file_name=self.main_app_variables.image_fname)
+                                                                      image_file_name=self.main_app_variables.file_annotation_collection.image_file_name)
             self.main_app_variables.file_annotation_collection = new_file_annotation_collection
             for key, val in self.main_app_variables.canvas_geom_ids_to_annotations_id_dict.items():
                 self.main_app_variables.file_annotation_collection.add_annotation(val)

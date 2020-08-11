@@ -644,6 +644,9 @@ class ApertureTool(WidgetPanel):
             range_ground_resolution = range_resolution / numpy.cos(
                 numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.GrazeAng))
 
+            tmp_cross_ground_res = cross_ground_resolution
+            tmp_range_ground_res = range_ground_resolution
+
             if self.phase_history.english_units_checkbox.is_selected():
                 tmp_cross_ground_res = cross_ground_resolution / scipy_constants.foot
                 tmp_range_ground_res = range_ground_resolution / scipy_constants.foot
