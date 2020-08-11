@@ -1,0 +1,8 @@
+# This details the important differences introduced in sarpy_apps 1.0
+# NB: bump the version number in __about__.py to reflect the below.
+
+* .5 - Created new image panel object that contains axes, toolbar and allows for window resize
+* .4 - Updates to metaicon to update graphic on window resize
+* .3 - Updates to aperture tool to update selection limits after window resize
+* .2 - Updates to tools for more streamlined look
+* .1 - Updates to tools to incorporate updated tk_builder workflow
