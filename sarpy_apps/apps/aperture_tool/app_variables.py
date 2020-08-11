@@ -1,9 +1,9 @@
+from typing import Tuple
+
 import numpy
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-
 from tk_builder.base_elements import TypedDescriptor, IntegerTupleDescriptor, \
     IntegerDescriptor, BooleanDescriptor, FloatDescriptor, StringDescriptor
-
 
 class AppVariables(object):
     sicd_fname = StringDescriptor(
@@ -22,18 +22,17 @@ class AppVariables(object):
         docstring='')  # type: numpy.ndarray
     fft_image_bounds = IntegerTupleDescriptor(
         'fft_image_bounds', length=4,
-        docstring='')  # type: tuple[int, int, int, int]
+        docstring='')  # type: Tuple[int, int, int, int]
     selected_region_complex_data = TypedDescriptor(
         'selected_region_complex_data', numpy.ndarray,
         docstring='')  # type: numpy.ndarray
     # animation properties
     animation_n_frames = IntegerDescriptor(
         'animation_n_frames', docstring='')  # type: int
-    # TODO: this one was annotated as int? Is this a typo?
     animation_aperture_faction = FloatDescriptor(
-        'animation_aperture_faction', docstring='')  # type: int
+        'animation_aperture_faction', docstring='')  # type: float
     animation_frame_rate = FloatDescriptor(
-        'animation_frame_rate', docstring='')  # type: int
+        'animation_frame_rate', docstring='')  # type: float
     animation_cycle_continuously = BooleanDescriptor(
         'animation_cycle_continuously', default_value=False, docstring='')  # type: bool
     animation_current_position = IntegerDescriptor(
