@@ -47,6 +47,7 @@ class SelectedRegionPanel(WidgetPanel):
     def set_current_tool_to_selection_tool(self, event):
         self.image_panel.canvas.set_current_tool_to_selection_tool()
 
+    # noinspection PyUnusedLocal
     def submit_aoi(self, event):
         selection_image_coords = self.image_panel.canvas.get_shape_image_coords(self.image_panel.canvas.variables.select_rect_id)
         if selection_image_coords:
@@ -55,7 +56,7 @@ class SelectedRegionPanel(WidgetPanel):
             x1 = selection_image_coords[1]
             y2 = selection_image_coords[2]
             x2 = selection_image_coords[3]
-            complex_data = self.app_variables.sicd_reader_object.base_reader.read_chip((y1, y2, 1), (x1, x2, 1))
+            complex_data = self.app_variables.sicd_reader_object.base_reader[y1:y2, x1:x2]
             self.app_variables.selected_region_complex_data = complex_data
             self.parent.destroy()
         else:
