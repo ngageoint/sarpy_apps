@@ -1,25 +1,28 @@
-from sarpy_apps.apps.annotation_tool.panels.annotate_image_panel.annotate_dashboard.annotate_dashboard import AnnotateDash
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.image_panel import ImagePanel
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets import basic_widgets
 
 
-class AppVariables:
-    def __init__(self):
-        self.image_fname = "None"       # type: str
-        self.sicd_metadata = None
+class Buttons(WidgetPanel):
+    _widget_list = ("draw_polygon", "edit_polygon", "select_closest", "delete", "annotate")
+    draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon")  # type: basic_widgets.Button
+    edit_polygon = widget_descriptors.ButtonDescriptor("edit_polygon")  # type: basic_widgets.Button
+    select_closest = widget_descriptors.ButtonDescriptor("select_closest")  # type: basic_widgets.Button
+    delete = widget_descriptors.ButtonDescriptor("delete")  # type: basic_widgets.Button
+    annotate = widget_descriptors.ButtonDescriptor("annotate")  # type: basic_widgets.Button
+
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+        self.init_w_horizontal_layout()
 
 
-class AnnotateImagePanel(AbstractWidgetPanel):
-    annotate_dashboard = AnnotateDash         # type: AnnotateDash
-    image_canvas_panel = ImageCanvasPanel      # type: ImageCanvasPanel
+class AnnotateImagePanel(WidgetPanel):
+    _widget_list = ("image_panel", "buttons")
+    buttons = widget_descriptors.PanelDescriptor("buttons", Buttons)   # type: Buttons
+    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
 
     def __init__(self, parent):
         # set the master frame
-        AbstractWidgetPanel.__init__(self, parent)
-        self.app_variables = AppVariables()
-        widgets_list = ["image_canvas_panel", "annotate_dashboard"]
-
-        self.init_w_vertical_layout(widgets_list)
-
-        self.annotate_dashboard.set_spacing_between_buttons(0)
-        self.image_canvas_panel.set_canvas_size(600, 400)
+        WidgetPanel.__init__(self, parent)
+        self.init_w_vertical_layout()

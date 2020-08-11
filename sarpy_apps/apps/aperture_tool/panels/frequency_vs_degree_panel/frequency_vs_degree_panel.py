@@ -41,10 +41,10 @@ class FrequencyVsDegreePanel(tkinter.LabelFrame):
         self.labels_canvas.variables.foreground_color = "black"
 
         for xy, tick_val in zip(tick_positions, tick_vals):
-            self.labels_canvas.create_text(xy, text=tick_val, fill="black", anchor="n")
+            self.labels_canvas.create_new_text(xy, text=tick_val, fill="black", anchor="n")
 
         if label:
-            self.labels_canvas.create_text((x_axis_positions[int(n_ticks/2)], label_y_index), text=label, fill="black", anchor="n")
+            self.labels_canvas.create_new_text((x_axis_positions[int(n_ticks/2)], label_y_index), text=label, fill="black", anchor="n")
 
     def update_y_axis(self, start_val, stop_val, label=None, n_ticks=5):
         display_image = self.canvas.variables.canvas_image_object.display_image
@@ -65,7 +65,7 @@ class FrequencyVsDegreePanel(tkinter.LabelFrame):
         self.labels_canvas.variables.foreground_color = "black"
 
         for xy, tick_val in zip(tick_positions, tick_vals):
-            self.labels_canvas.create_text(xy, text=tick_val, fill="black", anchor="w")
+            self.labels_canvas.create_new_text(xy, text=tick_val, fill="black", anchor="w")
 
         if label:
-            self.labels_canvas.create_text((label_x_index, y_axis_positions[int(n_ticks/2)]), text=label, fill="black", anchor="s", angle=90, justify="right")
+            self.labels_canvas.create_new_text((label_x_index, y_axis_positions[int(n_ticks/2)]), text=label, fill="black", anchor="s", angle=90, justify="right")

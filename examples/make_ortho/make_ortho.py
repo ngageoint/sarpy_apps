@@ -2,39 +2,38 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from sarpy_apps.apps.make_ortho.panels.ortho_button_panel import OrthoButtonPanel
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from examples.make_ortho.ortho_button_panel import OrthoButtonPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from sarpy_apps.supporting_classes.quick_ortho import QuickOrtho
 
 
-class Ortho(AbstractWidgetPanel):
+class Ortho(WidgetPanel):
     button_panel = OrthoButtonPanel         # type: OrthoButtonPanel
-    raw_frame_image_panel = ImageCanvasPanel     # type: ImageCanvasPanel
-    ortho_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
+    raw_frame_image_panel = AxesImageCanvas     # type: AxesImageCanvas
+    ortho_image_panel = AxesImageCanvas         # type: AxesImageCanvas
 
     fname = "None"  # type: str
     remap_type = "density"  # type: str
     image_reader = None  # type: ComplexImageReader
 
-    def __init__(self, master):
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+    def __init__(self, primary):
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
 
         widget_list = ["button_panel", "raw_frame_image_panel", "ortho_image_panel"]
         self.init_w_horizontal_layout(widget_list)
 
-        # define panels widget_wrappers in master frame
+        # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
         self.raw_frame_image_panel.set_canvas_size(600, 400)
         self.raw_frame_image_panel.canvas.rescale_image_to_fit_canvas = True
         self.ortho_image_panel.set_canvas_size(600, 400)
         self.ortho_image_panel.canvas.rescale_image_to_fit_canvas = True
 
-        # need to pack both master frame and self, since this is the main app window.
-        master_frame.pack()
-        self.pack()
+        # need to pack both primary frame and self, since this is the main app window.
+        primary_frame.pack()
 
         # bind events to callbacks here
         self.button_panel.fname_select.on_left_mouse_click(self.callback_set_filename)
@@ -57,7 +56,7 @@ class Ortho(AbstractWidgetPanel):
         if new_fname:
             self.fname = new_fname
             self.image_reader = ComplexImageReader(new_fname)
-            self.raw_frame_image_panel.canvas.set_image_reader(self.image_reader)
+            self.raw_frame_image_panel.set_image_reader(self.image_reader)
 
     # noinspection PyUnusedLocal
     def callback_display_ortho_image(self, event):

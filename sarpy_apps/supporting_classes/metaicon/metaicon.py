@@ -7,20 +7,20 @@ from sarpy.io.general.utils import string_types
 from sarpy.io.product.sidd import SIDDReader
 from sarpy.io.phase_history.cphd import CPHDReader
 
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 
-class MetaIcon(ImageCanvasPanel):
+class MetaIcon(ImagePanel):
 
     class Colors:
-        layover = color_converter.rgb_to_hex([1, 0.65, 0])
-        shadow = color_converter.rgb_to_hex([0, 0.65, 1])
-        multipath = color_converter.rgb_to_hex([1, 0, 0])
-        north = color_converter.rgb_to_hex([0.58, 0.82, 0.31])
-        flight_direction = color_converter.rgb_to_hex([1, 1, 0])
+        layover = color_converter.rgb_to_hex((1, 0.65, 0))
+        shadow = color_converter.rgb_to_hex((0, 0.65, 1))
+        multipath = color_converter.rgb_to_hex((1, 0, 0))
+        north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
+        flight_direction = color_converter.rgb_to_hex((1, 1, 0))
 
     class ArrowWidths:
         layover_width = 2
@@ -31,14 +31,22 @@ class MetaIcon(ImageCanvasPanel):
     def __init__(self, master):
         super(MetaIcon, self).__init__(master)
         self.parent = master
-        # TODO: what purpose does fname serve?
-        self.fname = None                              # type: str
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
-
+        self.resizeable = True
+        self.on_resize(self.callback_resize)
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def close_window(self):
+        self.parent.withdraw()
+
+    def callback_resize(self, event):
+        super().callback_resize(event)
+        if self.data_container:
+            self.canvas.delete("all")
+            self.create_from_metaicon_data_container(self.data_container)
 
     @property
     def font_family(self):
@@ -104,33 +112,34 @@ class MetaIcon(ImageCanvasPanel):
         """
 
         self.data_container = data_container
+        # metaicon_background = numpy.zeros((400, 400))
         metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width))
         numpy_reader = NumpyImageReader(metaicon_background)
-        self.canvas.set_image_reader(numpy_reader)
+        self.set_image_reader(numpy_reader)
 
         line_positions = self.line_positions
 
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[0], text=self.data_container.iid_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[1], text=self.data_container.geo_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[2], text=self.data_container.res_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[3], text=self.data_container.cdp_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[4], text=self.data_container.get_angle_line('azimuth'),
             fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[5], text=self.data_container.get_angle_line('graze'),
             fill="white", anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[6], text=self.data_container.get_angle_line('layover'),
             fill=self.Colors.layover, anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[7], text=self.data_container.get_angle_line('shadow'),
             fill=self.Colors.shadow, anchor="nw", font=self.font)
-        self.canvas.create_text(
+        self.canvas.create_new_text(
             line_positions[8], text=self.data_container.get_angle_line('multipath'),
             fill=self.Colors.multipath, anchor="nw", font=self.font)
 
@@ -371,7 +380,7 @@ class MetaIcon(ImageCanvasPanel):
         y_start = self.north_arrow_coords[1]
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
-        self.canvas.create_text(text_pos[0], text_pos[1],
+        self.canvas.create_new_text((text_pos[0], text_pos[1]),
                                 text="N",
                                 fill=self.Colors.north,
                                 font=self.font)
@@ -398,7 +407,7 @@ class MetaIcon(ImageCanvasPanel):
                                           flight_direction_arrow_end[1],
                                           flight_direction_arrow_start[0],
                                           flight_direction_arrow_start[1]), fill=self.Colors.flight_direction, width=3)
-        self.canvas.create_text((flight_direction_arrow_start[0] - self.canvas.variables.canvas_width * 0.04,
+        self.canvas.create_new_text((flight_direction_arrow_start[0] - self.canvas.variables.canvas_width * 0.04,
                                  flight_direction_arrow_start[1]),
                                 text="R",
                                 fill=self.Colors.flight_direction,
@@ -437,3 +446,4 @@ class MetaIcon(ImageCanvasPanel):
             x_end = arrow_length * numpy.cos(arrow_angle_radians)
             y_end = arrow_length * numpy.sin(arrow_angle_radians) * aspect_ratio
         return x_end, y_end
+

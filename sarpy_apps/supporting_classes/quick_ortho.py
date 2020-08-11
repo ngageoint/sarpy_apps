@@ -2,13 +2,13 @@ import numpy as np
 from sarpy.geometry import point_projection
 from sarpy.geometry import geocoords
 from scipy.interpolate import griddata
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 
 class QuickOrtho:
     def __init__(self,
-                 image_canvas,      # type: ImageCanvasPanel
+                 image_canvas,      # type: AxesImageCanvas
                  sicd_reader,       # type: ComplexImageReader
                  ):
         self.image_canvas = image_canvas

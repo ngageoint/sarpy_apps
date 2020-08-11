@@ -2,12 +2,13 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from sarpy_apps.apps.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
-from tk_builder.panel_templates.pyplot_image_panel.pyplot_image_panel import PyplotImagePanel
+from examples.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
+from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
-from tk_builder.base_elements import StringDescriptor, IntegerDescriptor
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
+from tk_builder.widgets import widget_descriptors
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
@@ -22,41 +23,37 @@ class AppVariables(object):
 
     fname = StringDescriptor(
         'fname', default_value='None', docstring='')  # type: str
-    remap_type = StringDescriptor(
-        'remap_type', default_value='density', docstring='')  # type: str
     selection_rect_id = IntegerDescriptor(
         'selection_rect_id', docstring='')  # type: int
+    image_reader = TypedDescriptor(
+        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
 
     def __init__(self):
         self.shapes_in_selector = []
 
 
-class CanvasDemo(AbstractWidgetPanel):
-    button_panel = CanvasDemoButtonPanel         # type: CanvasDemoButtonPanel
-    pyplot_panel = PyplotImagePanel         # type: PyplotImagePanel
-    canvas_demo_image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
+class CanvasDemo(WidgetPanel):
+    _widget_list = ("button_panel", "pyplot_panel", "canvas_demo_image_panel")
+    button_panel = widget_descriptors.PanelDescriptor("button_panel", CanvasDemoButtonPanel)   # type: CanvasDemoButtonPanel
+    pyplot_panel = widget_descriptors.PyplotImagePanelDescriptor("pyplot_panel")   # type: PyplotImagePanel
+    canvas_demo_image_panel = widget_descriptors.AxesImageCanvasDescriptor("canvas_demo_image_panel")   # type: AxesImageCanvas
 
-    def __init__(self, master):
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+    def __init__(self, primary):
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
-        widget_list = ["canvas_demo_image_panel", "pyplot_panel", "button_panel", ]
-        self.init_w_basic_widget_list(widget_list, 2, [2, 1])
+        self.init_w_basic_widget_list(2, [2, 1])
+        primary_frame.pack(fill=tkinter.BOTH, expand=1)
 
-        # define panels widget_wrappers in master frame
+        # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.canvas_demo_image_panel.canvas.variables.canvas_image_object = ImageCanvasPanel
         self.canvas_demo_image_panel.set_canvas_size(700, 400)
         self.canvas_demo_image_panel.canvas.rescale_image_to_fit_canvas = True
-
-        # need to pack both master frame and self, since this is the main app window.
-        master_frame.pack()
-        self.pack()
+        self.canvas_demo_image_panel.resizeable = True
 
         # bind events to callbacks here
         self.button_panel.fname_select.on_left_mouse_click(self.callback_initialize_canvas_image)
-        self.button_panel.update_rect_image.on_left_mouse_click(self.callback_display_canvas_rect_selection_in_pyplot_frame)
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
         self.button_panel.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
@@ -82,9 +79,10 @@ class CanvasDemo(AbstractWidgetPanel):
         self.button_panel.save_kml.on_left_mouse_click(self.callback_save_kml)
 
         self.canvas_demo_image_panel.canvas.on_left_mouse_click(self.callback_handle_canvas_left_mouse_click)
+        self.canvas_demo_image_panel.canvas.on_left_mouse_release(self.callback_handle_canvas_left_mouse_release)
 
     def callback_save_kml(self, event):
-        kml_save_fname = tkinter.filedialog.asksaveasfilename(initialdir = os.path.expanduser("~/Downloads"))
+        kml_save_fname = tkinter.filedialog.asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
 
         kml_util = KmlUtil()
 
@@ -127,6 +125,11 @@ class CanvasDemo(AbstractWidgetPanel):
             self.variables.shapes_in_selector.append(current_shape)
             self.variables.shapes_in_selector = sorted(list(set(self.variables.shapes_in_selector)))
             self.button_panel.select_existing_shape.update_combobox_values(self.variables.shapes_in_selector)
+
+    def callback_handle_canvas_left_mouse_release(self, event):
+        self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_release(event)
+        if self.canvas_demo_image_panel.canvas.variables.select_rect_id == self.canvas_demo_image_panel.canvas.variables.current_shape_id:
+            self.update_selection()
 
     def callback_handle_shape_selector(self, event):
         current_shape_id = int(self.button_panel.select_existing_shape.get())
@@ -185,6 +188,9 @@ class CanvasDemo(AbstractWidgetPanel):
 
     # define custom callbacks here
     def callback_remap(self, event):
+        self.update_selection()
+
+    def update_selection(self):
         remap_dict = {"density": "density",
                       "brighter": "brighter",
                       "darker": "darker",
@@ -194,8 +200,11 @@ class CanvasDemo(AbstractWidgetPanel):
                       "pedf": "pedf",
                       "nrl": "nrl"}
         selection = self.button_panel.remap_dropdown.get()
-        remap_type = remap_dict[selection]
-        self.canvas_demo_image_panel.canvas.variables.canvas_image_object.remap_type = remap_type
+        self.variables.image_reader.remap_type = remap_dict[selection]
+        image_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
+            self.canvas_demo_image_panel.canvas.variables.select_rect_id)
+        self.pyplot_panel.update_image(image_data)
+        self.canvas_demo_image_panel.canvas.update_current_image()
 
     def callback_initialize_canvas_image(self, event):
         image_file_extensions = ['*.nitf', '*.NITF']
@@ -206,12 +215,8 @@ class CanvasDemo(AbstractWidgetPanel):
         new_fname = askopenfilename(initialdir=os.path.expanduser("~"), filetypes=ftypes)
         if new_fname:
             self.variables.fname = new_fname
-            sicd_reader = ComplexImageReader(new_fname)
-            self.canvas_demo_image_panel.canvas.set_image_reader(sicd_reader)
-
-    def callback_display_canvas_rect_selection_in_pyplot_frame(self, event):
-        remapped_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(self.canvas_demo_image_panel.canvas.variables.select_rect_id)
-        self.pyplot_panel.update_image(remapped_data)
+            self.variables.image_reader = ComplexImageReader(new_fname)
+            self.canvas_demo_image_panel.set_image_reader(self.variables.image_reader)
 
 
 def main():

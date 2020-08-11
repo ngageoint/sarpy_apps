@@ -1,15 +1,13 @@
 from sarpy.annotation.annotate import FileAnnotationCollection
 from sarpy.annotation.schema_processing import LabelSchema
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
+
 
 class AppVariables(object):
     """
     The main application variables for the annotation panel.
     """
-    image_fname = StringDescriptor(
-        'image_fname',
-        docstring='The filename for the annotation tool.')  # type: str
     label_schema = TypedDescriptor(
         'label_schema', LabelSchema,
         docstring='The label schema object.')  # type: LabelSchema
@@ -20,11 +18,11 @@ class AppVariables(object):
         'file_annotation_fname',
         docstring='The path for the annotation results file.')  # type: str
     annotate_canvas = TypedDescriptor(
-        'annotate_canvas', ImageCanvasPanel,
-        docstring='The image canvas panel for the annotation.')  # type: ImageCanvasPanel
+        'annotate_canvas', AxesImageCanvas,
+        docstring='The image canvas panel for the annotation.')  # type: AxesImageCanvas
     context_canvas = TypedDescriptor(
-        'context_canvas', ImageCanvasPanel,
-        docstring='The image canvas panel for the context.')  # type: ImageCanvasPanel
+        'context_canvas', AxesImageCanvas,
+        docstring='The image canvas panel for the context.')  # type: AxesImageCanvas
     new_annotation = BooleanDescriptor(
         'new_annotation', default_value=False,
         docstring='The state variable for whether a new annotation has been '

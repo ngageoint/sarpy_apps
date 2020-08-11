@@ -1,0 +1,8 @@
+recursive-exclude examples.* *
+recursive-exclude *.examples *
+recursive-exclude *.examples.* *
+recursive-exclude *.examples.* *
+prune examples
+prune examples.*
+prune *.examples
+prune *.examples.*

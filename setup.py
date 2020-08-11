@@ -20,7 +20,7 @@ with open(os.path.join(here, 'sarpy_apps', '__about__.py'), 'r') as f:
     exec(f.read(), parameters)
 
 
-install_requires = ['numpy>=1.9.0', 'sarpy>=1.0.29', 'tk_builder']
+install_requires = ['numpy>=1.9.0', 'sarpy>=1.0.47', 'tk_builder>=1.0.1']
 tests_require = []
 if sys.version_info[0] < 3:
     tests_require.append('unittest2')

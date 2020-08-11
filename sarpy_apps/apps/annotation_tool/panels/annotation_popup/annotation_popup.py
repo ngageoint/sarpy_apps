@@ -1,6 +1,7 @@
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.base_elements import StringDescriptor
+from tk_builder.widgets import widget_descriptors
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables as MainAppVariables
 from sarpy.annotation.annotate import AnnotationMetadata
 from sarpy.annotation.annotate import Annotation
@@ -14,17 +15,23 @@ class AppVariables(object):
         docstring='The parent types main text.')  # type: str
 
 
-class AnnotationPopup(AbstractWidgetPanel):
-    parent_types = basic_widgets.Label      # type: basic_widgets.Label
-    thing_type = basic_widgets.Combobox  # type: basic_widgets.Combobox
-    reset = basic_widgets.Button        # type: basic_widgets.Button
-    submit = basic_widgets.Button       # type: basic_widgets.Button
-    comment = basic_widgets.Entry       # type: basic_widgets.Entry
-    confidence = basic_widgets.Combobox     # type: basic_widgets.Combobox
+class AnnotationPopup(WidgetPanel):
+    _widget_list = (("parent_types",),
+                    ("thing_type_label", "thing_type"),
+                    ("comment_label", "comment"),
+                    ("confidence_label", "confidence"),
+                    ("reset", "submit")
+                    )
+    parent_types = widget_descriptors.LabelDescriptor("parent_types")      # type: basic_widgets.Label
+    thing_type = widget_descriptors.ComboboxDescriptor("thing_type")  # type: basic_widgets.Combobox
+    reset = widget_descriptors.ButtonDescriptor("reset")        # type: basic_widgets.Button
+    submit = widget_descriptors.ButtonDescriptor("submit")       # type: basic_widgets.Button
+    comment = widget_descriptors.EntryDescriptor("comment")       # type: basic_widgets.Entry
+    confidence = widget_descriptors.ComboboxDescriptor("confidence")     # type: basic_widgets.Combobox
 
-    thing_type_label = basic_widgets.Label      # type: basic_widgets.Label
-    comment_label = basic_widgets.Label         # type: basic_widgets.Label
-    confidence_label = basic_widgets.Label            # type: basic_widgets.Label
+    thing_type_label = widget_descriptors.LabelDescriptor("thing_type_label")      # type: basic_widgets.Label
+    comment_label = widget_descriptors.LabelDescriptor("comment_label")         # type: basic_widgets.Label
+    confidence_label = widget_descriptors.LabelDescriptor("confidence_label")            # type: basic_widgets.Label
 
     def __init__(self, parent, main_app_variables):
         """
@@ -41,18 +48,12 @@ class AnnotationPopup(AbstractWidgetPanel):
         self.variables = AppVariables
 
         self.parent = parent
-        self.master_frame = tkinter.Frame(parent)
-        AbstractWidgetPanel.__init__(self, self.master_frame)
+        self.primary_frame = tkinter.Frame(parent)
+        WidgetPanel.__init__(self, self.primary_frame)
 
-        widget_rows_list = [["parent_types"],
-                            ["thing_type_label", "thing_type"],
-                            ["comment_label", "comment"],
-                            ["confidence_label", "confidence"],
-                            ["reset", "submit"]
-                            ]
-        self.init_w_rows(widget_rows_list)
+        self.init_w_rows()
 
-        self.set_label_text("annotate")
+        self.set_text("annotate")
 
         # set up base types for initial dropdown menu
         self.setup_main_parent_selections()
@@ -63,8 +64,7 @@ class AnnotationPopup(AbstractWidgetPanel):
         self.comment_label.set_text("comment")
         self.confidence_label.set_text("confidence")
 
-        self.master_frame.pack()
-        self.pack()
+        self.primary_frame.pack()
 
         self.parent_types.set_text(self.variables.parent_types_main_text)
 
@@ -136,13 +136,12 @@ class AnnotationPopup(AbstractWidgetPanel):
                                                      confidence=confidence_val)
             annotation.add_annotation_metadata(annotation_metadata)
             new_file_annotation_collection = FileAnnotationCollection(self.main_app_variables.label_schema,
-                                                                      image_file_name=self.main_app_variables.image_fname)
+                                                                      image_file_name=self.main_app_variables.file_annotation_collection.image_file_name)
             self.main_app_variables.file_annotation_collection = new_file_annotation_collection
             for key, val in self.main_app_variables.canvas_geom_ids_to_annotations_id_dict.items():
                 self.main_app_variables.file_annotation_collection.add_annotation(val)
             self.main_app_variables.file_annotation_collection.to_file(self.main_app_variables.file_annotation_fname)
             self.parent.destroy()
-
 
     def setup_main_parent_selections(self):
         base_type_ids = []

@@ -6,25 +6,38 @@ import numpy
 
 
 # TODO use properties for remap, and SICD
-class ComplexImageReader(ImageReader):
-    base_reader = None           # type: BaseReader
+class QuadPolImageReader(ImageReader):
+    base_readers = []           # type: [BaseReader]
     remap_type = "density"
 
-    def __init__(self, fname):
-        self.base_reader = sarpy_complex.open(fname)
-        # TODO: change to get_data_size_as_tuple
-        self.full_image_nx = self.base_reader.sicd_meta.ImageData.FullImage.NumCols
-        self.full_image_ny = self.base_reader.sicd_meta.ImageData.FullImage.NumRows
+    def __init__(self,
+                 fnames,            # type: [str]
+                 ):
+        self.base_readers = []
+        self.base_readers.append(sarpy_complex.open(fnames[0]))
+        self.base_readers.append(sarpy_complex.open(fnames[1]))
+        self.base_readers.append(sarpy_complex.open(fnames[2]))
+        self.base_readers.append(sarpy_complex.open(fnames[3]))
+
+        self.full_image_nx = self.base_readers[0].sicd_meta.ImageData.FullImage.NumCols
+        self.full_image_ny = self.base_readers[0].sicd_meta.ImageData.FullImage.NumRows
 
     def __getitem__(self, key):
-        cdata = self.base_reader[key]
-        decimated_image_data = self.remap_complex_data(cdata)
-        return decimated_image_data
+        vv_data = self.base_readers[0][key]
+        vh_data = self.base_readers[1][key]
+        hv_data = self.base_readers[2][key]
+        hh_data = self.base_readers[3][key]
 
-    def set_reader_file(self, fname):
-        self.base_reader = sarpy_complex.open(fname)
-        self.full_image_nx = self.base_reader.sicd_meta.ImageData.FullImage.NumCols
-        self.full_image_ny = self.base_reader.sicd_meta.ImageData.FullImage.NumRows
+        decimated_red = self.remap_complex_data(vv_data)
+        decimated_green = self.remap_complex_data(hh_data)
+        decimated_blue = (self.remap_complex_data(vh_data) + self.remap_complex_data(hv_data))/2
+
+        rgb_image = numpy.zeros((decimated_red.shape[0], decimated_red.shape[1], 3), dtype=decimated_red.dtype)
+        rgb_image[:, :, 0] = decimated_red
+        rgb_image[:, :, 1] = decimated_green
+        rgb_image[:, :, 2] = decimated_blue
+
+        return rgb_image
 
     # TODO get rid of strings, make these methods
     def remap_complex_data(self,
