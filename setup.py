@@ -32,7 +32,7 @@ setup(name=parameters['__title__'],
       description=parameters['__summary__'],
       long_description=long_description,
       long_description_content_type='text/markdown',
-      packages=find_packages(exclude=('*tests*', )),
+      packages=find_packages(exclude=('*tests*', '*examples*')),
       url=parameters['__url__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
