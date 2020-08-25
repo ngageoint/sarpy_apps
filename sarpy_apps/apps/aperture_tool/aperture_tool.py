@@ -109,6 +109,15 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
 
+        self.image_info_panel.phd_options.uniform_weighting.config(command=self.stuff)
+
+    def stuff(self):
+        if self.image_info_panel.phd_options.uniform_weighting.is_selected():
+            self.app_variables.aperture_filter.apply_deweighting = True
+        else:
+            self.app_variables.aperture_filter.apply_deweighting = False
+        self.update_fft_image()
+
     def exit(self):
         self.quit()
 
@@ -332,6 +341,21 @@ class ApertureTool(WidgetPanel):
         self.update_filtered_image()
         self.update_phase_history_selection()
 
+    def update_fft_image(self):
+        fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
+        self.app_variables.fft_complex_data = fft_complex_data
+
+        # self.app_variables.fft_display_data = remap.density(fft_complex_data)
+        fft_display_data = numpy.abs(fft_complex_data)
+        fft_display_data = fft_display_data - fft_display_data.min()
+        fft_display_data = fft_display_data / fft_display_data.max() * 255
+        self.app_variables.fft_display_data = fft_display_data
+        if not self.app_variables.aperture_filter.flip_x_axis:
+            self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
+        fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
+        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
+        self.frequency_vs_degree_panel.update_everything()
+
     def select_file(self):
         self.callback_select_file(None)
 
@@ -360,18 +384,7 @@ class ApertureTool(WidgetPanel):
 
         selected_region_complex_data = self.app_variables.aperture_filter.normalized_phase_history
 
-        fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
-        self.app_variables.fft_complex_data = fft_complex_data
-
-        # self.app_variables.fft_display_data = remap.density(fft_complex_data)
-        fft_display_data = numpy.abs(fft_complex_data)
-        fft_display_data = fft_display_data - fft_display_data.min()
-        fft_display_data = fft_display_data / fft_display_data.max() * 255
-        self.app_variables.fft_display_data = fft_display_data
-        if not self.app_variables.aperture_filter.flip_x_axis:
-            self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
-        fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
+        self.update_fft_image()
 
         self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
         self.frequency_vs_degree_panel.canvas.variables.current_shape_id = \

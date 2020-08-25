@@ -1,28 +1,8 @@
 import os
-import numpy
 import sarpy.io.complex as sarpy_complex
 import matplotlib.pyplot as plt
-from scipy.fftpack import fft2, ifft2, fftshift
 import sarpy.visualization.remap as remap
-from sarpy.processing.normalize_sicd import DeskewCalculator
-import sarpy.processing.normalize_sicd as normalize_sicd
-from sarpy.processing import fft_base
 from sarpy.processing.aperture_filter import ApertureFilter
-
-
-def get_fft_complex_data(ro,  # type: BaseReader
-                         cdata,  # type: numpy.ndarray
-                         ):
-    if ro.sicd_meta.Grid.Col.Sgn > 0 and ro.sicd_meta.Grid.Row.Sgn > 0:
-        # use fft2 to go from image to spatial freq
-        ft_cdata = fft2(cdata)
-        ft_cdata = fftshift(ft_cdata)
-    else:
-        # flip using ifft2
-        ft_cdata = ifft2(cdata)
-
-    ft_cdata = fftshift(ft_cdata)
-    return ft_cdata
 
 dim = 0
 
@@ -32,21 +12,15 @@ selected_region_image_coords = [3522.497816593887, 5701.362445414848, 3909.85152
 complex_data = reader[3522:3900, 5701:6088]
 complex_display = remap.density(complex_data)
 
-deskew_calc = DeskewCalculator(reader, dim)
-deskewed = deskew_calc[3522:3900, 5701:6088]
-deskewed_display = remap.density(deskewed)
-
-
-DeltaKCOAPoly, rg_coords_m, az_coords_m, fft_sgn = normalize_sicd.deskewparams(reader.sicd_meta, dim)
-
-fft_complex_data = get_fft_complex_data(reader, deskewed)
-fft_display_data = remap.density(fft_complex_data)
 
 aperture_filter = ApertureFilter(reader, dimension=dim)
+aperture_filter.apply_deweighting = True
 aperture_filter.set_sub_image_bounds((3522, 3900), (5701, 6088))
-filtered_image = aperture_filter[:, :]
+filtered_image = aperture_filter[:]
+complex_image = aperture_filter.normalized_phase_history
+complex_display = remap.density(complex_image)
 filtered_display = remap.density(filtered_image)
 
 
-plt.imshow(filtered_display)
+plt.imshow(complex_display)
 plt.show()
