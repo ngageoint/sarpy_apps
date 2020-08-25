@@ -1,12 +1,10 @@
 import os
 import time
 import numpy
-from scipy.fftpack import fft2, ifft2, fftshift
 import scipy.constants.constants as scipy_constants
 
 import tkinter
 from tkinter import filedialog
-from tkinter.filedialog import asksaveasfilename
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
@@ -15,7 +13,6 @@ from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 
 import sarpy.visualization.remap as remap
-from sarpy.io.general.base import BaseReader
 from sarpy.processing.aperture_filter import ApertureFilter
 
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
@@ -366,7 +363,13 @@ class ApertureTool(WidgetPanel):
         fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
         self.app_variables.fft_complex_data = fft_complex_data
 
-        self.app_variables.fft_display_data = remap.density(fft_complex_data)
+        # self.app_variables.fft_display_data = remap.density(fft_complex_data)
+        fft_display_data = numpy.abs(fft_complex_data)
+        fft_display_data = fft_display_data - fft_display_data.min()
+        fft_display_data = fft_display_data / fft_display_data.max() * 255
+        self.app_variables.fft_display_data = fft_display_data
+        if self.app_variables.aperture_filter.flip_x_axis:
+            self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
         fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
         self.frequency_vs_degree_panel.set_image_reader(fft_reader)
 
