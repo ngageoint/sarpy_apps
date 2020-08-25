@@ -37,7 +37,7 @@ class SelectedRegionPanel(WidgetPanel):
         self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
         self.image_panel.resizeable = True
 
-        sicd_reader = ComplexImageReader(app_variables.sicd_fname)
+        sicd_reader = ComplexImageReader(app_variables.sicd_reader_object.base_reader.file_name)
         self.image_panel.set_image_reader(sicd_reader)
 
         self.toolbar.select_aoi.on_left_mouse_click(self.set_current_tool_to_selection_tool)
