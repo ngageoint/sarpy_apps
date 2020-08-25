@@ -2,10 +2,12 @@ import os
 import numpy
 import sarpy.io.complex as sarpy_complex
 import matplotlib.pyplot as plt
-from scipy.fftpack import fft2, ifft2, fftshift, ifftshift
+from scipy.fftpack import fft2, ifft2, fftshift
 import sarpy.visualization.remap as remap
 from sarpy.processing.normalize_sicd import DeskewCalculator
 import sarpy.processing.normalize_sicd as normalize_sicd
+from sarpy.processing import fft_base
+from sarpy.processing.aperture_filter import ApertureFilter
 
 
 def get_fft_complex_data(ro,  # type: BaseReader
@@ -18,11 +20,11 @@ def get_fft_complex_data(ro,  # type: BaseReader
     else:
         # flip using ifft2
         ft_cdata = ifft2(cdata)
-        ft_cdata = ifftshift(ft_cdata)
 
+    ft_cdata = fftshift(ft_cdata)
     return ft_cdata
 
-dim = 1
+dim = 0
 
 fname = os.path.expanduser("~/sicd_example_RMA_RGZERO_RE16I_IM16I.nitf")
 reader = sarpy_complex.open(fname)
@@ -40,5 +42,11 @@ DeltaKCOAPoly, rg_coords_m, az_coords_m, fft_sgn = normalize_sicd.deskewparams(r
 fft_complex_data = get_fft_complex_data(reader, deskewed)
 fft_display_data = remap.density(fft_complex_data)
 
-plt.imshow(fft_display_data)
+aperture_filter = ApertureFilter(reader, dimension=dim)
+aperture_filter.set_sub_image_bounds((3522, 3900), (5701, 6088))
+filtered_image = aperture_filter[:, :]
+filtered_display = remap.density(filtered_image)
+
+
+plt.imshow(filtered_display)
 plt.show()

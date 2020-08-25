@@ -4,6 +4,8 @@ import numpy
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 from tk_builder.base_elements import TypedDescriptor, IntegerTupleDescriptor, \
     IntegerDescriptor, BooleanDescriptor, FloatDescriptor, StringDescriptor
+from sarpy.processing.aperture_filter import ApertureFilter
+
 
 class AppVariables(object):
     sicd_fname = StringDescriptor(
@@ -11,6 +13,9 @@ class AppVariables(object):
     sicd_reader_object = TypedDescriptor(
         'sicd_reader_object', ComplexImageReader,
         docstring='')  # type: ComplexImageReader
+    aperture_filter = TypedDescriptor('aperture_filter',
+                                      ApertureFilter,
+                                      docstring='')  # type: ApertureFilter
     fft_complex_data = TypedDescriptor(
         'fft_complex_data', numpy.ndarray,
         docstring='')  # type: numpy.ndarray
