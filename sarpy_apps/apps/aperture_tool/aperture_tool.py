@@ -368,7 +368,7 @@ class ApertureTool(WidgetPanel):
         fft_display_data = fft_display_data - fft_display_data.min()
         fft_display_data = fft_display_data / fft_display_data.max() * 255
         self.app_variables.fft_display_data = fft_display_data
-        if self.app_variables.aperture_filter.flip_x_axis:
+        if not self.app_variables.aperture_filter.flip_x_axis:
             self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
         fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
         self.frequency_vs_degree_panel.set_image_reader(fft_reader)
