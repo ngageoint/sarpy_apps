@@ -109,14 +109,26 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
 
-        self.image_info_panel.phd_options.uniform_weighting.config(command=self.stuff)
+        self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
+        self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
 
-    def stuff(self):
+    # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
+    # TODO: In a user-selected direction.
+    def callback_update_deskew_slow_time(self):
+        if self.image_info_panel.phd_options.deskew_slow.is_selected():
+            self.app_variables.aperture_filter.dimension = 1
+        else:
+            self.app_variables.aperture_filter.dimension = 0
+        self.update_fft_image()
+        self.update_filtered_image()
+
+    def callback_update_weighting(self):
         if self.image_info_panel.phd_options.uniform_weighting.is_selected():
             self.app_variables.aperture_filter.apply_deweighting = True
         else:
             self.app_variables.aperture_filter.apply_deweighting = False
         self.update_fft_image()
+        self.update_filtered_image()
 
     def exit(self):
         self.quit()
