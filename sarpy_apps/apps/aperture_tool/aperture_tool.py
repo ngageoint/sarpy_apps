@@ -611,6 +611,9 @@ class ApertureTool(WidgetPanel):
         cross_sample_spacing = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.SS
         range_sample_spacing = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.SS
 
+        tmp_cross_ss = cross_sample_spacing
+        tmp_range_ss = range_sample_spacing
+
         if self.phase_history.english_units_checkbox.is_selected():
             tmp_cross_ss = cross_sample_spacing / scipy_constants.foot
             tmp_range_ss = range_sample_spacing / scipy_constants.foot

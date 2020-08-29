@@ -1,36 +1,23 @@
 import os
-import time
+
 import numpy
-from scipy.fftpack import fft2, ifft2, fftshift
 
 import tkinter
-from tkinter.filedialog import askopenfilename, asksaveasfilename
-from tkinter import filedialog
+from tkinter.filedialog import askopenfilename
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.utils.color_utils.color_cycler import ColorCycler
 
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 from tk_builder.panel_builder import RadioButtonPanel
 
-import sarpy.visualization.remap as remap
-from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_history_selection_panel \
-    import PhaseHistoryPanel
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
 
-from sarpy.io.general.base import BaseReader
-import scipy.constants.constants as scipy_constants
-from tkinter.filedialog import asksaveasfilename
-from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
+from tk_builder.widgets.image_canvas import ToolConstants
+from sarpy_apps.apps.rcs_tool.popups.rcs_plot import RcsPlot
 
 
 class ControlsPanel(WidgetPanel):
@@ -46,12 +33,13 @@ class ControlsPanel(WidgetPanel):
                 self.parent = parent
                 self.init_w_vertical_layout()
 
-        _widget_list = ("roi_radiobuttons", "draw", "select_closest", "edit")
+        _widget_list = ("roi_radiobuttons", "draw", "select_closest", "edit", "delete")
 
         roi_radiobuttons = widget_descriptors.PanelDescriptor("roi_radiobuttons", RoiRadiobuttons)  # type: ControlsPanel.RoiControls.RoiRadiobuttons
         draw = widget_descriptors.ButtonDescriptor("draw")  # type: basic_widgets.Button
         select_closest = widget_descriptors.ButtonDescriptor("select_closest")  # type: basic_widgets.Button
         edit = widget_descriptors.ButtonDescriptor("edit")  # type: basic_widgets.Button
+        delete = widget_descriptors.ButtonDescriptor("delete")  # type: basic_widgets.Button
 
         def __init__(self, parent):
             WidgetPanel.__init__(self, parent)
@@ -122,6 +110,12 @@ class ControlsPanel(WidgetPanel):
                                                           self.MeasureOptions.gamma_0,
                                                           self.MeasureOptions.avg_pixel_power])
 
+            self.slow_time_dropdown.update_combobox_values([self.SlowTimeUnits.azimuth_angle,
+                                                            self.SlowTimeUnits.aperture_relative,
+                                                            self.SlowTimeUnits.collect_time,
+                                                            self.SlowTimeUnits.polar_angle,
+                                                            self.SlowTimeUnits.target_relative])
+
     class PlotButtons(WidgetPanel):
         _widget_list = ("plot", "save_kml", "image_profile", "save_as_text")
 
@@ -138,8 +132,8 @@ class ControlsPanel(WidgetPanel):
     _widget_list = ("roi_controls", "data_generation_options", "plot_buttons")
 
     roi_controls = widget_descriptors.PanelDescriptor("roi_controls", RoiControls)  # type: ControlsPanel.RoiControls
-    data_generation_options = widget_descriptors.PanelDescriptor("data_generation_options", DataGenerationOptions)  # type: DataGenerationOptions
-    plot_buttons = widget_descriptors.PanelDescriptor("plot_buttons", PlotButtons)  # type: PlotButtons
+    data_generation_options = widget_descriptors.PanelDescriptor("data_generation_options", DataGenerationOptions)  # type: ControlsPanel.DataGenerationOptions
+    plot_buttons = widget_descriptors.PanelDescriptor("plot_buttons", PlotButtons)  # type: ControlsPanel.PlotButtons
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -147,34 +141,57 @@ class ControlsPanel(WidgetPanel):
 
 
 class RcsTable(WidgetPanel):
-    _widget_list = ("table", )
+    class Buttons(WidgetPanel):
+        _widget_list = ("edit", )
+        edit = widget_descriptors.ButtonDescriptor("edit")  # type: basic_widgets.Button
 
+        def __init__(self, parent):
+            WidgetPanel.__init__(self, parent)
+            self.init_w_horizontal_layout()
+
+    _widget_list = ("table", "buttons", )
     table = widget_descriptors.TreeviewDescriptor("table")  # type: basic_widgets.Treeview
+    buttons = widget_descriptors.PanelDescriptor("buttons", Buttons)  # type: RcsTable.Buttons
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_horizontal_layout()
+        self.init_w_vertical_layout()
 
-        self.table.config(columns=("shape", "color", "use", "rel_sigma", "pred_noise"))
+        self.table.config(columns=("name", "shape", "color", "use", "rel_sigma", "pred_noise"))
+        self.table.heading("#0", text="Shape ID")
+        self.table.heading("name", text="Name")
         self.table.heading("shape", text="Shape")
         self.table.heading("color", text="Color")
         self.table.heading("use", text="Use")
         self.table.heading("rel_sigma", text="Relative Sigma-0 (dB)")
         self.table.heading("pred_noise", text="Pred. Noise")
-        self._current_index = 0
+        self._shape_name_to_shape_id_dict = {}
 
-    # def insert(self, values):
-    #     self.table.insert(self._current_index)
+    @property
+    def n_entries(self):
+        return len(self.table.get_children())
+
+    def insert_row(self, shape_id, vals):
+        self._shape_name_to_shape_id_dict[str(shape_id)] = str(shape_id)
+        vals = tuple([str(shape_id)] + list(vals))
+        self.table.insert('',
+                          'end',
+                          iid=shape_id,
+                          text=str(shape_id),
+                          values=vals)
+
+    def delete(self, shape_id):
+        self.table.delete(str(shape_id))
 
 
 class RcsTool(WidgetPanel):
     __slots__ = (
         '_sicd_reader', '_color_cycler')
-    _widget_list = ("controls", "image_panel", "treeview")
+    _widget_list = ("controls", "image_panel", "rcs_table")
 
     controls = widget_descriptors.PanelDescriptor("controls", ControlsPanel)  # type: ControlsPanel
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")  # type:  ImagePanel
-    rcs_table = widget_descriptors.PanelDescriptor("treeview", RcsTable, default_text="RCS Table")  # type: RcsTable
+    rcs_table = widget_descriptors.PanelDescriptor("rcs_table", RcsTable, default_text="RCS Table")  # type: RcsTable
 
     def __init__(self, primary):
 
@@ -205,12 +222,43 @@ class RcsTool(WidgetPanel):
         self.controls.roi_controls.draw.config(command=self.set_tool)
         self.controls.roi_controls.select_closest.config(command=self.select_closest)
         self.controls.roi_controls.edit.config(command=self.edit_shape)
+        self.controls.roi_controls.delete.config(command=self.delete_shape)
+
+        self.controls.plot_buttons.plot.config(command=self.plot_popups)
 
         self.image_panel.canvas.on_left_mouse_release(self.handle_canvas_left_mouse_release)
+        self.rcs_table.buttons.edit.config(command=self.edit_rcs_table)
 
     def handle_canvas_left_mouse_release(self, event):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
-        self.rcs_table.table.insert(("1", "2", "3"))
+        n_shapes_on_canvas = len(self.image_panel.canvas.get_non_tool_shape_ids())
+
+        if self.image_panel.current_tool == ToolConstants.DRAW_RECT_BY_DRAGGING or \
+           self.image_panel.current_tool == ToolConstants.DRAW_POLYGON_BY_CLICKING or \
+           self.image_panel.current_tool == ToolConstants.DRAW_ELLIPSE_BY_DRAGGING:
+
+            shape = "Rectangle"
+            if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
+                shape = "Polygon"
+            if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.ellipse:
+                shape = "Ellipse"
+            if self.rcs_table.n_entries == n_shapes_on_canvas - 1:
+                table_vals = (shape, self.image_panel.canvas.variables.foreground_color, "yes", "0", "0")
+                self.rcs_table.insert_row(self.image_panel.canvas.variables.current_shape_id, table_vals)
+            else:
+                pass
+
+    # commands for controls.plot_buttons
+    def plot_popups(self):
+        popup = tkinter.Toplevel(self.primary)
+        plot_panel = RcsPlot(popup)
+        popup.geometry("1000x1000")
+        plot_panel.azimuth_plot.set_data(numpy.linspace(0, 100))
+        plot_panel.range_plot.set_data(numpy.linspace(100, 50))
+
+    def edit_rcs_table(self):
+        current_item = self.rcs_table.table.focus()
+        print(self.rcs_table.table.item(current_item))
 
     @property
     def color_cycler(self):
@@ -233,6 +281,12 @@ class RcsTool(WidgetPanel):
 
     def edit_shape(self):
         self.image_panel.canvas.set_current_tool_to_edit_shape()
+
+    def delete_shape(self):
+        current_shape_id = self.image_panel.canvas.variables.current_shape_id
+        if current_shape_id in self.image_panel.canvas.get_non_tool_shape_ids():
+            self.image_panel.canvas.delete_shape(current_shape_id)
+            self.rcs_table.delete(current_shape_id)
 
     def select_file(self):
         fname_filters = [("NITF", ".nitf .NITF .ntf .NTF"), ('All files', '*')]
