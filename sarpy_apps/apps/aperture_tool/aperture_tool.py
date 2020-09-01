@@ -1,7 +1,7 @@
 import os
 import time
 import numpy
-from scipy.fftpack import fft2, ifft2, fftshift
+import scipy.constants.constants as scipy_constants
 
 import tkinter
 from tkinter import filedialog
@@ -10,10 +10,11 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-
 from tk_builder.widgets import widget_descriptors
 
 import sarpy.visualization.remap as remap
+from sarpy.processing.aperture_filter import ApertureFilter
+
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
@@ -23,9 +24,6 @@ from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_his
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
 
-from sarpy.io.general.base import BaseReader
-import scipy.constants.constants as scipy_constants
-from tkinter.filedialog import asksaveasfilename
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
 
@@ -75,10 +73,11 @@ class ApertureTool(WidgetPanel):
         self.animation_popup_panel.withdraw()
 
         # callbacks for animation
-        self.animation_panel.animation_settings.play.on_left_mouse_click(self.callback_play_animation_fast_slow)
+        self.animation_panel.animation_settings.play.on_left_mouse_click(self.callback_play_animation)
         self.animation_panel.animation_settings.step_forward.on_left_mouse_click(self.callback_step_forward)
         self.animation_panel.animation_settings.step_back.on_left_mouse_click(self.callback_step_back)
         self.animation_panel.animation_settings.stop.on_left_mouse_click(self.callback_stop_animation)
+        self.animation_panel.save.on_left_mouse_click(self.callback_save_animation)
 
         menubar = Menu()
 
@@ -95,12 +94,8 @@ class ApertureTool(WidgetPanel):
         popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         popups_menu.add_command(label="Animation", command=self.animation_fast_slow_popup)
 
-        save_menu = Menu(menubar, tearoff=0)
-        save_menu.add_command(label="Save Meticon", command=self.save_metaicon)
-
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Popups", menu=popups_menu)
-        menubar.add_cascade(label="Save", menu=save_menu)
 
         primary.config(menu=menubar)
 
@@ -114,9 +109,26 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
 
-    def save_metaicon(self):
-        save_fname = asksaveasfilename(initialdir=os.path.expanduser("~"), filetypes=[("*.png", ".PNG")])
-        self.metaicon.canvas.save_full_canvas_as_png(save_fname)
+        self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
+        self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
+
+    # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
+    # TODO: In a user-selected direction.
+    def callback_update_deskew_slow_time(self):
+        if self.image_info_panel.phd_options.deskew_slow.is_selected():
+            self.app_variables.aperture_filter.dimension = 1
+        else:
+            self.app_variables.aperture_filter.dimension = 0
+        self.update_fft_image()
+        self.update_filtered_image()
+
+    def callback_update_weighting(self):
+        if self.image_info_panel.phd_options.uniform_weighting.is_selected():
+            self.app_variables.aperture_filter.apply_deweighting = True
+        else:
+            self.app_variables.aperture_filter.apply_deweighting = False
+        self.update_fft_image()
+        self.update_filtered_image()
 
     def exit(self):
         self.quit()
@@ -125,7 +137,6 @@ class ApertureTool(WidgetPanel):
         self.app_variables.animation_n_frames = int(self.animation_panel.animation_settings.number_of_frames.get())
         self.app_variables.animation_aperture_faction = \
             float(self.animation_panel.fast_slow_settings.aperture_fraction.get())
-        self.app_variables.animation_frame_rate = float(self.animation_panel.animation_settings.frame_rate.get())
         self.app_variables.animation_cycle_continuously = \
             self.animation_panel.animation_settings.cycle_continuously.is_selected()
         self.app_variables.animation_min_aperture_percent = \
@@ -284,13 +295,13 @@ class ApertureTool(WidgetPanel):
         self.animation_panel.animation_settings.unpress_all_buttons()
 
     # noinspection PyUnusedLocal
-    def callback_play_animation_fast_slow(self, event):
+    def callback_play_animation(self, event):
         self.update_animation_params()
 
         direction_forward_or_back = "forward"
         if self.animation_panel.mode_panel.reverse.is_selected():
             direction_forward_or_back = "back"
-        time_between_frames = 1 / self.app_variables.animation_frame_rate
+        time_between_frames = 1 / float(self.animation_panel.animation_settings.frame_rate.get())
         self.animation_panel.animation_settings.stop.config(state="normal")
 
         def play_animation():
@@ -342,13 +353,35 @@ class ApertureTool(WidgetPanel):
         self.update_filtered_image()
         self.update_phase_history_selection()
 
+    def update_fft_image(self):
+        fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
+        self.app_variables.fft_complex_data = fft_complex_data
+
+        # self.app_variables.fft_display_data = remap.density(fft_complex_data)
+        fft_display_data = numpy.abs(fft_complex_data)
+        fft_display_data = fft_display_data - fft_display_data.min()
+        fft_display_data = fft_display_data / fft_display_data.max() * 255
+        self.app_variables.fft_display_data = fft_display_data
+        if not self.app_variables.aperture_filter.flip_x_axis:
+            self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
+        fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
+        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
+        self.frequency_vs_degree_panel.update_everything()
+
     def select_file(self):
         self.callback_select_file(None)
 
     def callback_select_file(self, event):
         sicd_fname = self.image_info_panel.file_selector.event_select_file(event)
-        self.app_variables.sicd_fname = sicd_fname
-        self.app_variables.sicd_reader_object = ComplexImageReader(self.app_variables.sicd_fname)
+        self.app_variables.sicd_reader_object = ComplexImageReader(sicd_fname)
+
+        dim = 1
+        if self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly:
+            if self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly.Coefs == [[0]]:
+                dim = 0
+
+        self.app_variables.aperture_filter = \
+            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim)
 
         # TODO: handle index, and generalize what sicd_reader_object could be...
         self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
@@ -361,15 +394,9 @@ class ApertureTool(WidgetPanel):
 
         self.primary.wait_window(popup)
 
-        selected_region_complex_data = self.app_variables.selected_region_complex_data
+        selected_region_complex_data = self.app_variables.aperture_filter.normalized_phase_history
 
-        fft_complex_data = \
-            self.get_fft_complex_data(self.app_variables.sicd_reader_object.base_reader, selected_region_complex_data)
-        self.app_variables.fft_complex_data = fft_complex_data
-
-        self.app_variables.fft_display_data = remap.density(fft_complex_data)
-        fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
+        self.update_fft_image()
 
         self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
         self.frequency_vs_degree_panel.canvas.variables.current_shape_id = \
@@ -397,47 +424,16 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.axes_canvas.x_label = "Polar Angle (degrees)"
         self.frequency_vs_degree_panel.axes_canvas.y_label = "Frequency (GHz)"
 
-        polar_angle_min, polar_angle_max = self.get_polar_angle_bounds()
+        polar_angles = self.app_variables.aperture_filter.polar_angles
+        frequencies = self.app_variables.aperture_filter.frequencies
 
-        self.frequency_vs_degree_panel.axes_canvas.image_x_min_val = polar_angle_min
-        self.frequency_vs_degree_panel.axes_canvas.image_x_max_val = polar_angle_max
+        self.frequency_vs_degree_panel.axes_canvas.image_x_min_val = polar_angles[0]
+        self.frequency_vs_degree_panel.axes_canvas.image_x_max_val = polar_angles[-1]
 
-        min_frequency, max_frequency = self.get_frequency_bounds()
-        self.frequency_vs_degree_panel.axes_canvas.image_y_min_val = max_frequency
-        self.frequency_vs_degree_panel.axes_canvas.image_y_max_val = min_frequency
+        self.frequency_vs_degree_panel.axes_canvas.image_y_min_val = frequencies[0]
+        self.frequency_vs_degree_panel.axes_canvas.image_y_max_val = frequencies[-1]
 
         self.frequency_vs_degree_panel.update_everything()
-
-    def get_polar_angle_bounds(self):
-        x1 = self.get_fft_image_bounds()[1]
-        x2 = self.get_fft_image_bounds()[3]
-
-        polar_angle_min = self.app_variables.sicd_reader_object.base_reader.sicd_meta.PFA.Kaz1
-        polar_angle_max = self.app_variables.sicd_reader_object.base_reader.sicd_meta.PFA.Kaz2
-
-        m = (polar_angle_max - polar_angle_min) / (x2 - x1)
-
-        min_polar_angle = polar_angle_min - m * x1
-        max_polar_angle = m * self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx + min_polar_angle
-
-        return min_polar_angle, max_polar_angle
-
-    def get_frequency_bounds(self):
-        y1 = self.get_fft_image_bounds()[0]
-        y2 = self.get_fft_image_bounds()[2]
-
-        frequency_min = self.app_variables.sicd_reader_object.base_reader.sicd_meta.RadarCollection.TxFrequency.Min
-        frequency_max = self.app_variables.sicd_reader_object.base_reader.sicd_meta.RadarCollection.TxFrequency.Max
-
-        m = (frequency_max - frequency_min) / (y2 - y1)
-
-        min_frequency = frequency_min - m * y1
-        max_frequency = m * self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny + min_frequency
-
-        min_frequency = min_frequency / 1e9
-        max_frequency = max_frequency / 1e9
-
-        return min_frequency, max_frequency
 
     def get_fft_image_bounds(self,
                              ):  # type: (...) -> (int, int, int, int)
@@ -457,15 +453,6 @@ class ApertureTool(WidgetPanel):
 
         return full_im_y_start, full_im_x_start, full_im_y_end, full_im_x_end
 
-    def callback_save_fft_panel_as_png(self, event):
-        filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
-                                                filetypes=(("png file", "*.png"), ("all files", "*.*")))
-        self.frequency_vs_degree_panel.canvas.save_full_canvas_as_png(filename)
-
-    def callback_get_adjusted_image(self, event):
-        filtered_image = self.get_filtered_image()
-        self.frequency_vs_degree_panel.set_image_reader(NumpyImageReader(filtered_image))
-
     def update_filtered_image(self):
         self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
 
@@ -483,68 +470,37 @@ class ApertureTool(WidgetPanel):
         x_ul = min(x1, x2)
         x_lr = max(x1, x2)
 
-        ft_cdata = self.app_variables.fft_complex_data
-        filtered_cdata = numpy.zeros(ft_cdata.shape, ft_cdata.dtype)
-        filtered_cdata[y_ul:y_lr, x_ul:x_lr] = ft_cdata[y_ul:y_lr, x_ul:x_lr]
-        filtered_cdata = fftshift(filtered_cdata)
-
-        inverse_flag = False
-        ro = self.app_variables.sicd_reader_object.base_reader
-        if ro.sicd_meta.Grid.Col.Sgn > 0 and ro.sicd_meta.Grid.Row.Sgn > 0:
-            pass
-        else:
-            inverse_flag = True
-
-        if inverse_flag:
-            cdata_clip = fft2(filtered_cdata)
-        else:
-            cdata_clip = ifft2(filtered_cdata)
-
-        filtered_image = remap.density(cdata_clip)
-        return filtered_image
-
-    @staticmethod
-    def get_fft_complex_data(ro,  # type: BaseReader
-                             cdata,  # type: numpy.ndarray
-                             ):
-        # TODO: change this to a tuple sequence to get rid of FutureWarning
-        if ro.sicd_meta.Grid.Col.Sgn > 0 and ro.sicd_meta.Grid.Row.Sgn > 0:
-            # use fft2 to go from image to spatial freq
-            ft_cdata = fft2(cdata)
-        else:
-            # flip using ifft2
-            ft_cdata = ifft2(tuple(cdata))
-
-        ft_cdata = fftshift(ft_cdata)
-        return ft_cdata
+        filtered_complex_image = self.app_variables.aperture_filter[y_ul:y_lr, x_ul:x_lr]
+        filtered_display_image = remap.density(filtered_complex_image)
+        return filtered_display_image
 
     # noinspection PyUnusedLocal
     # TODO: update variables, some don't exist in the current form.
     def callback_save_animation(self, event):
+        self.update_animation_params()
         filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
                                                 filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
-        select_box_id = self.filtered_panel.canvas.variables.current_shape_id
-        start_fft_select_box = self.filtered_panel.canvas.get_shape_canvas_coords(select_box_id)
-        n_steps = int(self.animation_panel.animation_settings.number_of_frames.get())
-        n_pixel_translate = int(self.filtered_panel.fft_button_panel.n_pixels_horizontal.get())
-        step_factor = numpy.linspace(0, n_pixel_translate, n_steps)
-        fps = float(self.filtered_panel.fft_button_panel.animation_fps.get())
 
         frame_sequence = []
-        for step in step_factor:
-            x1 = start_fft_select_box[0] + step
-            y1 = start_fft_select_box[1]
-            x2 = start_fft_select_box[2] + step
-            y2 = start_fft_select_box[3]
-            self.filtered_panel.image_canvas.modify_existing_shape_using_canvas_coords(
-                select_box_id, (x1, y1, x2, y2), update_pixel_coords=True)
-            self.filtered_panel.image_canvas.update()
+        direction_forward_or_back = "forward"
+        if self.animation_panel.mode_panel.reverse.is_selected():
+            direction_forward_or_back = "back"
+        self.animation_panel.animation_settings.stop.config(state="normal")
+
+        self.animation_panel.animation_settings.disable_all_widgets()
+        self.animation_panel.animation_settings.stop.config(state="normal")
+        if direction_forward_or_back == "forward":
+            self.app_variables.animation_current_position = -1
+        else:
+            self.app_variables.animation_current_position = self.app_variables.animation_n_frames
+        for i in range(self.app_variables.animation_n_frames):
             filtered_image = self.get_filtered_image()
             frame_sequence.append(filtered_image)
+            self.update_animation_params()
+            self.step_animation(direction_forward_or_back)
+            self.frequency_vs_degree_panel.update()
+        fps = float(self.animation_panel.animation_settings.frame_rate.get())
         frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
-        self.filtered_panel.image_canvas.modify_existing_shape_using_canvas_coords(
-            select_box_id, start_fft_select_box, update_pixel_coords=True)
-        self.filtered_panel.image_canvas.update()
 
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
@@ -610,6 +566,9 @@ class ApertureTool(WidgetPanel):
 
         cross_sample_spacing = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.SS
         range_sample_spacing = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.SS
+
+        tmp_cross_ss = cross_sample_spacing
+        tmp_range_ss = range_sample_spacing
 
         if self.phase_history.english_units_checkbox.is_selected():
             tmp_cross_ss = cross_sample_spacing / scipy_constants.foot
