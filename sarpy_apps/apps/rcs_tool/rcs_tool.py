@@ -254,7 +254,14 @@ class RcsTool(WidgetPanel):
         plot_panel = RcsPlot(popup)
         popup.geometry("1000x1000")
         plot_panel.azimuth_plot.set_data(numpy.linspace(0, 100))
+        plot_panel.azimuth_plot.title = "Slow Time Response: "
+        plot_panel.azimuth_plot.y_label = "Relative RCS (dB)"
+        plot_panel.azimuth_plot.x_label = "Azimuth Angle (deg)"
+
         plot_panel.range_plot.set_data(numpy.linspace(100, 50))
+        plot_panel.range_plot.title = "Fast Time Response: "
+        plot_panel.range_plot.y_label = "Relative RCS (dB)"
+        plot_panel.range_plot.x_label = "Frequency (GHz)"
 
     def edit_rcs_table(self):
         current_item = self.rcs_table.table.focus()
