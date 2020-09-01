@@ -37,7 +37,7 @@ class SelectedRegionPanel(WidgetPanel):
         self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
         self.image_panel.resizeable = True
 
-        sicd_reader = ComplexImageReader(app_variables.sicd_fname)
+        sicd_reader = ComplexImageReader(app_variables.sicd_reader_object.base_reader.file_name)
         self.image_panel.set_image_reader(sicd_reader)
 
         self.toolbar.select_aoi.on_left_mouse_click(self.set_current_tool_to_selection_tool)
@@ -52,11 +52,12 @@ class SelectedRegionPanel(WidgetPanel):
         selection_image_coords = self.image_panel.canvas.get_shape_image_coords(self.image_panel.canvas.variables.select_rect_id)
         if selection_image_coords:
             self.app_variables.selected_region = selection_image_coords
-            y1 = selection_image_coords[0]
-            x1 = selection_image_coords[1]
-            y2 = selection_image_coords[2]
-            x2 = selection_image_coords[3]
+            y1 = int(min(selection_image_coords[0], selection_image_coords[2]))
+            x1 = int(min(selection_image_coords[1], selection_image_coords[3]))
+            y2 = int(max(selection_image_coords[0], selection_image_coords[2]))
+            x2 = int(max(selection_image_coords[1], selection_image_coords[3]))
             complex_data = self.app_variables.sicd_reader_object.base_reader[y1:y2, x1:x2]
+            self.app_variables.aperture_filter.set_sub_image_bounds((y1, y2), (x1, x2))
             self.app_variables.selected_region_complex_data = complex_data
             self.parent.destroy()
         else:
