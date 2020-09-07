@@ -10,11 +10,13 @@ class ModeSelections(RadioButtonPanel):
                     "aperture_percent",
                     "full_range_bandwidth",
                     "full_az_bandwidth")
-    slow_time = widget_descriptors.RadioButtonDescriptor("slow_time")          # type: basic_widgets.RadioButton
-    fast_time = widget_descriptors.RadioButtonDescriptor("fast_time")          # type: basic_widgets.RadioButton
-    aperture_percent = widget_descriptors.RadioButtonDescriptor("aperture_percent")      # type: basic_widgets.RadioButton
-    full_range_bandwidth = widget_descriptors.RadioButtonDescriptor("full_range_bandwidth")     # type: basic_widgets.RadioButton
-    full_az_bandwidth = widget_descriptors.RadioButtonDescriptor("full_az_bandwidth")       # type: basic_widgets.RadioButton
+    slow_time = widget_descriptors.RadioButtonDescriptor("slow_time")  # type: basic_widgets.RadioButton
+    fast_time = widget_descriptors.RadioButtonDescriptor("fast_time")  # type: basic_widgets.RadioButton
+    aperture_percent = widget_descriptors.RadioButtonDescriptor("aperture_percent")   # type: basic_widgets.RadioButton
+    full_range_bandwidth = \
+        widget_descriptors.RadioButtonDescriptor("full_range_bandwidth")  # type: basic_widgets.RadioButton
+    full_az_bandwidth = \
+        widget_descriptors.RadioButtonDescriptor("full_az_bandwidth")  # type: basic_widgets.RadioButton
 
     def __init__(self, parent):
         RadioButtonPanel.__init__(self, parent)
@@ -63,7 +65,8 @@ class AnimationSettingsPanel(WidgetPanel):
                     "step_back", "step_forward", "play", "stop",
                     "cycle_continuously")
 
-    number_of_frames_label = widget_descriptors.LabelDescriptor("number_of_frames_label", default_text="Number of Frames:")
+    number_of_frames_label = \
+        widget_descriptors.LabelDescriptor("number_of_frames_label", default_text="Number of Frames:")
     frame_rate_label = widget_descriptors.LabelDescriptor("frame_rate_label", default_text="Frame Rate:")
     fps_label = widget_descriptors.LabelDescriptor("fps_label", default_text="fps")
 
@@ -71,14 +74,15 @@ class AnimationSettingsPanel(WidgetPanel):
     r1c4 = widget_descriptors.LabelDescriptor("r1c4", default_text="")
     r2c4 = widget_descriptors.LabelDescriptor("r2c4", default_text="")
 
-    number_of_frames = widget_descriptors.EntryDescriptor("number_of_frames")
-    aperture_fraction = widget_descriptors.EntryDescriptor("aperture_fraction")
-    frame_rate = widget_descriptors.EntryDescriptor("frame_rate")
-    cycle_continuously = widget_descriptors.CheckButtonDescriptor("cycle_continuously")
-    step_forward = widget_descriptors.ButtonDescriptor("step_forward")
-    step_back = widget_descriptors.ButtonDescriptor("step_back")
-    play = widget_descriptors.ButtonDescriptor("play")
-    stop = widget_descriptors.ButtonDescriptor("stop")
+    number_of_frames = widget_descriptors.EntryDescriptor("number_of_frames")  # type: basic_widgets.Entry
+    aperture_fraction = widget_descriptors.EntryDescriptor("aperture_fraction")  # type: basic_widgets.Entry
+    frame_rate = widget_descriptors.EntryDescriptor("frame_rate")  # type: basic_widgets.Entry
+    cycle_continuously = widget_descriptors.\
+        CheckButtonDescriptor("cycle_continuously")  # type: basic_widgets.CheckButton
+    step_forward = widget_descriptors.ButtonDescriptor("step_forward")  # type: basic_widgets.Button
+    step_back = widget_descriptors.ButtonDescriptor("step_back")  # type: basic_widgets.Button
+    play = widget_descriptors.ButtonDescriptor("play")  # type: basic_widgets.Button
+    stop = widget_descriptors.ButtonDescriptor("stop")  # type: basic_widgets.Button
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -90,12 +94,16 @@ class AnimationSettingsPanel(WidgetPanel):
 
 
 class AnimationPanel(WidgetPanel):
-    _widget_list = ("mode_panel", "animation_settings", "fast_slow_settings", "resolution_settings")
+    _widget_list = ("mode_panel", "animation_settings", "fast_slow_settings", "resolution_settings", "save")
 
-    mode_panel = widget_descriptors.PanelDescriptor("mode_panel", ModePanel)         # type: ModePanel
-    animation_settings = widget_descriptors.PanelDescriptor("animation_settings", AnimationSettingsPanel)  # type: AnimationSettingsPanel
-    fast_slow_settings = widget_descriptors.PanelDescriptor("fast_slow_settings", FastSlowSettingsPanel)       # type: FastSlowSettingsPanel
-    resolution_settings = widget_descriptors.PanelDescriptor("resolution_settings", ResolutionSettingsPanel)        # type: ResolutionSettingsPanel
+    mode_panel = widget_descriptors.PanelDescriptor("mode_panel", ModePanel)  # type: ModePanel
+    animation_settings = widget_descriptors.PanelDescriptor("animation_settings",
+                                                            AnimationSettingsPanel)  # type: AnimationSettingsPanel
+    fast_slow_settings = widget_descriptors.PanelDescriptor("fast_slow_settings",
+                                                            FastSlowSettingsPanel)  # type: FastSlowSettingsPanel
+    resolution_settings = widget_descriptors.PanelDescriptor("resolution_settings",
+                                                             ResolutionSettingsPanel)  # type: ResolutionSettingsPanel
+    save = widget_descriptors.ButtonDescriptor("save")  # type: basic_widgets.Button
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
