@@ -13,7 +13,6 @@ from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 from tk_builder.panel_builder import RadioButtonPanel
 
-from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 from tk_builder.widgets.image_canvas import ToolConstants
@@ -23,7 +22,7 @@ from sarpy_apps.apps.rcs_tool.popups.rcs_plot import RcsPlot
 class ControlsPanel(WidgetPanel):
     class RoiControls(WidgetPanel):
         class RoiRadiobuttons(RadioButtonPanel):
-            _widget_list = ("rectangle", "polygon", "ellipse",)
+            _widget_list = ("rectangle", "polygon",)
             rectangle = widget_descriptors.RadioButtonDescriptor("rectangle")  # type: basic_widgets.RadioButton
             polygon = widget_descriptors.RadioButtonDescriptor("polygon")  # type: basic_widgets.RadioButton
             ellipse = widget_descriptors.RadioButtonDescriptor("ellipse")  # type: basic_widgets.RadioButton
@@ -33,11 +32,10 @@ class ControlsPanel(WidgetPanel):
                 self.parent = parent
                 self.init_w_vertical_layout()
 
-        _widget_list = ("roi_radiobuttons", "draw", "select_closest", "edit", "delete")
+        _widget_list = ("roi_radiobuttons", "draw", "edit", "delete")
 
         roi_radiobuttons = widget_descriptors.PanelDescriptor("roi_radiobuttons", RoiRadiobuttons)  # type: ControlsPanel.RoiControls.RoiRadiobuttons
         draw = widget_descriptors.ButtonDescriptor("draw")  # type: basic_widgets.Button
-        select_closest = widget_descriptors.ButtonDescriptor("select_closest")  # type: basic_widgets.Button
         edit = widget_descriptors.ButtonDescriptor("edit")  # type: basic_widgets.Button
         delete = widget_descriptors.ButtonDescriptor("delete")  # type: basic_widgets.Button
 
@@ -127,7 +125,7 @@ class ControlsPanel(WidgetPanel):
         def __init__(self, parent):
             WidgetPanel.__init__(self, parent)
             self.parent = parent
-            self.init_w_box_layout(2, 10, 10)
+            self.init_w_box_layout(2, 10, 1)
 
     _widget_list = ("roi_controls", "data_generation_options", "plot_buttons")
 
@@ -220,7 +218,6 @@ class RcsTool(WidgetPanel):
 
         # callbacks
         self.controls.roi_controls.draw.config(command=self.set_tool)
-        self.controls.roi_controls.select_closest.config(command=self.select_closest)
         self.controls.roi_controls.edit.config(command=self.edit_shape)
         self.controls.roi_controls.delete.config(command=self.delete_shape)
 
@@ -228,6 +225,29 @@ class RcsTool(WidgetPanel):
 
         self.image_panel.canvas.on_left_mouse_release(self.handle_canvas_left_mouse_release)
         self.rcs_table.buttons.edit.config(command=self.edit_rcs_table)
+
+        # self.rcs_table.table.on_left_mouse_click(self.handle_table_selection)
+        self.rcs_table.table.on_selection(self.handle_table_selection)
+
+    def handle_table_left_mouse_click(self, event):
+        item = self.rcs_table.table.identify('item', event.x, event.y)
+        if item != "":
+            item = int(item)
+            self.image_panel.canvas.variables.current_shape_id = item
+            self.image_panel.canvas.set_current_tool_to_edit_shape()
+
+    def handle_table_selection(self, event):
+        item = self.rcs_table.table.selection()
+        if item == ():
+            item = self.rcs_table.table.identify('item', event.x, event.y)
+        if type("") == type(item):
+            pass
+        else:
+            item = item[0]
+        if item != "":
+            item = int(item)
+            self.image_panel.canvas.variables.current_shape_id = item
+            self.image_panel.canvas.set_current_tool_to_edit_shape()
 
     def handle_canvas_left_mouse_release(self, event):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
@@ -247,6 +267,9 @@ class RcsTool(WidgetPanel):
                 self.rcs_table.insert_row(self.image_panel.canvas.variables.current_shape_id, table_vals)
             else:
                 pass
+
+        if self.image_panel.variables.current_shape_id is not None:
+            self.rcs_table.table.selection_set(self.image_panel.canvas.variables.current_shape_id)
 
     # commands for controls.plot_buttons
     def plot_popups(self):
@@ -283,11 +306,8 @@ class RcsTool(WidgetPanel):
         else:
             self.image_panel.canvas.set_current_tool_to_draw_ellipse()
 
-    def select_closest(self):
-        self.image_panel.canvas.set_current_tool_to_select_closest_shape()
-
     def edit_shape(self):
-        self.image_panel.canvas.set_current_tool_to_edit_shape()
+        self.image_panel.canvas.set_current_tool_to_edit_shape(select_closest_first=True)
 
     def delete_shape(self):
         current_shape_id = self.image_panel.canvas.variables.current_shape_id

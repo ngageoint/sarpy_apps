@@ -637,7 +637,7 @@ if __name__ == '__main__':
     root.geometry("1200x1000")
     app.frequency_vs_degree_panel.canvas.set_canvas_size(500, 500)
     app.filtered_panel.canvas.set_canvas_size(500, 500)
-    root.after(400, app.filtered_panel.update_everything)
-    root.after(400, app.frequency_vs_degree_panel.update_everything)
+    root.after(1400, app.filtered_panel.update_everything)
+    root.after(1400, app.frequency_vs_degree_panel.update_everything)
     root.mainloop()
 
