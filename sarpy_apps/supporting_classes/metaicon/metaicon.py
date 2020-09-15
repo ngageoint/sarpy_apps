@@ -112,7 +112,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.data_container = data_container
-        metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width), dtype=int)
+        metaicon_background = numpy.zeros(
+            (self.canvas.variables.canvas_height, self.canvas.variables.canvas_width),
+            dtype=numpy.uint8)
         numpy_reader = NumpyImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
 
