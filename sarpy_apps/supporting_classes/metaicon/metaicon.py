@@ -37,7 +37,7 @@ class MetaIcon(ImagePanel):
         self._font_family = 'Times New Roman'
         self.resizeable = True
         self.on_resize(self.callback_resize)
-        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+        # self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def close_window(self):
         self.parent.withdraw()
@@ -112,8 +112,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.data_container = data_container
-        # metaicon_background = numpy.zeros((400, 400))
-        metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width))
+        metaicon_background = numpy.zeros(
+            (self.canvas.variables.canvas_height, self.canvas.variables.canvas_width),
+            dtype=numpy.uint8)
         numpy_reader = NumpyImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
 
