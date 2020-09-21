@@ -2,18 +2,62 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilename
-from examples.canvas_demo.panels.canvas_demo_button_panel import CanvasDemoButtonPanel
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.utils.geometry_utils.kml_util import KmlUtil
-from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
+from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 import numpy
+
+
+class CanvasDemoButtonPanel(WidgetPanel):
+    _widget_list = ("fname_select",
+                    "rect_select",
+                    "draw_line_w_drag",
+                    "draw_line_w_click",
+                    "draw_arrow_w_drag",
+                    "draw_arrow_w_click",
+                    "draw_rect_w_drag",
+                    "draw_rect_w_click",
+                    "draw_polygon_w_click",
+                    "draw_point",
+                    "edit",
+                    "color_selector",
+                    "remap_dropdown",
+                    )
+    fname_select = widget_descriptors.ButtonDescriptor("fname_select")  # type: basic_widgets.Button
+    rect_select = widget_descriptors.ButtonDescriptor("rect_select")  # type: basic_widgets.Button
+    draw_line_w_drag = widget_descriptors.ButtonDescriptor("draw_line_w_drag")  # type: basic_widgets.Button
+    draw_line_w_click = widget_descriptors.ButtonDescriptor("draw_line_w_click")  # type: basic_widgets.Button
+    draw_arrow_w_drag = widget_descriptors.ButtonDescriptor("draw_arrow_w_drag")  # type: basic_widgets.Button
+    draw_arrow_w_click = widget_descriptors.ButtonDescriptor("draw_arrow_w_click")  # type: basic_widgets.Button
+    draw_rect_w_drag = widget_descriptors.ButtonDescriptor("draw_rect_w_drag")  # type: basic_widgets.Button
+    draw_rect_w_click = widget_descriptors.ButtonDescriptor("draw_rect_w_click")  # type: basic_widgets.Button
+    draw_polygon_w_click = widget_descriptors.ButtonDescriptor("draw_polygon_w_click")  # type: basic_widgets.Button
+    draw_point = widget_descriptors.ButtonDescriptor("draw_point")  # type: basic_widgets.Button
+    color_selector = widget_descriptors.ButtonDescriptor("color_selector")      # type: basic_widgets.Button
+    edit = widget_descriptors.ButtonDescriptor("edit")      # type: basic_widgets.Button
+    remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")         # type: basic_widgets.Combobox
+
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+
+        self.init_w_box_layout(2, column_widths=20)
+
+        self.remap_dropdown.update_combobox_values(["density",
+                                                    "brighter",
+                                                    "darker",
+                                                    "high contrast",
+                                                    "linear",
+                                                    "log",
+                                                    "pedf",
+                                                    "nrl"])
 
 
 class AppVariables(object):
@@ -33,55 +77,48 @@ class AppVariables(object):
 
 
 class CanvasDemo(WidgetPanel):
-    _widget_list = ("button_panel", "pyplot_panel", "canvas_demo_image_panel")
+    _widget_list = ("button_panel", "canvas_demo_image_panel", "pyplot_panel")
     button_panel = widget_descriptors.PanelDescriptor("button_panel", CanvasDemoButtonPanel)   # type: CanvasDemoButtonPanel
     pyplot_panel = widget_descriptors.PyplotImagePanelDescriptor("pyplot_panel")   # type: PyplotImagePanel
-    canvas_demo_image_panel = widget_descriptors.AxesImageCanvasDescriptor("canvas_demo_image_panel")   # type: AxesImageCanvas
+    canvas_demo_image_panel = widget_descriptors.ImagePanelDescriptor("canvas_demo_image_panel")   # type: ImagePanel
 
     def __init__(self, primary):
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
-        self.init_w_basic_widget_list(2, [2, 1])
+        self.init_w_horizontal_layout()
         primary_frame.pack(fill=tkinter.BOTH, expand=1)
+        self.button_panel.pack(fill=tkinter.X, expand=False)
+        self.pyplot_panel.pack(expand=True)
+        self.canvas_demo_image_panel.pack(expand=True)
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.canvas_demo_image_panel.set_canvas_size(700, 400)
         self.canvas_demo_image_panel.canvas.rescale_image_to_fit_canvas = True
-        self.canvas_demo_image_panel.resizeable = True
+        self.canvas_demo_image_panel.resizeable = False
+        self.canvas_demo_image_panel.canvas.set_canvas_size(600, 400)
 
         # bind events to callbacks here
-        self.button_panel.fname_select.on_left_mouse_click(self.callback_initialize_canvas_image)
-        self.button_panel.remap_dropdown.on_selection(self.callback_remap)
-        self.button_panel.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
-        self.button_panel.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
-        self.button_panel.pan.on_left_mouse_click(self.callback_set_to_pan)
+        self.button_panel.fname_select.config(command=self.callback_initialize_canvas_image)
         self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
 
-        self.button_panel.draw_line_w_drag.on_left_mouse_click(self.callback_draw_line_w_drag)
-        self.button_panel.draw_line_w_click.on_left_mouse_click(self.callback_draw_line_w_click)
-        self.button_panel.draw_arrow_w_drag.on_left_mouse_click(self.callback_draw_arrow_w_drag)
-        self.button_panel.draw_arrow_w_click.on_left_mouse_click(self.callback_draw_arrow_w_click)
-
-        self.button_panel.draw_rect_w_drag.on_left_mouse_click(self.callback_draw_rect_w_drag)
-        self.button_panel.draw_rect_w_click.on_left_mouse_click(self.callback_draw_rect_w_click)
-
-        self.button_panel.draw_polygon_w_click.on_left_mouse_click(self.callback_draw_polygon_w_click)
-        self.button_panel.draw_point_w_click.on_left_mouse_click(self.callback_draw_point_w_click)
-
-        self.button_panel.color_selector.on_left_mouse_click(self.callback_activate_color_selector)
-
-        self.button_panel.modify_existing_shape_coords.on_left_mouse_click(self.callback_edit_shape_coords)
-        self.button_panel.edit_existing_shape.on_left_mouse_click(self.callback_edit_shape)
-        self.button_panel.select_existing_shape.on_selection(self.callback_handle_shape_selector)
-        self.button_panel.save_kml.on_left_mouse_click(self.callback_save_kml)
+        self.button_panel.draw_line_w_drag.config(command=self.callback_draw_line_w_drag)
+        self.button_panel.draw_line_w_click.config(command=self.callback_draw_line_w_click)
+        self.button_panel.draw_arrow_w_drag.config(command=self.callback_draw_arrow_w_drag)
+        self.button_panel.draw_arrow_w_click.config(command=self.callback_draw_arrow_w_click)
+        self.button_panel.draw_rect_w_drag.config(command=self.callback_draw_rect_w_drag)
+        self.button_panel.draw_rect_w_click.config(command=self.callback_draw_rect_w_click)
+        self.button_panel.draw_polygon_w_click.config(command=self.callback_draw_polygon_w_click)
+        self.button_panel.draw_point.config(command=self.callback_draw_point)
+        self.button_panel.edit.config(command=self.callback_edit)
+        self.button_panel.color_selector.config(command=self.callback_activate_color_selector)
+        self.button_panel.remap_dropdown.on_selection(self.callback_remap)
 
         self.canvas_demo_image_panel.canvas.on_left_mouse_click(self.callback_handle_canvas_left_mouse_click)
         self.canvas_demo_image_panel.canvas.on_left_mouse_release(self.callback_handle_canvas_left_mouse_release)
 
-    def callback_save_kml(self, event):
+    def callback_save_kml(self):
         kml_save_fname = tkinter.filedialog.asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
 
         kml_util = KmlUtil()
@@ -124,70 +161,47 @@ class CanvasDemo(WidgetPanel):
         if current_shape:
             self.variables.shapes_in_selector.append(current_shape)
             self.variables.shapes_in_selector = sorted(list(set(self.variables.shapes_in_selector)))
-            self.button_panel.select_existing_shape.update_combobox_values(self.variables.shapes_in_selector)
 
     def callback_handle_canvas_left_mouse_release(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_release(event)
         if self.canvas_demo_image_panel.canvas.variables.select_rect_id == self.canvas_demo_image_panel.canvas.variables.current_shape_id:
             self.update_selection()
 
-    def callback_handle_shape_selector(self, event):
-        current_shape_id = int(self.button_panel.select_existing_shape.get())
-        self.canvas_demo_image_panel.canvas.variables.current_shape_id = current_shape_id
-        self.canvas_demo_image_panel.canvas.highlight_existing_shape(current_shape_id)
+    def callback_edit(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_edit_shape(select_closest_first=True)
 
-    def callback_highlight_shape(self, event):
-        self.canvas_demo_image_panel.canvas.highlight_existing_shape(self.canvas_demo_image_panel.canvas.variables.current_shape_id)
-        
-    def callback_edit_shape_coords(self, event):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_edit_shape_coords()
+    def callback_activate_color_selector(self):
+        self.canvas_demo_image_panel.canvas.activate_color_selector()
 
-    def callback_edit_shape(self, event):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_edit_shape()
-
-    def callback_activate_color_selector(self, event):
-        self.canvas_demo_image_panel.canvas.activate_color_selector(event)
-
-    def callback_draw_line_w_drag(self, event):
+    def callback_draw_line_w_drag(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line_by_dragging()
 
-    def callback_draw_line_w_click(self, event):
+    def callback_draw_line_w_click(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line_by_clicking()
 
-    def callback_draw_arrow_w_drag(self, event):
+    def callback_draw_arrow_w_drag(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging()
 
-    def callback_draw_arrow_w_click(self, event):
+    def callback_draw_arrow_w_click(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow_by_clicking()
 
-    def callback_draw_rect_w_drag(self, event):
+    def callback_draw_rect_w_drag(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect()
 
-    def callback_draw_rect_w_click(self, event):
+    def callback_draw_rect_w_click(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect_by_clicking()
 
-    def callback_draw_polygon_w_click(self, event):
+    def callback_draw_polygon_w_click(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
 
-    def callback_draw_point_w_click(self, event):
+    def callback_draw_point(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_point()
 
-    def callback_set_to_zoom_in(self, event):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_zoom_in()
-
-    def callback_set_to_zoom_out(self, event):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_zoom_out()
-
-    def callback_set_to_pan(self, event):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_pan()
-        self.canvas_demo_image_panel.canvas.hide_shape(self.canvas_demo_image_panel.canvas.variables.zoom_rect_id)
-
     def callback_set_to_select(self, event):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect(self.canvas_demo_image_panel.canvas.variables.select_rect_id)
-        self.variables.selection_rect_id = self.canvas_demo_image_panel.canvas.variables.current_shape_id
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_selection_tool()
 
     # define custom callbacks here
-    def callback_remap(self, event):
+    def callback_remap(self):
         self.update_selection()
 
     def update_selection(self):
@@ -206,7 +220,7 @@ class CanvasDemo(WidgetPanel):
         self.pyplot_panel.update_image(image_data)
         self.canvas_demo_image_panel.canvas.update_current_image()
 
-    def callback_initialize_canvas_image(self, event):
+    def callback_initialize_canvas_image(self):
         image_file_extensions = ['*.nitf', '*.NITF']
         ftypes = [
             ('image files', image_file_extensions),

@@ -7,7 +7,6 @@ from tkinter.filedialog import askopenfilename
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.utils.color_utils.color_cycler import ColorCycler
 
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
@@ -185,7 +184,7 @@ class RcsTable(WidgetPanel):
 class RcsTool(WidgetPanel):
     __slots__ = (
         '_sicd_reader', '_color_cycler')
-    _widget_list = ("controls", "image_panel", "rcs_table")
+    _widget_list = ("controls",  "image_panel", "rcs_table",)
 
     controls = widget_descriptors.PanelDescriptor("controls", ControlsPanel)  # type: ControlsPanel
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")  # type:  ImagePanel
@@ -195,15 +194,19 @@ class RcsTool(WidgetPanel):
 
         # define variables
         self.sicd_reader = None
-        self._color_cycler = ColorCycler(n_colors=10)
 
         self.primary = primary
         primary_frame = tkinter.Frame(primary)
 
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_basic_widget_list(2, [2, 1])
-
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        primary_frame.pack(fill=tkinter.BOTH, expand=1)
+        self.image_panel.pack(expand=True)
+        self.image_panel.canvas.rescale_image_to_fit_canvas = True
+        self.image_panel.resizeable = False
+        self.image_panel.canvas.set_canvas_size(600, 400)
+        self.controls.pack(fill=tkinter.X, expand=False)
+        self.rcs_table.pack(fill=tkinter.X, expand=True)
 
         menubar = Menu()
 
@@ -226,7 +229,7 @@ class RcsTool(WidgetPanel):
         self.image_panel.canvas.on_left_mouse_release(self.handle_canvas_left_mouse_release)
         self.rcs_table.buttons.edit.config(command=self.edit_rcs_table)
 
-        # self.rcs_table.table.on_left_mouse_click(self.handle_table_selection)
+        self.rcs_table.table.on_left_mouse_click(self.handle_table_selection)
         self.rcs_table.table.on_selection(self.handle_table_selection)
 
     def handle_table_left_mouse_click(self, event):
@@ -290,15 +293,7 @@ class RcsTool(WidgetPanel):
         current_item = self.rcs_table.table.focus()
         print(self.rcs_table.table.item(current_item))
 
-    @property
-    def color_cycler(self):
-        return self._color_cycler
-
-    def set_color_cycler(self, n_colors, hex_color_palette):
-        self._color_cycler = ColorCycler(n_colors, hex_color_palette)
-
     def set_tool(self):
-        self.image_panel.canvas.variables.foreground_color = self.color_cycler.next_color
         if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.rectangle:
             self.image_panel.canvas.set_current_tool_to_draw_rect()
         elif self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
@@ -329,8 +324,6 @@ class RcsTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = RcsTool(root)
-    root.geometry("1200x1000")
-    app.image_panel.canvas.set_canvas_size(500, 500)
-    root.after(400, app.image_panel.update_everything)
+    # root.geometry("1200x1000")
     root.mainloop()
 

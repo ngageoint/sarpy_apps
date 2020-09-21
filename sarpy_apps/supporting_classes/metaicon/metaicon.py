@@ -28,16 +28,20 @@ class MetaIcon(ImagePanel):
         multipath_width = 2
         north_width = 2
 
-    def __init__(self, master):
-        super(MetaIcon, self).__init__(master)
-        self.parent = master
+    def __init__(self, parent):
+        super(MetaIcon, self).__init__(parent)
+        self.parent = parent
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
         self.resizeable = True
-        self.on_resize(self.callback_resize)
         # self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def set_dims(self, width, height):
+        self.canvas.set_canvas_size(width, height)
+        self.canvas.delete("all")
+        self.create_from_metaicon_data_container(self.data_container)
 
     def close_window(self):
         self.parent.withdraw()

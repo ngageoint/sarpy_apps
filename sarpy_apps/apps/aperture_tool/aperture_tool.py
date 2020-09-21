@@ -112,6 +112,25 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
         self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
 
+        self.filtered_panel.canvas.set_canvas_size(600, 600)
+        self.frequency_vs_degree_panel.canvas.set_canvas_size(600, 600)
+        self.on_resize(self.callback_resize)
+        # self.frequency_vs_degree_panel.update_everything()
+
+        stop = 1
+
+    def callback_resize(self, event):
+        print(self.frequency_vs_degree_panel.winfo_width())
+        print(self.frequency_vs_degree_panel.winfo_height())
+        print("")
+        print(self.filtered_panel.winfo_width())
+        print(self.filtered_panel.winfo_height())
+        self.frequency_vs_degree_panel.toolbar.config(width=self.winfo_width()/2)
+        # self.frequency_vs_degree_panel.canvas.set_canvas_size(self.winfo_width()/2-50, self.winfo_height()/2-50)
+        # self.filtered_panel.canvas.set_canvas_size(self.winfo_width()/2-50, self.winfo_height()/2-50)
+        # self.frequency_vs_degree_panel.update()
+        # self.filtered_panel.update()
+
     # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
     # TODO: In a user-selected direction.
     def callback_update_deskew_slow_time(self):
@@ -634,10 +653,8 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.geometry("1200x1000")
-    app.frequency_vs_degree_panel.canvas.set_canvas_size(500, 500)
-    app.filtered_panel.canvas.set_canvas_size(500, 500)
-    root.after(1400, app.filtered_panel.update_everything)
-    root.after(1400, app.frequency_vs_degree_panel.update_everything)
+    root.geometry("800x800")
+    # root.after(1400, app.filtered_panel.update_everything)
+    # root.after(1400, app.frequency_vs_degree_panel.update_everything)
     root.mainloop()
 
