@@ -38,7 +38,18 @@ class MetaIcon(ImagePanel):
         self.resizeable = True
         self.set_max_canvas_size(2000, 1800)
         self.set_min_canvas_size(100, 100)
-        # self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+
+        self.hide_zoom_in()
+        self.hide_zoom_out()
+        self.hide_pan()
+        self.hide_margin_controls()
+        self.hide_axes_controls()
+        self.hide_save_image()
+        self.hide_canvas_size_controls()
+
+        self.toolbar.save_canvas.config(text="save metaicon")
+
+        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def set_dims(self, width, height):
         self.canvas.set_canvas_size(width, height)

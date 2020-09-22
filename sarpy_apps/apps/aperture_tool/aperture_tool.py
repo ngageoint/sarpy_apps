@@ -99,9 +99,9 @@ class ApertureTool(WidgetPanel):
 
         primary.config(menu=menubar)
 
-        self.frequency_vs_degree_panel.toolbar.zoom_in.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.zoom_out.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.pan.pack_forget()
+        self.frequency_vs_degree_panel.hide_zoom_in()
+        self.frequency_vs_degree_panel.hide_zoom_out()
+        self.frequency_vs_degree_panel.hide_pan()
         self.frequency_vs_degree_panel.toolbar.margins_checkbox.pack_forget()
         self.frequency_vs_degree_panel.toolbar.axes_labels_checkbox.pack_forget()
 
@@ -115,8 +115,14 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
         self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
 
-        self.filtered_panel.canvas.set_canvas_size(200, 400)
-        self.frequency_vs_degree_panel.canvas.set_canvas_size(200, 400)
+        self.frequency_vs_degree_panel.axes_canvas.left_margin_pixels = 100
+        self.frequency_vs_degree_panel.axes_canvas.top_margin_pixels = 30
+        self.frequency_vs_degree_panel.axes_canvas.bottom_margin_pixels = 100
+        self.frequency_vs_degree_panel.axes_canvas.right_margin_pixels = 30
+
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(400, 400)
+        self.filtered_panel.canvas.set_canvas_size(400, 400)
+
         self.on_resize(self.callback_resize)
 
         self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
@@ -445,7 +451,8 @@ class ApertureTool(WidgetPanel):
 
         self.frequency_vs_degree_panel.axes_canvas.image_y_min_val = frequencies[0]
         self.frequency_vs_degree_panel.axes_canvas.image_y_max_val = frequencies[-1]
-        self.update_fft_image()
+
+        self.callback_resize(None)
 
     def get_fft_image_bounds(self,
                              ):  # type: (...) -> (int, int, int, int)
@@ -466,7 +473,8 @@ class ApertureTool(WidgetPanel):
         return full_im_y_start, full_im_x_start, full_im_y_end, full_im_x_end
 
     def update_filtered_image(self):
-        self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
+        if self.get_filtered_image() is not None:
+            self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
 
     def get_filtered_image(self):
         select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
@@ -647,6 +655,6 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.geometry("1000x1000")
+    root.geometry("1000x800")
     root.mainloop()
 
