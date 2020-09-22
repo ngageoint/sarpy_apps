@@ -128,6 +128,8 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
         self.filtered_panel.canvas.disable_mouse_zoom()
 
+        self.metaicon.hide_on_close()
+
     def callback_resize(self, event):
         self.update_fft_image()
         self.update_filtered_image()
