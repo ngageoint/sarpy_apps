@@ -36,6 +36,8 @@ class MetaIcon(ImagePanel):
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
         self.resizeable = True
+        self.set_max_canvas_size(2000, 1800)
+        self.set_min_canvas_size(100, 100)
         # self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def set_dims(self, width, height):
