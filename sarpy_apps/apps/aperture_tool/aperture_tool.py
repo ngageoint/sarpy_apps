@@ -109,27 +109,22 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
 
+        self.frequency_vs_degree_panel.pack(expand=True)
+        self.filtered_panel.pack(expand=True)
+
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
         self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
 
-        self.filtered_panel.canvas.set_canvas_size(600, 600)
-        self.frequency_vs_degree_panel.canvas.set_canvas_size(600, 600)
+        self.filtered_panel.canvas.set_canvas_size(200, 400)
+        self.frequency_vs_degree_panel.canvas.set_canvas_size(200, 400)
         self.on_resize(self.callback_resize)
-        # self.frequency_vs_degree_panel.update_everything()
 
-        stop = 1
+        self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
+        self.filtered_panel.canvas.disable_mouse_zoom()
 
     def callback_resize(self, event):
-        print(self.frequency_vs_degree_panel.winfo_width())
-        print(self.frequency_vs_degree_panel.winfo_height())
-        print("")
-        print(self.filtered_panel.winfo_width())
-        print(self.filtered_panel.winfo_height())
-        self.frequency_vs_degree_panel.toolbar.config(width=self.winfo_width()/2)
-        # self.frequency_vs_degree_panel.canvas.set_canvas_size(self.winfo_width()/2-50, self.winfo_height()/2-50)
-        # self.filtered_panel.canvas.set_canvas_size(self.winfo_width()/2-50, self.winfo_height()/2-50)
-        # self.frequency_vs_degree_panel.update()
-        # self.filtered_panel.update()
+        self.update_fft_image()
+        self.update_filtered_image()
 
     # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
     # TODO: In a user-selected direction.
@@ -373,19 +368,20 @@ class ApertureTool(WidgetPanel):
         self.update_phase_history_selection()
 
     def update_fft_image(self):
-        fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
-        self.app_variables.fft_complex_data = fft_complex_data
+        if self.app_variables.aperture_filter is not None:
+            fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
+            self.app_variables.fft_complex_data = fft_complex_data
 
-        # self.app_variables.fft_display_data = remap.density(fft_complex_data)
-        fft_display_data = numpy.abs(fft_complex_data)
-        fft_display_data = fft_display_data - fft_display_data.min()
-        fft_display_data = fft_display_data / fft_display_data.max() * 255
-        self.app_variables.fft_display_data = fft_display_data
-        if not self.app_variables.aperture_filter.flip_x_axis:
-            self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
-        fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
-        self.frequency_vs_degree_panel.update_everything()
+            # self.app_variables.fft_display_data = remap.density(fft_complex_data)
+            fft_display_data = numpy.abs(fft_complex_data)
+            fft_display_data = fft_display_data - fft_display_data.min()
+            fft_display_data = fft_display_data / fft_display_data.max() * 255
+            self.app_variables.fft_display_data = fft_display_data
+            if not self.app_variables.aperture_filter.flip_x_axis:
+                self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
+            fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
+            self.frequency_vs_degree_panel.set_image_reader(fft_reader)
+            self.frequency_vs_degree_panel.update_everything()
 
     def select_file(self):
         self.callback_select_file(None)
@@ -438,8 +434,6 @@ class ApertureTool(WidgetPanel):
 
         self.metaviewer.create_w_sicd(self.app_variables.sicd_reader_object.base_reader.sicd_meta)
 
-        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
-
         self.frequency_vs_degree_panel.axes_canvas.x_label = "Polar Angle (degrees)"
         self.frequency_vs_degree_panel.axes_canvas.y_label = "Frequency (GHz)"
 
@@ -451,8 +445,7 @@ class ApertureTool(WidgetPanel):
 
         self.frequency_vs_degree_panel.axes_canvas.image_y_min_val = frequencies[0]
         self.frequency_vs_degree_panel.axes_canvas.image_y_max_val = frequencies[-1]
-
-        self.frequency_vs_degree_panel.update_everything()
+        self.update_fft_image()
 
     def get_fft_image_bounds(self,
                              ):  # type: (...) -> (int, int, int, int)
@@ -479,19 +472,20 @@ class ApertureTool(WidgetPanel):
         select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
         full_image_rect = self.frequency_vs_degree_panel.canvas.get_shape_image_coords(select_rect_id)
 
-        y1 = int(full_image_rect[0])
-        x1 = int(full_image_rect[1])
-        y2 = int(full_image_rect[2])
-        x2 = int(full_image_rect[3])
+        if full_image_rect is not None:
+            y1 = int(full_image_rect[0])
+            x1 = int(full_image_rect[1])
+            y2 = int(full_image_rect[2])
+            x2 = int(full_image_rect[3])
 
-        y_ul = min(y1, y2)
-        y_lr = max(y1, y2)
-        x_ul = min(x1, x2)
-        x_lr = max(x1, x2)
+            y_ul = min(y1, y2)
+            y_lr = max(y1, y2)
+            x_ul = min(x1, x2)
+            x_lr = max(x1, x2)
 
-        filtered_complex_image = self.app_variables.aperture_filter[y_ul:y_lr, x_ul:x_lr]
-        filtered_display_image = remap.density(filtered_complex_image)
-        return filtered_display_image
+            filtered_complex_image = self.app_variables.aperture_filter[y_ul:y_lr, x_ul:x_lr]
+            filtered_display_image = remap.density(filtered_complex_image)
+            return filtered_display_image
 
     # noinspection PyUnusedLocal
     # TODO: update variables, some don't exist in the current form.
@@ -653,8 +647,6 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.geometry("800x800")
-    # root.after(1400, app.filtered_panel.update_everything)
-    # root.after(1400, app.frequency_vs_degree_panel.update_everything)
+    root.geometry("1000x1000")
     root.mainloop()
 

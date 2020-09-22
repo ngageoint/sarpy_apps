@@ -324,6 +324,4 @@ class RcsTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = RcsTool(root)
-    # root.geometry("1200x1000")
     root.mainloop()
-
