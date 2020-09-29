@@ -7,7 +7,6 @@ from tk_builder.base_elements import TypedDescriptor, IntegerTupleDescriptor, \
 from sarpy.processing.aperture_filter import ApertureFilter
 
 
-
 class AppVariables(object):
     sicd_reader_object = TypedDescriptor(
         'sicd_reader_object', ComplexImageReader,

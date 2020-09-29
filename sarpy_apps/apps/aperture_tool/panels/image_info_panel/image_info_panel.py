@@ -1,21 +1,34 @@
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.panel_builder import RadioButtonPanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import widget_descriptors
 
 
 class PhdOptionsPanel(WidgetPanel):
-    _widget_list = ("deskew_slow", "deskew_fast", "uniform_weighting")
-    deskew_slow = widget_descriptors.CheckButtonDescriptor(
-        "deskew_slow", default_text="Deskew Slow Time")  # type: basic_widgets.CheckButton
-    deskew_fast = widget_descriptors.CheckButtonDescriptor(
-        "deskew_fast", default_text="Deskew Fast Time")  # type: basic_widgets.CheckButton
+
+    class DeskewFastSlow(RadioButtonPanel):
+        _widget_list = ("fast", "slow",)
+        fast = widget_descriptors.RadioButtonDescriptor("fast")  # type: basic_widgets.RadioButton
+        slow = widget_descriptors.RadioButtonDescriptor("slow")  # type: basic_widgets.RadioButton
+
+        def __init__(self, primary):
+            self.primary = primary
+            RadioButtonPanel.__init__(self, primary)
+            self.init_w_vertical_layout()
+
+    _widget_list = ("apply_deskew", "uniform_weighting", "deskew_fast_slow")
+    apply_deskew = widget_descriptors.CheckButtonDescriptor(
+        "apply_deskew", default_text="apply deskew")  # type: basic_widgets.CheckButton
     uniform_weighting = widget_descriptors.CheckButtonDescriptor(
-        "uniform_weighting", default_text="Apply Uniform Weighting")  # type: basic_widgets.CheckButton
+        "uniform_weighting", default_text="apply uniform weighting")  # type: basic_widgets.CheckButton
+    deskew_fast_slow = widget_descriptors.PanelDescriptor("deskew_fast_slow",
+                                                          DeskewFastSlow,
+                                                          default_text="direction")  # type: DeskewFastSlow
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_vertical_layout()
+        self.init_w_horizontal_layout()
 
 
 class ChipSizePanel(WidgetPanel):

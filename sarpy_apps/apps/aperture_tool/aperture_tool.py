@@ -113,7 +113,9 @@ class ApertureTool(WidgetPanel):
         self.filtered_panel.pack(expand=True)
 
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
-        self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
+        self.image_info_panel.phd_options.apply_deskew.config(command=self.callback_update_apply_deskew)
+        self.image_info_panel.phd_options.deskew_fast_slow.slow.config(command=self.callback_update_deskew_direction)
+        self.image_info_panel.phd_options.deskew_fast_slow.fast.config(command=self.callback_update_deskew_direction)
 
         self.frequency_vs_degree_panel.axes_canvas.left_margin_pixels = 100
         self.frequency_vs_degree_panel.axes_canvas.top_margin_pixels = 30
@@ -136,11 +138,11 @@ class ApertureTool(WidgetPanel):
 
     # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
     # TODO: In a user-selected direction.
-    def callback_update_deskew_slow_time(self):
-        if self.image_info_panel.phd_options.deskew_slow.is_selected():
-            self.app_variables.aperture_filter.dimension = 1
-        else:
+    def callback_update_deskew_direction(self):
+        if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
             self.app_variables.aperture_filter.dimension = 0
+        else:
+            self.app_variables.aperture_filter.dimension = 1
         self.update_fft_image()
         self.update_filtered_image()
 
@@ -149,6 +151,14 @@ class ApertureTool(WidgetPanel):
             self.app_variables.aperture_filter.apply_deweighting = True
         else:
             self.app_variables.aperture_filter.apply_deweighting = False
+        self.update_fft_image()
+        self.update_filtered_image()
+
+    def callback_update_apply_deskew(self):
+        if self.image_info_panel.phd_options.apply_deskew.is_selected():
+            self.app_variables.aperture_filter.apply_deskew = True
+        else:
+            self.app_variables.aperture_filter.apply_deskew = False
         self.update_fft_image()
         self.update_filtered_image()
 
