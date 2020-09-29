@@ -102,15 +102,22 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.hide_zoom_in()
         self.frequency_vs_degree_panel.hide_zoom_out()
         self.frequency_vs_degree_panel.hide_pan()
-        self.frequency_vs_degree_panel.toolbar.margins_checkbox.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.axes_labels_checkbox.pack_forget()
+        self.frequency_vs_degree_panel.hide_margin_controls()
+        self.frequency_vs_degree_panel.hide_axes_controls()
+        self.frequency_vs_degree_panel.set_max_canvas_size(800, 800)
+
+        self.filtered_panel.hide_pan()
+        self.filtered_panel.hide_zoom_out()
+        self.filtered_panel.hide_zoom_out()
+        self.filtered_panel.hide_margin_controls()
+        self.filtered_panel.hide_axes_controls()
 
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
 
-        self.frequency_vs_degree_panel.pack(expand=True)
-        self.filtered_panel.pack(expand=True)
+        self.frequency_vs_degree_panel.pack(expand=True, fill=tkinter.BOTH)
+        self.filtered_panel.pack(expand=True, fill=tkinter.BOTH)
 
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
         self.image_info_panel.phd_options.apply_deskew.config(command=self.callback_update_apply_deskew)
@@ -122,8 +129,8 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.axes_canvas.bottom_margin_pixels = 100
         self.frequency_vs_degree_panel.axes_canvas.right_margin_pixels = 30
 
-        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(400, 400)
-        self.filtered_panel.canvas.set_canvas_size(400, 400)
+        self.filtered_panel.canvas.set_canvas_size(600, 400)
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(600, 400)
 
         self.on_resize(self.callback_resize)
 
@@ -157,8 +164,13 @@ class ApertureTool(WidgetPanel):
     def callback_update_apply_deskew(self):
         if self.image_info_panel.phd_options.apply_deskew.is_selected():
             self.app_variables.aperture_filter.apply_deskew = True
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="normal")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="normal")
         else:
             self.app_variables.aperture_filter.apply_deskew = False
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
+
         self.update_fft_image()
         self.update_filtered_image()
 
@@ -414,7 +426,21 @@ class ApertureTool(WidgetPanel):
                 dim = 0
 
         self.app_variables.aperture_filter = \
-            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim)
+            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim, apply_deskew=True, apply_deweighting=True)
+        self.image_info_panel.phd_options.uniform_weighting.value.set(True)
+        self.image_info_panel.phd_options.apply_deskew.value.set(True)
+        if dim == 0:
+            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(0)
+        else:
+            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(1)
+
+        # handle the case of no deskew:
+        if not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly and \
+                not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.DeltaKCOAPoly:
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
+            self.image_info_panel.phd_options.apply_deskew.config(state="disabled")
+            self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
 
         # TODO: handle index, and generalize what sicd_reader_object could be...
         self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
