@@ -147,9 +147,9 @@ class ApertureTool(WidgetPanel):
     # TODO: In a user-selected direction.
     def callback_update_deskew_direction(self):
         if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
-            self.app_variables.aperture_filter.dimension = 0
-        else:
             self.app_variables.aperture_filter.dimension = 1
+        else:
+            self.app_variables.aperture_filter.dimension = 0
         self.update_fft_image()
         self.update_filtered_image()
 
@@ -435,12 +435,15 @@ class ApertureTool(WidgetPanel):
             self.image_info_panel.phd_options.deskew_fast_slow.set_selection(1)
 
         # handle the case of no deskew:
+        # TODO: Also check if DeltaKCOAPoly is zero, or an array of all zeros
         if not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly and \
                 not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.DeltaKCOAPoly:
             self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
             self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
             self.image_info_panel.phd_options.apply_deskew.config(state="disabled")
             self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
+
+        # TODO: Check for default deweight value in Grid.Col/Row.WgtType
 
         # TODO: handle index, and generalize what sicd_reader_object could be...
         self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
