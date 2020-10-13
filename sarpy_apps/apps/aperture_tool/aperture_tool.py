@@ -54,7 +54,7 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel = ImageInfoPanel(self.image_info_popup_panel)
         self.image_info_popup_panel.withdraw()
 
-        self.image_info_panel.file_selector.select_file.on_left_mouse_click(self.callback_select_file)
+        self.image_info_panel.file_selector.select_file.config(command=self.select_file)
 
         self.ph_popup_panel = tkinter.Toplevel(self.primary)
         self.phase_history = PhaseHistoryPanel(self.ph_popup_panel)
@@ -414,10 +414,7 @@ class ApertureTool(WidgetPanel):
             self.frequency_vs_degree_panel.update_everything()
 
     def select_file(self):
-        self.callback_select_file(None)
-
-    def callback_select_file(self, event):
-        sicd_fname = self.image_info_panel.file_selector.event_select_file(event)
+        sicd_fname = self.image_info_panel.file_selector.select_file_command()
         self.app_variables.sicd_reader_object = ComplexImageReader(sicd_fname)
 
         dim = 1
@@ -426,7 +423,8 @@ class ApertureTool(WidgetPanel):
                 dim = 0
 
         self.app_variables.aperture_filter = \
-            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim, apply_deskew=True, apply_deweighting=True)
+            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim, apply_deskew=True,
+                           apply_deweighting=True)
         self.image_info_panel.phd_options.uniform_weighting.value.set(True)
         self.image_info_panel.phd_options.apply_deskew.value.set(True)
         if dim == 0:

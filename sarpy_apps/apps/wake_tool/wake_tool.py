@@ -30,6 +30,10 @@ class AppVariables(object):
 
 
 class WakeTool(WidgetPanel):
+    """
+    Tool that displays information based on a line and point drawn on an image.  Information pertains
+    to the direction of the line and distance from the point to the line.
+    """
     _widget_list = ("side_panel", "image_panel")
     side_panel = widget_descriptors.PanelDescriptor(
         "side_panel", SidePanel, default_text="wake tool controls")      # type: SidePanel
@@ -45,35 +49,31 @@ class WakeTool(WidgetPanel):
 
         self.side_panel.set_spacing_between_buttons(0)
 
-        # need to pack both primary frame and self, since this is the main app window.
-
         # set up event listeners
-        self.side_panel.buttons.line_draw.on_left_mouse_click(self.callback_press_line_button)
-        self.side_panel.buttons.point_draw.on_left_mouse_click(self.callback_press_point_button)
+        self.side_panel.buttons.line_draw.config(command=self.line_draw_command)
+        self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
         self.image_panel.canvas.variables.line_width = self.variables.line_width
         self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
         self.side_panel.file_selector.set_fname_filters([("*.NITF", ".nitf")])
-        self.side_panel.file_selector.select_file.on_left_mouse_click(self.callback_select_file)
+        self.side_panel.file_selector.select_file.config(command=self.select_file_command)
 
-    def callback_select_file(self, event):
-        self.side_panel.file_selector.event_select_file(event)
+    def select_file_command(self):
+        self.side_panel.file_selector.select_file_command()
         if self.side_panel.file_selector.fname:
             self.variables.image_fname = self.side_panel.file_selector.fname
         self.variables.image_reader = ComplexImageReader(self.variables.image_fname)
         self.image_panel.set_image_reader(self.variables.image_reader)
 
     # noinspection PyUnusedLocal
-    def callback_press_line_button(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.line_draw)
+    def line_draw_command(self):
         self.image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging()
         self.image_panel.canvas.variables.current_shape_id = self.variables.arrow_id
 
     # noinspection PyUnusedLocal
-    def callback_press_point_button(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.point_draw)
+    def draw_point_command(self):
         self.image_panel.canvas.set_current_tool_to_draw_point()
         self.image_panel.canvas.variables.current_shape_id = self.variables.point_id
 
