@@ -1,5 +1,4 @@
 from tkinter import font
-from tkinter import Toplevel
 
 import numpy
 from sarpy.io.complex.converter import open_complex
@@ -31,14 +30,14 @@ class MetaIcon(ImagePanel):
 
     def __init__(self, parent):
         super(MetaIcon, self).__init__(parent)
+        self.canvas.config(background='black')
         self.parent = parent
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
         self.resizeable = True
-        self.set_max_canvas_size(2000, 1800)
-        self.set_min_canvas_size(100, 100)
+        self.axes_canvas.set_canvas_size(10, 10)
 
         self.hide_zoom_in()
         self.hide_zoom_out()
@@ -49,6 +48,7 @@ class MetaIcon(ImagePanel):
         self.hide_canvas_size_controls()
 
         self.toolbar.save_canvas.config(text="save metaicon")
+        self.canvas.disable_mouse_zoom()
 
     def hide_on_close(self):
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)

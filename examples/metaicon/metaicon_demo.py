@@ -63,14 +63,13 @@ class MetaIconDemo(WidgetPanel):
                                                rniirs=rniirs,
                                                polarization=polarization,
                                                )
-        self.metaicon.create_from_metaicon_data_container(data_container)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.metaicon.set_dims(800, 600)
+        self.metaicon.create_from_metaicon_data_container(data_container)
 
 
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = MetaIconDemo(root)
-    app.metaicon.config(width=800, height=600)
+    root.minsize(500, 500)
     root.mainloop()
 

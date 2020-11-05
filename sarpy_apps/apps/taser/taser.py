@@ -81,7 +81,7 @@ class Taser(WidgetPanel):
             self.taser_image_panel.\
                 image_frame.\
                 outer_canvas.\
-                canvas.zoom_to_selection((0, 0, full_image_width, fill_image_height))
+                canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
             self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal

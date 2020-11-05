@@ -165,7 +165,7 @@ class AnnotationTool(WidgetPanel):
             image_rect = self.context_panel.image_panel.canvas.get_shape_image_coords(rect_id)
             annotate_zoom_rect = self.annotate_panel.image_panel.canvas.variables.canvas_image_object.full_image_yx_to_canvas_coords(
                 image_rect)
-            self.annotate_panel.image_panel.canvas.zoom_to_selection(annotate_zoom_rect, animate=True)
+            self.annotate_panel.image_panel.canvas.zoom_to_canvas_selection(annotate_zoom_rect, animate=True)
 
     # annotate callbacks
     # noinspection PyUnusedLocal
