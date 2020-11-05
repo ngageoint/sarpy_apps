@@ -1,3 +1,5 @@
+import tkinter
+
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
@@ -10,5 +12,4 @@ class ButtonPanel(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-
         self.init_w_box_layout(2, column_widths=8, row_heights=2)

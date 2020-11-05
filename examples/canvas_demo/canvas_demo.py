@@ -95,10 +95,6 @@ class CanvasDemo(WidgetPanel):
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
-        self.canvas_demo_image_panel.canvas.rescale_image_to_fit_canvas = True
-        self.canvas_demo_image_panel.resizeable = False
-        self.canvas_demo_image_panel.canvas.set_canvas_size(600, 400)
-
         # bind events to callbacks here
         self.button_panel.fname_select.config(command=self.callback_initialize_canvas_image)
         self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)

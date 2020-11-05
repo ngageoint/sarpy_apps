@@ -67,21 +67,17 @@ class Taser(WidgetPanel):
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
 
-        self.taser_image_panel.image_frame.outer_canvas.set_canvas_size(700, 400)
-        self.taser_image_panel.image_frame.outer_canvas.canvas.on_left_mouse_release(self.callback_left_mouse_release)
+        self.taser_image_panel.canvas.on_left_mouse_release(self.callback_left_mouse_release)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.button_panel.pack(fill=tkinter.X, expand=tkinter.NO)
         self.taser_image_panel.resizeable = True
 
     def callback_left_mouse_release(self, event):
-        self.taser_image_panel.image_frame.outer_canvas.canvas.callback_handle_left_mouse_release(event)
-        if self.taser_image_panel.image_frame.outer_canvas.canvas.variables.current_tool == TOOLS.SELECT_TOOL:
-            full_image_width = self.taser_image_panel.image_frame.outer_canvas.canvas.variables.canvas_width
-            fill_image_height = self.taser_image_panel.image_frame.outer_canvas.canvas.variables.canvas_height
-            self.taser_image_panel.\
-                image_frame.\
-                outer_canvas.\
-                canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
+        self.taser_image_panel.canvas.callback_handle_left_mouse_release(event)
+        if self.taser_image_panel.canvas.variables.current_tool == TOOLS.SELECT_TOOL:
+            full_image_width = self.taser_image_panel.canvas.variables.canvas_width
+            fill_image_height = self.taser_image_panel.canvas.variables.canvas_height
+            self.taser_image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
             self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal
@@ -103,7 +99,7 @@ class Taser(WidgetPanel):
         remap_type = remap_dict[selection]
         self.variables.image_reader.remap_type = remap_type
         self.display_canvas_rect_selection_in_pyplot_frame()
-        self.taser_image_panel.image_frame.outer_canvas.canvas.update_current_image()
+        self.taser_image_panel.canvas.update_current_image()
 
     # noinspection PyUnusedLocal
     def callback_select_files(self, event):
@@ -135,13 +131,12 @@ class Taser(WidgetPanel):
             self.taser_image_panel.set_image_reader(self.variables.image_reader)
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
-        image_data = self.taser_image_panel.image_frame.outer_canvas.canvas.get_image_data_in_canvas_rect_by_id(
-            self.taser_image_panel.image_frame.outer_canvas.canvas.variables.select_rect_id)
+        image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
+            self.taser_image_panel.canvas.variables.select_rect_id)
         self.pyplot_panel.update_image(image_data)
 
 
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = Taser(root)
-    root.after(200, app.taser_image_panel.update_everything)
     root.mainloop()

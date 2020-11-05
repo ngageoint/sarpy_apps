@@ -44,7 +44,6 @@ class WakeTool(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_vertical_layout()
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.image_panel.resizeable = True
         self.variables = AppVariables()
 
         self.side_panel.set_spacing_between_buttons(0)
@@ -57,6 +56,9 @@ class WakeTool(WidgetPanel):
         self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
+        self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
+        self.side_panel.do_not_expand()
+        self.side_panel.fill_x(False)
         self.side_panel.file_selector.set_fname_filters([("*.NITF", ".nitf")])
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
 
