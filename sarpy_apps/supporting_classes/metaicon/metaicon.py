@@ -49,21 +49,16 @@ class MetaIcon(ImagePanel):
 
         self.toolbar.save_canvas.config(text="save metaicon")
         self.canvas.disable_mouse_zoom()
+        self.on_resize(self.callback_resize)
 
     def hide_on_close(self):
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
-
-    def set_dims(self, width, height):
-        self.canvas.set_canvas_size(width, height)
-        self.canvas.delete("all")
-        self.create_from_metaicon_data_container(self.data_container)
 
     def close_window(self):
         self.parent.withdraw()
 
     def callback_resize(self, event):
-        super().callback_resize(event)
-        if self.data_container:
+        if self.data_container and self.resizeable:
             self.canvas.delete("all")
             self.create_from_metaicon_data_container(self.data_container)
 
