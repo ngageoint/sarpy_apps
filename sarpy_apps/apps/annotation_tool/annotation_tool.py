@@ -44,8 +44,8 @@ class AnnotationTool(WidgetPanel):
 
         self.variables = AppVariables()
 
-        self.context_panel.buttons.select_area.on_left_mouse_click(self.callback_context_set_to_select)
-        self.context_panel.buttons.edit_selection.on_left_mouse_click(self.callback_context_set_to_edit_selection)
+        self.context_panel.buttons.select_area.config(command=self.callback_context_set_to_select)
+        self.context_panel.buttons.edit_selection.config(command=self.callback_context_set_to_edit_selection)
 
         self.context_panel.image_panel.canvas.on_left_mouse_release(self.callback_context_handle_left_mouse_release)
 
@@ -55,11 +55,11 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.image_panel.canvas.on_left_mouse_release(self.callback_annotate_handle_left_mouse_release)
         self.annotate_panel.image_panel.canvas.on_right_mouse_click(self.callback_annotate_handle_right_mouse_click)
 
-        self.annotate_panel.buttons.draw_polygon.on_left_mouse_click(self.callback_set_to_draw_polygon)
-        self.annotate_panel.buttons.annotate.on_left_mouse_click(self.callback_annotation_popup)
-        self.annotate_panel.buttons.select_closest.on_left_mouse_click(self.callback_set_to_select_closest_shape)
-        self.annotate_panel.buttons.edit_polygon.on_left_mouse_click(self.callback_set_to_edit_shape)
-        self.annotate_panel.buttons.delete.on_left_mouse_click(self.callback_delete_shape)
+        self.annotate_panel.buttons.draw_polygon.config(command=self.callback_set_to_draw_polygon)
+        self.annotate_panel.buttons.annotate.config(command=self.callback_annotation_popup)
+        self.annotate_panel.buttons.select_closest.config(command=self.callback_set_to_select_closest_shape)
+        self.annotate_panel.buttons.edit_polygon.config(command=self.callback_set_to_edit_shape)
+        self.annotate_panel.buttons.delete.config(command=self.callback_delete_shape)
 
         self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
@@ -157,11 +157,11 @@ class AnnotationTool(WidgetPanel):
             print("select a valid schema file or existing annotation file..")
 
     # noinspection PyUnusedLocal
-    def callback_context_set_to_select(self, event):
+    def callback_context_set_to_select(self):
         self.context_panel.image_panel.canvas.set_current_tool_to_selection_tool()
 
     # noinspection PyUnusedLocal
-    def callback_context_set_to_edit_selection(self, event):
+    def callback_context_set_to_edit_selection(self):
         self.context_panel.image_panel.canvas.set_current_tool_to_edit_shape()
 
     def callback_context_handle_left_mouse_release(self, event):
@@ -176,7 +176,7 @@ class AnnotationTool(WidgetPanel):
 
     # annotate callbacks
     # noinspection PyUnusedLocal
-    def callback_set_to_select_closest_shape(self, event):
+    def callback_set_to_select_closest_shape(self):
         self.annotate_panel.image_panel.canvas.set_current_tool_to_select_closest_shape()
 
     def callback_annotate_handle_left_mouse_release(self, event):
@@ -201,18 +201,18 @@ class AnnotationTool(WidgetPanel):
 
             self.variables.canvas_geom_ids_to_annotations_id_dict[str(current_canvas_shape_id)] = annotation
 
-    def callback_set_to_draw_polygon(self, event):
+    def callback_set_to_draw_polygon(self):
         self.annotate_panel.image_panel.canvas.variables.current_shape_id = None
         self.annotate_panel.image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
 
-    def callback_set_to_edit_shape(self, event):
+    def callback_set_to_edit_shape(self):
         self.annotate_panel.image_panel.canvas.set_current_tool_to_edit_shape()
 
     def callback_handle_annotate_mouse_wheel(self, event):
         self.annotate_panel.image_panel.canvas.callback_mouse_zoom(event)
 
     # noinspection PyUnusedLocal
-    def callback_delete_shape(self, event):
+    def callback_delete_shape(self):
         tool_shape_ids = self.annotate_panel.image_panel.canvas.get_tool_shape_ids()
         current_geom_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
         if current_geom_id:
@@ -226,7 +226,7 @@ class AnnotationTool(WidgetPanel):
             print("no shape selected")
 
     # noinspection PyUnusedLocal
-    def callback_annotation_popup(self, event):
+    def callback_annotation_popup(self):
         current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
         if current_canvas_shape_id:
             popup = tkinter.Toplevel(self.parent)

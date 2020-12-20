@@ -8,7 +8,8 @@ from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaI
 
 
 class MetaIconDemo(WidgetPanel):
-    _widget_list = ("metaicon", )
+    # The metaicon will be a popup, so leave the widget list unpopulated
+    _widget_list = ()
 
     metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
 
@@ -17,6 +18,7 @@ class MetaIconDemo(WidgetPanel):
 
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
+
         self.init_w_horizontal_layout()
 
         lat = 35.05452800184999
@@ -63,13 +65,18 @@ class MetaIconDemo(WidgetPanel):
                                                rniirs=rniirs,
                                                polarization=polarization,
                                                )
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
+        self.metaicon = MetaIcon(self.metaicon_popup_panel)
         self.metaicon.create_from_metaicon_data_container(data_container)
+        # hide the main window so just the metaicon popup is showing
+        self.primary.withdraw()
+
+        # quit the program when the user closes the metaicon popup
+        self.metaicon_popup_panel.protocol("WM_DELETE_WINDOW", root.quit)
 
 
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = MetaIconDemo(root)
-    root.minsize(500, 500)
     root.mainloop()
 

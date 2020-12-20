@@ -97,7 +97,7 @@ class CanvasDemo(WidgetPanel):
         self.button_panel.set_spacing_between_buttons(0)
         # bind events to callbacks here
         self.button_panel.fname_select.config(command=self.callback_initialize_canvas_image)
-        self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
+        self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
         self.button_panel.draw_line_w_drag.config(command=self.callback_draw_line_w_drag)
         self.button_panel.draw_line_w_click.config(command=self.callback_draw_line_w_click)
@@ -193,7 +193,7 @@ class CanvasDemo(WidgetPanel):
     def callback_draw_point(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_point()
 
-    def callback_set_to_select(self, event):
+    def callback_set_to_select(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_selection_tool()
 
     # define custom callbacks here

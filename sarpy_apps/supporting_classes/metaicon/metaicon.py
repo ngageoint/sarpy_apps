@@ -1,4 +1,5 @@
 from tkinter import font
+import tkinter
 
 import numpy
 from sarpy.io.complex.converter import open_complex
@@ -50,6 +51,9 @@ class MetaIcon(ImagePanel):
         self.toolbar.save_canvas.config(text="save metaicon")
         self.canvas.disable_mouse_zoom()
         self.on_resize(self.callback_resize)
+
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.parent.minsize(500, 500)
 
     def hide_on_close(self):
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)

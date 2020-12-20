@@ -73,11 +73,11 @@ class ApertureTool(WidgetPanel):
         self.animation_popup_panel.withdraw()
 
         # callbacks for animation
-        self.animation_panel.animation_settings.play.on_left_mouse_click(self.callback_play_animation)
-        self.animation_panel.animation_settings.step_forward.on_left_mouse_click(self.callback_step_forward)
-        self.animation_panel.animation_settings.step_back.on_left_mouse_click(self.callback_step_back)
-        self.animation_panel.animation_settings.stop.on_left_mouse_click(self.callback_stop_animation)
-        self.animation_panel.save.on_left_mouse_click(self.callback_save_animation)
+        self.animation_panel.animation_settings.play.config(command=self.callback_play_animation)
+        self.animation_panel.animation_settings.step_forward.config(command=self.callback_step_forward)
+        self.animation_panel.animation_settings.step_back.config(command=self.callback_step_back)
+        self.animation_panel.animation_settings.stop.config(command=self.callback_stop_animation)
+        self.animation_panel.save.config(command=self.callback_save_animation)
 
         menubar = Menu()
 
@@ -191,11 +191,11 @@ class ApertureTool(WidgetPanel):
             float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
 
     # noinspection PyUnusedLocal
-    def callback_step_forward(self, event):
+    def callback_step_forward(self):
         self.step_animation("forward")
 
     # noinspection PyUnusedLocal
-    def callback_step_back(self, event):
+    def callback_step_back(self):
         self.step_animation("back")
 
     def step_animation(self,
@@ -336,12 +336,12 @@ class ApertureTool(WidgetPanel):
         self.update_phase_history_selection()
 
     # noinspection PyUnusedLocal
-    def callback_stop_animation(self, event):
+    def callback_stop_animation(self):
         self.app_variables.animation_stop_pressed = True
         self.animation_panel.animation_settings.unpress_all_buttons()
 
     # noinspection PyUnusedLocal
-    def callback_play_animation(self, event):
+    def callback_play_animation(self):
         self.update_animation_params()
 
         direction_forward_or_back = "forward"
@@ -538,11 +538,14 @@ class ApertureTool(WidgetPanel):
 
     # noinspection PyUnusedLocal
     # TODO: update variables, some don't exist in the current form.
-    def callback_save_animation(self, event):
+    def callback_save_animation(self):
         self.update_animation_params()
         filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
                                                 filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
 
+        extension = filename[-4:]
+        if extension.lower() != ".gif":
+            filename = filename + ".gif"
         frame_sequence = []
         direction_forward_or_back = "forward"
         if self.animation_panel.mode_panel.reverse.is_selected():
@@ -563,6 +566,7 @@ class ApertureTool(WidgetPanel):
             self.frequency_vs_degree_panel.update()
         fps = float(self.animation_panel.animation_settings.frame_rate.get())
         frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
+        self.animation_panel.animation_settings.enable_all_widgets()
 
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
