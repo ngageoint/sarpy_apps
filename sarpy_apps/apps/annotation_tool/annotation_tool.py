@@ -84,6 +84,13 @@ class AnnotationTool(WidgetPanel):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Popups", menu=popups_menu)
 
+        self.context_panel.buttons.fill_y(False)
+        self.context_panel.buttons.do_not_expand()
+        self.context_panel.buttons.pack(side="bottom")
+        self.annotate_panel.buttons.fill_y(False)
+        self.annotate_panel.buttons.do_not_expand()
+        self.annotate_panel.buttons.pack(side="bottom")
+
         primary.config(menu=menubar)
 
     def exit(self):

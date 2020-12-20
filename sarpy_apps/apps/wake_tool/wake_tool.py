@@ -61,6 +61,7 @@ class WakeTool(WidgetPanel):
         self.side_panel.fill_x(False)
         self.side_panel.file_selector.set_fname_filters([("*.NITF", ".nitf")])
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
+        self.image_panel.canvas.update_outer_axes_on_zoom = False
 
     def select_file_command(self):
         self.side_panel.file_selector.select_file_command()
@@ -142,4 +143,5 @@ class WakeTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = WakeTool(root)
+    root.geometry("1000x800")
     root.mainloop()

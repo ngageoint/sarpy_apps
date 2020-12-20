@@ -42,6 +42,7 @@ class SelectedRegionPanel(WidgetPanel):
 
         self.toolbar.select_aoi.on_left_mouse_click(self.set_current_tool_to_selection_tool)
         self.toolbar.submit_aoi.on_left_mouse_click(self.submit_aoi)
+        self.toolbar.do_not_expand()
 
     # noinspection PyUnusedLocal
     def set_current_tool_to_selection_tool(self, event):

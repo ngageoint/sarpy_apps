@@ -19,7 +19,7 @@ from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel impo
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_history_selection_panel \
+from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel.phase_history_selection_panel \
     import PhaseHistoryPanel
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
@@ -136,6 +136,8 @@ class ApertureTool(WidgetPanel):
 
         self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
         self.filtered_panel.canvas.disable_mouse_zoom()
+
+        self.filtered_panel.canvas.update_outer_axes_on_zoom = False
 
         self.metaicon.hide_on_close()
 
