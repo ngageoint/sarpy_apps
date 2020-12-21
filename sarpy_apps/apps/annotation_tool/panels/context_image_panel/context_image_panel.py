@@ -15,7 +15,7 @@ class Buttons(WidgetPanel):
 
 
 class ContextImagePanel(WidgetPanel):
-    _widget_list = ("image_panel", "buttons")
+    _widget_list = ("buttons", "image_panel")
     buttons = widget_descriptors.PanelDescriptor("buttons", Buttons)  # type: Buttons
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
 

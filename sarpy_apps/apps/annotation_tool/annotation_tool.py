@@ -35,12 +35,12 @@ class AnnotationTool(WidgetPanel):
 
     def __init__(self, primary):
         self.primary = tkinter.Frame(primary)
+        primary_frame = tkinter.Frame(primary)
+
         WidgetPanel.__init__(self, primary)
 
         self.init_w_horizontal_layout()
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.context_panel.image_panel.resizeable = True
-        self.annotate_panel.image_panel.resizeable = True
 
         self.variables = AppVariables()
 
@@ -91,6 +91,13 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.buttons.do_not_expand()
         self.annotate_panel.buttons.pack(side="bottom")
 
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
+        self.context_panel.image_panel.resizeable = True
+        self.annotate_panel.image_panel.resizeable = True
+        # self.context_panel.pack(expand=True, fill=tkinter.BOTH)
+        # self.annotate_panel.pack(expand=True, fill=tkinter.BOTH)
+
         primary.config(menu=menubar)
 
     def exit(self):
@@ -130,7 +137,7 @@ class AnnotationTool(WidgetPanel):
                 print("select a valid label schema file.")
         elif "label_schema" in json_dict:
             # save a backup
-            backup_file_fname = os.path.join(os.path.dirname(json_fname), os.path.basename(json_fname) + '.bak' )
+            backup_file_fname = os.path.join(os.path.dirname(json_fname), os.path.basename(json_fname) + '.bak')
             copyfile(json_fname, backup_file_fname)
             self.variables.file_annotation_fname = json_fname
             self.variables.file_annotation_collection = FileAnnotationCollection.from_dict(json_dict)
@@ -196,6 +203,8 @@ class AnnotationTool(WidgetPanel):
             geometry_coords = np.asarray([x for x in zip(image_coords[0::2], image_coords[1::2])])
             polygon = Polygon(coordinates=[geometry_coords])
 
+            # TODO: change this to create a new annotation from a feature, then update the features when the user
+            # TODO: populuates the feature properties.
             annotation = Annotation()
             annotation.geometry = polygon
 

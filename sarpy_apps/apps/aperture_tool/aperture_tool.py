@@ -104,7 +104,6 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.hide_pan()
         self.frequency_vs_degree_panel.hide_margin_controls()
         self.frequency_vs_degree_panel.hide_axes_controls()
-        # self.frequency_vs_degree_panel.set_max_canvas_size(800, 800)
 
         self.filtered_panel.hide_pan()
         self.filtered_panel.hide_zoom_out()
