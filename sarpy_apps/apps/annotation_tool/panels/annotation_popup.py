@@ -70,8 +70,8 @@ class AnnotationPopup(WidgetPanel):
 
         # set up callbacks
         self.thing_type.on_selection(self.callback_update_selection)
-        self.reset.on_left_mouse_click(self.callback_reset)
-        self.submit.on_left_mouse_click(self.callback_submit)
+        self.reset.config(command=self.callback_reset)
+        self.submit.config(command=self.callback_submit)
 
         # populate existing fields if editing an existing geometry
         previous_annotation = self.main_app_variables.canvas_geom_ids_to_annotations_id_dict[str(self.main_app_variables.current_canvas_geom_id)]
@@ -114,12 +114,12 @@ class AnnotationPopup(WidgetPanel):
             self.thing_type.configure(state="disabled")
 
     # noinspection PyUnusedLocal
-    def callback_reset(self, event):
+    def callback_reset(self):
         self.thing_type.configure(state="normal")
         self.setup_main_parent_selections()
 
     # noinspection PyUnusedLocal
-    def callback_submit(self, event):
+    def callback_submit(self):
         if not 'disabled' in self.thing_type.state():
             print("please select a valid type.")
         elif self.confidence.get() not in self.main_app_variables.label_schema.confidence_values:

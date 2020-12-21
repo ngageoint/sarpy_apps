@@ -53,7 +53,7 @@ class MetaIcon(ImagePanel):
         self.on_resize(self.callback_resize)
 
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.parent.minsize(500, 500)
+        self.parent.minsize(600, 450)
 
     def hide_on_close(self):
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -189,7 +189,8 @@ class MetaIcon(ImagePanel):
         if not isinstance(reader, BaseReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
-        if reader.is_sicd_type:
+        # TODO: re-implement support for cphd and sidd metadata
+        if reader.reader_type == 'SICD':
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
         elif isinstance(reader, CPHDReader):
@@ -206,7 +207,6 @@ class MetaIcon(ImagePanel):
         """
         float: The margin size in percent.
         """
-
         return self._margin_percent
 
     @property
@@ -465,4 +465,3 @@ class MetaIcon(ImagePanel):
             x_end = arrow_length * numpy.cos(arrow_angle_radians)
             y_end = arrow_length * numpy.sin(arrow_angle_radians) * aspect_ratio
         return x_end, y_end
-

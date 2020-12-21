@@ -56,6 +56,12 @@ class WakeTool(WidgetPanel):
         self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
+        self.image_panel.resizeable = True
+        self.image_panel.pack(expand=True, fill=tkinter.BOTH)
+
+        self.image_panel.hide_margin_controls()
+        self.image_panel.hide_axes_controls()
+
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
         self.side_panel.do_not_expand()
         self.side_panel.fill_x(False)

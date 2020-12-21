@@ -63,9 +63,9 @@ class Taser(WidgetPanel):
         self.button_panel.set_spacing_between_buttons(0)
 
         # bind events to callbacks here
-        self.button_panel.fname_select.on_left_mouse_click(self.callback_select_files)
+        self.button_panel.fname_select.config(command=self.callback_select_files)
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
-        self.button_panel.rect_select.on_left_mouse_click(self.callback_set_to_select)
+        self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
         self.taser_image_panel.canvas.on_left_mouse_release(self.callback_left_mouse_release)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -81,7 +81,7 @@ class Taser(WidgetPanel):
             self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal
-    def callback_set_to_select(self, event):
+    def callback_set_to_select(self):
         self.taser_image_panel.current_tool = ToolConstants.SELECT_TOOL
 
     # define custom callbacks here
@@ -102,7 +102,7 @@ class Taser(WidgetPanel):
         self.taser_image_panel.canvas.update_current_image()
 
     # noinspection PyUnusedLocal
-    def callback_select_files(self, event):
+    def callback_select_files(self):
         image_file_extensions = ['*.nitf', '*.NITF']
         ftypes = [
             ('image files', image_file_extensions),

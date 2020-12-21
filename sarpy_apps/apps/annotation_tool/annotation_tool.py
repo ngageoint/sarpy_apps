@@ -10,8 +10,8 @@ import numpy as np
 from shutil import copyfile
 
 from sarpy_apps.apps.annotation_tool.panels.context_image_panel.context_image_panel import ContextImagePanel
-from sarpy_apps.apps.annotation_tool.panels.annotate_image_panel.annotate_image_panel import AnnotateImagePanel
-from sarpy_apps.apps.annotation_tool.panels.annotation_popup.annotation_popup import AnnotationPopup
+from sarpy_apps.apps.annotation_tool.panels.annotate_image_panel import AnnotateImagePanel
+from sarpy_apps.apps.annotation_tool.panels.annotation_popup import AnnotationPopup
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 
 from tk_builder.panel_builder import WidgetPanel

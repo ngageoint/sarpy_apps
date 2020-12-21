@@ -40,16 +40,14 @@ class SelectedRegionPanel(WidgetPanel):
         sicd_reader = ComplexImageReader(app_variables.sicd_reader_object.base_reader.file_name)
         self.image_panel.set_image_reader(sicd_reader)
 
-        self.toolbar.select_aoi.on_left_mouse_click(self.set_current_tool_to_selection_tool)
-        self.toolbar.submit_aoi.on_left_mouse_click(self.submit_aoi)
+        self.toolbar.select_aoi.config(command=self.set_current_tool_to_selection_tool)
+        self.toolbar.submit_aoi.config(command=self.submit_aoi)
         self.toolbar.do_not_expand()
 
-    # noinspection PyUnusedLocal
-    def set_current_tool_to_selection_tool(self, event):
+    def set_current_tool_to_selection_tool(self):
         self.image_panel.canvas.set_current_tool_to_selection_tool()
 
-    # noinspection PyUnusedLocal
-    def submit_aoi(self, event):
+    def submit_aoi(self):
         selection_image_coords = self.image_panel.canvas.get_shape_image_coords(self.image_panel.canvas.variables.select_rect_id)
         if selection_image_coords:
             self.app_variables.selected_region = selection_image_coords

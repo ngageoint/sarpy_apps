@@ -15,14 +15,14 @@ from tk_builder.widgets import widget_descriptors
 import sarpy.visualization.remap as remap
 from sarpy.processing.aperture_filter import ApertureFilter
 
-from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
-from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
+from sarpy_apps.apps.aperture_tool.panels.image_info_panel import ImageInfoPanel
+from sarpy_apps.apps.aperture_tool.panels.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel.phase_history_selection_panel \
+from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel \
     import PhaseHistoryPanel
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
+from sarpy_apps.apps.aperture_tool.panels.animation_panel import AnimationPanel
 
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
@@ -104,7 +104,7 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.hide_pan()
         self.frequency_vs_degree_panel.hide_margin_controls()
         self.frequency_vs_degree_panel.hide_axes_controls()
-        self.frequency_vs_degree_panel.set_max_canvas_size(800, 800)
+        # self.frequency_vs_degree_panel.set_max_canvas_size(800, 800)
 
         self.filtered_panel.hide_pan()
         self.filtered_panel.hide_zoom_out()
@@ -425,7 +425,9 @@ class ApertureTool(WidgetPanel):
                 dim = 0
 
         self.app_variables.aperture_filter = \
-            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim, apply_deskew=True,
+            ApertureFilter(self.app_variables.sicd_reader_object.base_reader,
+                           dimension=dim,
+                           apply_deskew=True,
                            apply_deweighting=True)
         self.image_info_panel.phd_options.uniform_weighting.value.set(True)
         self.image_info_panel.phd_options.apply_deskew.value.set(True)
@@ -700,6 +702,6 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.geometry("1000x800")
+    root.geometry("1200x600")
     root.mainloop()
 
