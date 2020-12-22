@@ -15,6 +15,9 @@ from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReade
 from sarpy_apps.supporting_classes.quad_pol_image_reader import QuadPolImageReader
 import sarpy.io.complex as sarpy_complex
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class TaserButtonPanel(WidgetPanel):
     _widget_list = ("fname_select",

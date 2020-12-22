@@ -13,6 +13,9 @@ import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class MetaIcon(ImagePanel):
 

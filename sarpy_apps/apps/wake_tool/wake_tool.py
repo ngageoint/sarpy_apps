@@ -8,6 +8,9 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerD
 from tk_builder.widgets import widget_descriptors
 import numpy as np
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class AppVariables(object):
     image_fname = StringDescriptor(

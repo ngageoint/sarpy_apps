@@ -27,6 +27,9 @@ from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class AnnotationTool(WidgetPanel):
     _widget_list = ("context_panel", "annotate_panel")

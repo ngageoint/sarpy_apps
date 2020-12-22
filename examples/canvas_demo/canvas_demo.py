@@ -15,6 +15,9 @@ from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReade
 
 import numpy
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class CanvasDemoButtonPanel(WidgetPanel):
     _widget_list = ("fname_select",

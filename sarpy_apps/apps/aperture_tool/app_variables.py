@@ -6,6 +6,9 @@ from tk_builder.base_elements import TypedDescriptor, IntegerTupleDescriptor, \
     IntegerDescriptor, BooleanDescriptor, FloatDescriptor, StringDescriptor
 from sarpy.processing.aperture_filter import ApertureFilter
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class AppVariables(object):
     sicd_reader_object = TypedDescriptor(

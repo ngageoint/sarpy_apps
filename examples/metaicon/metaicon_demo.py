@@ -7,6 +7,10 @@ from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 class MetaIconDemo(WidgetPanel):
     # The metaicon will be a popup, so leave the widget list unpopulated
     _widget_list = ()

@@ -1,8 +1,9 @@
 from tk_builder.panel_builder import WidgetPanel
-
 from tk_builder.widgets import widget_descriptors
-
 from tk_builder.panels.pyplot_panel import PyplotPanel
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
 
 
 class RcsPlot(WidgetPanel):

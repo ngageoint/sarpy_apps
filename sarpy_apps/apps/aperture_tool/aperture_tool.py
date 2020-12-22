@@ -26,6 +26,9 @@ from sarpy_apps.apps.aperture_tool.panels.animation_panel import AnimationPanel
 
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class ApertureTool(WidgetPanel):
     _widget_list = ("frequency_vs_degree_panel", "filtered_panel")

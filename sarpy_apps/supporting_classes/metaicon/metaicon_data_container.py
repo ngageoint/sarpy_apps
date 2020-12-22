@@ -16,6 +16,10 @@ from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # versio
 from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
 from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
 
 

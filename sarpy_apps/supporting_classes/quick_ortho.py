@@ -5,6 +5,9 @@ from scipy.interpolate import griddata
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class QuickOrtho:
     def __init__(self,

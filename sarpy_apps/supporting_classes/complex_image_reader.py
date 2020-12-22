@@ -4,6 +4,9 @@ from sarpy.io.general.base import BaseReader
 import sarpy.visualization.remap as remap
 import numpy
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 # TODO use properties for remap, and SICD
 class ComplexImageReader(ImageReader):

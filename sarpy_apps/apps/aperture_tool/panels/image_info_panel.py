@@ -4,6 +4,9 @@ from tk_builder.panel_builder import RadioButtonPanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import widget_descriptors
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class PhdOptionsPanel(WidgetPanel):
 

@@ -6,6 +6,9 @@ from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class Toolbar(WidgetPanel):
     _widget_list = ("select_aoi", "submit_aoi")

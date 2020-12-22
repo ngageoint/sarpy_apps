@@ -3,6 +3,9 @@ from tkinter import ttk
 from collections import OrderedDict
 from sarpy.io.complex.sicd import SICDType
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class Metaviewer(ttk.Treeview):
     def __init__(self, master,      # type: tk.Tk

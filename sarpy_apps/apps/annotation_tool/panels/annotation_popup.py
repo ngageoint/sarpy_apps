@@ -8,6 +8,9 @@ from sarpy.annotation.annotate import Annotation
 from sarpy.annotation.annotate import FileAnnotationCollection
 import tkinter
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class AppVariables(object):
     parent_types_main_text = StringDescriptor(

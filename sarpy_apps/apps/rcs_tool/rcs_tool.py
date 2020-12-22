@@ -17,6 +17,9 @@ from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReade
 from tk_builder.widgets.image_canvas import ToolConstants
 from sarpy_apps.apps.rcs_tool.popups.rcs_plot import RcsPlot
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class ControlsPanel(WidgetPanel):
     class RoiControls(WidgetPanel):

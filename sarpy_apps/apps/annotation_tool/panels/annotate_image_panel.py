@@ -3,6 +3,9 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class Buttons(WidgetPanel):
     _widget_list = ("draw_polygon", "edit_polygon", "select_closest", "delete", "annotate")
