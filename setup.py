@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys
 from setuptools import setup, find_packages
 from codecs import open
 
@@ -20,13 +19,6 @@ with open(os.path.join(here, 'sarpy_apps', '__about__.py'), 'r') as f:
     exec(f.read(), parameters)
 
 
-install_requires = ['numpy>=1.9.0', 'sarpy>=1.0.47', 'tk_builder>=1.0.1']
-tests_require = []
-if sys.version_info[0] < 3:
-    tests_require.append('unittest2')
-    # unittest2 only for Python2.7, we rely on subTest usage
-    install_requires.extend(['typing', 'future'])
-
 setup(name=parameters['__title__'],
       version=parameters['__version__'],
       description=parameters['__summary__'],
@@ -36,10 +28,12 @@ setup(name=parameters['__title__'],
       url=parameters['__url__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
-      install_requires=install_requires,
+      install_requires=[
+          'numpy', 'sarpy>=1.1.43', 'tk_builder>=1.0.4',
+          'typing;python_version<"3.4"', 'future;python_version<"3.4"'],
       zip_safe=True,
       test_suite="tests",
-      tests_require=tests_require,
+      tests_require=['unittest2;python_version<"3.4"', ],
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',

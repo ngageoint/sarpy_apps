@@ -1,6 +1,10 @@
 # This details the important differences introduced in sarpy_apps 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .7 - Adjusting for tk_builder refactor of ImagePanel
+       Aperture tool updates
+       Minor metaicon refactoring for sarpy changes
+       Preliminary RCS shell, with more functionality required
 * .6 - Animated gif capability added
 * .5 - Created new image panel object that contains axes, toolbar and allows for window resize
 * .4 - Updates to metaicon to update graphic on window resize
