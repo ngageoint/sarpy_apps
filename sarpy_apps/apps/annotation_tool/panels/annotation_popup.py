@@ -1,12 +1,15 @@
+import tkinter
+
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.base_elements import StringDescriptor
 from tk_builder.widgets import widget_descriptors
+
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables as MainAppVariables
+
 from sarpy.annotation.annotate import AnnotationMetadata
 from sarpy.annotation.annotate import Annotation
 from sarpy.annotation.annotate import FileAnnotationCollection
-import tkinter
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"

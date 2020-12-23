@@ -6,7 +6,7 @@ from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 from tk_builder.widgets import widget_descriptors
-import numpy as np
+import numpy
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
@@ -134,9 +134,9 @@ class WakeTool(WidgetPanel):
         horizontal_line_image_coords = self.image_panel.canvas.get_vector_object(
             self.variables.horizontal_line_id).image_coords
         sicd_meta = self.variables.image_reader.base_reader.sicd_meta
-        points = np.asarray(np.reshape(horizontal_line_image_coords, (2, 2)))
+        points = numpy.asarray(numpy.reshape(horizontal_line_image_coords, (2, 2)))
         ecf_ground_points = sicd_meta.project_image_to_ground(points)
-        return float(np.linalg.norm(ecf_ground_points[0, :] - ecf_ground_points[1, :]))
+        return float(numpy.linalg.norm(ecf_ground_points[0, :] - ecf_ground_points[1, :]))
 
     def get_line_slope_and_intercept(self):
         line_coords = self.image_panel.canvas.coords(self.variables.arrow_id)

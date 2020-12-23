@@ -1,4 +1,5 @@
 from tk_builder.image_readers.image_reader import ImageReader
+
 import sarpy.io.complex as sarpy_complex
 from sarpy.io.general.base import BaseReader
 import sarpy.visualization.remap as remap
@@ -8,7 +9,12 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
-# TODO use properties for remap, and SICD
+# TODO: I will leave this for now. Dump this in to complex_image_reader.py
+#   Use reader.get_sicd_partitions().
+#   Be more flexible than requiring exactly 4.
+#   Handle the ordering appropriately.
+
+
 class QuadPolImageReader(ImageReader):
     base_readers = []           # type: [BaseReader]
     remap_type = "density"
@@ -42,7 +48,6 @@ class QuadPolImageReader(ImageReader):
 
         return rgb_image
 
-    # TODO get rid of strings, make these methods
     def remap_complex_data(self,
                            complex_data,    # type: numpy.ndarray
                            ):

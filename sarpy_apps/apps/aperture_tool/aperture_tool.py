@@ -439,7 +439,6 @@ class ApertureTool(WidgetPanel):
             self.image_info_panel.phd_options.deskew_fast_slow.set_selection(1)
 
         # handle the case of no deskew:
-        # TODO: Also check if DeltaKCOAPoly is zero, or an array of all zeros
         if not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly and \
                 not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.DeltaKCOAPoly:
             self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")

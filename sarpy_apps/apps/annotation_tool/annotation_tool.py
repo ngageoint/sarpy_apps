@@ -6,26 +6,26 @@ from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
 from tkinter import Menu
 
-import numpy as np
+import numpy
 from shutil import copyfile
 
 from sarpy_apps.apps.annotation_tool.panels.context_image_panel.context_image_panel import ContextImagePanel
 from sarpy_apps.apps.annotation_tool.panels.annotate_image_panel import AnnotateImagePanel
 from sarpy_apps.apps.annotation_tool.panels.annotation_popup import AnnotationPopup
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
+from sarpy_apps.supporting_classes.metaviewer import Metaviewer
+from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
+from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.widgets import widget_descriptors
-from sarpy.geometry.geometry_elements import Polygon
+
 from sarpy.annotation.annotate import FileAnnotationCollection
 from sarpy.annotation.annotate import Annotation
 from sarpy.annotation.annotate import LabelSchema
+from sarpy.geometry.geometry_elements import Polygon
 
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
@@ -155,7 +155,7 @@ class AnnotationTool(WidgetPanel):
                         image_coords = geometry.get_coordinate_list()[0]  # the "outer" ring is always first
                     else:
                         raise TypeError('Unhandled geometry type {}'.format(type(geometry)))
-                    image_coords_1d = list(np.reshape(image_coords, np.asarray(image_coords).size))
+                    image_coords_1d = list(numpy.reshape(image_coords, numpy.asarray(image_coords).size))
                     tmp_shape_id = self.annotate_panel.image_panel.canvas.create_new_polygon((0, 0, 1, 1))
                     self.annotate_panel.image_panel.canvas.set_shape_pixel_coords(tmp_shape_id, image_coords_1d)
                     self.variables.canvas_geom_ids_to_annotations_id_dict[str(tmp_shape_id)] = feature
@@ -203,7 +203,7 @@ class AnnotationTool(WidgetPanel):
         if self.annotate_panel.image_panel.canvas.variables.current_tool == ToolConstants.DRAW_POLYGON_BY_CLICKING:
             current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
             image_coords = self.annotate_panel.image_panel.canvas.get_shape_image_coords(current_canvas_shape_id)
-            geometry_coords = np.asarray([x for x in zip(image_coords[0::2], image_coords[1::2])])
+            geometry_coords = numpy.asarray([x for x in zip(image_coords[0::2], image_coords[1::2])])
             polygon = Polygon(coordinates=[geometry_coords])
 
             # TODO: change this to create a new annotation from a feature, then update the features when the user

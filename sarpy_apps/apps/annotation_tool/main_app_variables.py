@@ -1,5 +1,6 @@
 from sarpy.annotation.annotate import FileAnnotationCollection
 from sarpy.annotation.schema_processing import LabelSchema
+
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 
