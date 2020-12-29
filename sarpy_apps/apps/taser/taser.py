@@ -2,6 +2,7 @@ import os
 
 import tkinter
 from tkinter.filedialog import askopenfilenames
+
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
@@ -11,9 +12,9 @@ from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
 from tk_builder.widgets import basic_widgets
 from tk_builder.panels.image_panel import ToolConstants
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.quad_pol_image_reader import QuadPolImageReader
-import sarpy.io.complex as sarpy_complex
+
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, QuadPolImageReader
+import sarpy.visualization.remap as remap
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
@@ -90,47 +91,27 @@ class Taser(WidgetPanel):
     # define custom callbacks here
     # noinspection PyUnusedLocal
     def callback_remap(self, event):
-        remap_dict = {"density": "density",
-                      "brighter": "brighter",
-                      "darker": "darker",
-                      "high contrast": "highcontrast",
-                      "linear": "linear",
-                      "log": "log",
-                      "pedf": "pedf",
-                      "nrl": "nrl"}
+        remap_dict = {entry: entry for entry in remap.get_remap_list()}
         selection = self.button_panel.remap_dropdown.get()
         remap_type = remap_dict[selection]
-        self.variables.image_reader.remap_type = remap_type
+        self.variables.image_reader.set_remap_type(remap_type)
         self.display_canvas_rect_selection_in_pyplot_frame()
         self.taser_image_panel.canvas.update_current_image()
 
-    # noinspection PyUnusedLocal
     def callback_select_files(self):
-        image_file_extensions = ['*.nitf', '*.NITF']
+        image_file_extensions = ['*.nitf', '*.ntf', '*.NITF', '*.NTF']
         ftypes = [
             ('image files', image_file_extensions),
-            ('All files', '*'),
-        ]
+            ('All files', '*')]
+
         fnames = askopenfilenames(initialdir=os.path.expanduser("~"), filetypes=ftypes)
+
+        # TODO: handle non-complex data possibilities here
         if fnames:
             if len(fnames) == 1:
                 self.variables.image_reader = ComplexImageReader(fnames[0])
-            elif len(fnames) == 4:
-                ordered_fnames = ["", "", "", ""]
-                for fname in fnames:
-                    complex_reader = sarpy_complex.open(fname)
-                    polarization_state = complex_reader.sicd_meta.ImageFormation.TxRcvPolarizationProc
-                    if polarization_state == "V:V":
-                        ordered_fnames[0] = fname
-                    elif polarization_state == "V:H":
-                        ordered_fnames[1] = fname
-                    elif polarization_state == "H:V":
-                        ordered_fnames[2] = fname
-                    elif polarization_state == "H:H":
-                        ordered_fnames[3] = fname
-                self.variables.image_reader = QuadPolImageReader(ordered_fnames)
             else:
-                print("Please select either 1 file for single channel vieweing, or 4 files to view color-coded quadpole data.")
+                self.variables.image_reader = QuadPolImageReader(fnames)
             self.taser_image_panel.set_image_reader(self.variables.image_reader)
 
     def display_canvas_rect_selection_in_pyplot_frame(self):

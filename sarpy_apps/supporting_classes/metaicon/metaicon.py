@@ -1,7 +1,9 @@
+from typing import Tuple, List
 from tkinter import font
 import tkinter
 
 import numpy
+
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.general.base import BaseReader
 from sarpy.io.general.utils import string_types
@@ -88,6 +90,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def arrows_origin(self):
+        # type: () -> Tuple[float, float]
         """
         Tuple[float, float]: The arrow origin location.
         """
@@ -107,17 +110,6 @@ class MetaIcon(ImagePanel):
         if not isinstance(value, MetaIconDataContainer):
             raise TypeError('Got unexpected type {}'.format(type(value)))
         self._metadata_container = value
-
-    def close_window(self):
-        """
-        Close the meta-icon window.
-
-        Returns
-        -------
-        None
-        """
-
-        self.parent.withdraw()
 
     def create_from_metaicon_data_container(self, data_container):
         """
@@ -197,7 +189,7 @@ class MetaIcon(ImagePanel):
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
         elif isinstance(reader, CPHDReader):
-            data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta)
+            data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta, index)
         elif isinstance(reader, SIDDReader):
             data_container = MetaIconDataContainer.from_sidd(reader.sidd_meta[index])
         else:
@@ -214,6 +206,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def line_positions(self):
+        # type: () -> List[Tuple[float, float]]
         """
         List[Tuple[float, float]]: The line positions.
         """
@@ -231,7 +224,7 @@ class MetaIcon(ImagePanel):
 
         xy_positions = []
         for pos in y_positions:
-            xy_positions.append((x_positions, pos))
+            xy_positions.append((x_positions, float(pos)))
         return xy_positions
 
     @property
@@ -296,6 +289,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def layover_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The layover arrow coordinates.
         """
@@ -304,6 +298,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def shadow_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
@@ -312,6 +307,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def multipath_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The multipath arrow coordinates.
         """
@@ -320,6 +316,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def north_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The north arrow coordinates.
         """
@@ -327,6 +324,7 @@ class MetaIcon(ImagePanel):
         return self._get_arrow_coords(self.north_arrow_angle)
 
     def _get_arrow_coords(self, arrow_angle):
+        # type: (float) -> Tuple[float, float, float, float]
         """
         Gets the arrow coordinates.
 

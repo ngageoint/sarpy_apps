@@ -12,7 +12,7 @@ from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 from tk_builder.panel_builder import RadioButtonPanel
 
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 
 from tk_builder.widgets.image_canvas import ToolConstants
 from sarpy_apps.apps.rcs_tool.popups.rcs_plot import RcsPlot

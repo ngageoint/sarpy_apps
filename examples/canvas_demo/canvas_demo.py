@@ -9,9 +9,11 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+import sarpy.visualization.remap as remap
 
 import numpy
 
@@ -204,16 +206,9 @@ class CanvasDemo(WidgetPanel):
         self.update_selection()
 
     def update_selection(self):
-        remap_dict = {"density": "density",
-                      "brighter": "brighter",
-                      "darker": "darker",
-                      "high contrast": "highcontrast",
-                      "linear": "linear",
-                      "log": "log",
-                      "pedf": "pedf",
-                      "nrl": "nrl"}
+        remap_dict = {entry: entry for entry in remap.get_remap_list()}
         selection = self.button_panel.remap_dropdown.get()
-        self.variables.image_reader.remap_type = remap_dict[selection]
+        self.variables.image_reader.set_remap_type(remap_dict[selection])
         image_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
             self.canvas_demo_image_panel.canvas.variables.select_rect_id)
         self.pyplot_panel.update_image(image_data)

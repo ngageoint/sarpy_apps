@@ -1,7 +1,7 @@
 from typing import Tuple
 
 import numpy
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from tk_builder.base_elements import TypedDescriptor, IntegerTupleDescriptor, \
     IntegerDescriptor, BooleanDescriptor, FloatDescriptor, StringDescriptor
 from sarpy.processing.aperture_filter import ApertureFilter

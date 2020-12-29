@@ -1,5 +1,5 @@
 import tkinter
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables

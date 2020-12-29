@@ -1,6 +1,6 @@
 import tkinter
 from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_builder import WidgetPanel

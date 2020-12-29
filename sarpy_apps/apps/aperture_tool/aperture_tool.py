@@ -18,7 +18,7 @@ from sarpy.processing.aperture_filter import ApertureFilter
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel import ImageInfoPanel
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel \
     import PhaseHistoryPanel
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer

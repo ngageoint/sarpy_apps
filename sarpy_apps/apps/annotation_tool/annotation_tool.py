@@ -15,7 +15,7 @@ from sarpy_apps.apps.annotation_tool.panels.annotation_popup import AnnotationPo
 from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants

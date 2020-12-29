@@ -7,16 +7,14 @@ __author__ = "Jason Casey"
 
 
 class Metaviewer(ttk.Treeview):
-    # TODO:
-    #  1.) how do you reinitialize this thing?
-    #  2.) Where all is this used? Why not a treeview - should be a treeview.
+    # TODO: Why not a treeview?
 
     def __init__(self, master):
         """
 
         Parameters
         ----------
-        master : tk.Tk
+        master : tk.Tk|tk.TopLevel
             The GUI element which is the parent or master of this node.
         """
 
