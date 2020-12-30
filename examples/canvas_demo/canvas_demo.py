@@ -206,7 +206,7 @@ class CanvasDemo(WidgetPanel):
         self.update_selection()
 
     def update_selection(self):
-        remap_dict = {entry: entry for entry in remap.get_remap_list()}
+        remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
         selection = self.button_panel.remap_dropdown.get()
         self.variables.image_reader.set_remap_type(remap_dict[selection])
         image_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(

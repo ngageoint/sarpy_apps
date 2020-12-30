@@ -31,14 +31,8 @@ class TaserButtonPanel(WidgetPanel):
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self.init_w_vertical_layout()
-        self.remap_dropdown.update_combobox_values(["density",
-                                                    "brighter",
-                                                    "darker",
-                                                    "high contrast",
-                                                    "linear",
-                                                    "log",
-                                                    "pedf",
-                                                    "nrl"])
+        remap_values = [entry[0] for entry in remap.get_remap_list()]
+        self.remap_dropdown.update_combobox_values(remap_values)
 
 
 class AppVariables(object):
@@ -91,12 +85,13 @@ class Taser(WidgetPanel):
     # define custom callbacks here
     # noinspection PyUnusedLocal
     def callback_remap(self, event):
-        remap_dict = {entry: entry for entry in remap.get_remap_list()}
+        remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
         selection = self.button_panel.remap_dropdown.get()
         remap_type = remap_dict[selection]
-        self.variables.image_reader.set_remap_type(remap_type)
-        self.display_canvas_rect_selection_in_pyplot_frame()
-        self.taser_image_panel.canvas.update_current_image()
+        if self.variables.image_reader is not None:
+            self.variables.image_reader.set_remap_type(remap_type)
+            self.display_canvas_rect_selection_in_pyplot_frame()
+            self.taser_image_panel.canvas.update_current_image()
 
     def callback_select_files(self):
         image_file_extensions = ['*.nitf', '*.ntf', '*.NITF', '*.NTF']
@@ -113,11 +108,14 @@ class Taser(WidgetPanel):
             else:
                 self.variables.image_reader = QuadPolImageReader(fnames)
             self.taser_image_panel.set_image_reader(self.variables.image_reader)
+            # set remap value
+            self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
             self.taser_image_panel.canvas.variables.select_rect_id)
-        self.pyplot_panel.update_image(image_data)
+        if image_data is not None:
+            self.pyplot_panel.update_image(image_data)
 
 
 if __name__ == '__main__':
