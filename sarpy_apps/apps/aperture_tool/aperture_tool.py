@@ -419,6 +419,9 @@ class ApertureTool(WidgetPanel):
 
     def select_file(self):
         sicd_fname = self.image_info_panel.file_selector.select_file_command()
+        if sicd_fname == '':
+            # no file was selected
+            return
         self.app_variables.sicd_reader_object = ComplexImageReader(sicd_fname)
 
         dim = 1
