@@ -485,7 +485,7 @@ class ApertureTool(WidgetPanel):
 
         self.update_phase_history_selection()
 
-        self.metaviewer.create_w_sicd(self.app_variables.sicd_reader_object.base_reader.sicd_meta)
+        self.metaviewer.populate_from_reader(self.app_variables.sicd_reader_object.base_reader)
 
         self.frequency_vs_degree_panel.axes_canvas.x_label = "Polar Angle (degrees)"
         self.frequency_vs_degree_panel.axes_canvas.y_label = "Frequency (GHz)"

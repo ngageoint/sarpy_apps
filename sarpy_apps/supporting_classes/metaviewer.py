@@ -1,13 +1,28 @@
 import tkinter as tk
 from tkinter import ttk
-from sarpy.io.complex.sicd import SICDType
+
+from sarpy.compliance import integer_types, string_types
+from sarpy.io.general.base import BaseReader
+from sarpy.io.general.nitf import NITFDetails
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
+def _primitive_list(the_list):
+    primitive = True
+    for entry in the_list:
+        primitive &= (isinstance(entry, float) or
+                      isinstance(entry, integer_types) or
+                      isinstance(entry, string_types) or
+                      isinstance(entry, list))
+    return primitive
+
+
 class Metaviewer(ttk.Treeview):
-    # TODO: Why not a treeview?
+    """
+    For viewing a rendering of a json compatible object.
+    """
 
     def __init__(self, master):
         """
@@ -24,48 +39,121 @@ class Metaviewer(ttk.Treeview):
         self.pack(expand=True, fill='both')
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
+    def empty_empties(self):
+        """
+        Empty all entries - for the purpose of reinitializing.
+
+        Returns
+        -------
+        None
+        """
+
+        self.delete(*self.get_children())
+
     def close_window(self):
         self.parent.withdraw()
 
-    def add_node(self, k, v):
+    def add_node(self, the_parent, the_key, the_value):
         """
-        Given a name and dictionary of values, recursively add elements.
+        For the given key and value, this creates the node for the given value,
+        and recursively adds children, as appropriate.
 
         Parameters
         ----------
-        k : str
-        v : dict
+        the_parent : str
+            The parent key for this entry.
+        the_key : str
+            The key for this entry - should be unique amongst children of this parent.
+        the_value : dict|list|str|int|float
+            The value for this entry.
 
         Returns
         -------
         None
         """
 
-        # TODO: make this more robust to types - list, at least
-
-        for key, val in v.items():
-            new_key = "{}_{}".format(k, key)
-            if isinstance(val, dict):
-                self.insert(k, 1, new_key, text=key)
-                self.add_node(new_key, val)
+        real_key = '{}_{}'.format(the_parent, the_key)
+        if isinstance(the_value, list):
+            if _primitive_list(the_value):
+                self.insert(the_parent, "end", real_key, text="{}: {}".format(the_key, the_value))
             else:
-                self.insert(k, 1, new_key, text="{}: {}".format(key, val))
+                # add a parent node for this list
+                self.insert(the_parent, "end", real_key, text=the_key)
+                for i, value in enumerate(the_value):
+                    # add a node for each list element
+                    element_key = '{}[{}]'.format(the_key, i)
+                    self.add_node(real_key, element_key, value)
+        elif isinstance(the_value, dict):
+            self.insert(the_parent, "end", real_key, text=the_key)
+            for key in the_value:
+                val = the_value[key]
+                self.add_node(real_key, key, val)
+        elif isinstance(the_value, float):
+            self.insert(the_parent, "end", real_key, text="{0:s}: {1:0.16G}".format(the_key, the_value))
+        else:
+            self.insert(the_parent, "end", real_key, text="{}: {}".format(the_key, the_value))
 
-    def create_w_sicd(self, sicd_meta):
+    def populate_from_reader(self, reader):
         """
-        Initialize from a SICD structure.
+        Populate the entries from a reader implementation.
 
         Parameters
         ----------
-        sicd_meta : SICDType
+        reader : BaseReader
 
         Returns
         -------
         None
         """
 
-        # TODO: this should be replaced with something more multi-purpose
+        def do_sicds():
+            sicds = reader.get_sicds_as_tuple()
+            if sicds is None:
+                return
+            elif len(sicds) == 1:
+                self.add_node("", "SICD", sicds[0].to_dict())
+            else:
+                for i, entry in enumerate(sicds):
+                    self.add_node("", "SICD_{}".format(i), entry.to_dict())
 
-        for k, v in sicd_meta.to_dict().items():
-            self.insert("", 1, k, text=k)
-            self.add_node(k, v)
+        def do_sidds():
+            try:
+                sidds = reader.sidd_meta
+                if sidds is None:
+                    pass
+                elif isinstance(sidds, (list, tuple)):
+                    for i, entry in enumerate(sidds):
+                        self.add_node("", "SIDD_{}".format(i), entry.to_dict())
+                else:
+                    self.add_node("", "SIDD", sidds.to_dict())
+            except AttributeError:
+                pass
+
+        def do_cphd():
+            try:
+                cphd = reader.cphd_meta
+                if cphd is None:
+                    pass
+                else:
+                    self.add_node("", "CPHD", cphd.to_dict())
+            except AttributeError:
+                pass
+
+        def do_nitf():
+            try:
+                nitf_details = reader.nitf_details  # type: NITFDetails
+                self.add_node("", "NITF", nitf_details.get_headers_json())
+            except AttributeError:
+                pass
+
+        # empty any present entries
+        self.empty_empties()
+        # populate relevant meta-data structures
+        if reader.reader_type == "SICD":
+            do_sicds()
+        elif reader.reader_type == "SIDD":
+            do_sidds()
+            do_sicds()
+        elif reader.reader_type == "CPHD":
+            do_cphd()
+        do_nitf()

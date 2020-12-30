@@ -120,7 +120,7 @@ class AnnotationTool(WidgetPanel):
             self.context_panel.image_panel.set_image_reader(image_reader)
             self.annotate_panel.image_panel.set_image_reader(image_reader)
             self.metaicon.create_from_reader(image_reader.base_reader, index=0)
-            self.metaviewer.create_w_sicd(image_reader.base_reader.sicd_meta)
+            self.metaviewer.populate_from_reader(image_reader.base_reader)
 
     def select_annotation_file(self):
         json_fname = askopenfilename(filetypes=[('json files', '*.json'), ("all files", "*")])
