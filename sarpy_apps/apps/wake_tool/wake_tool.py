@@ -1,20 +1,23 @@
 import tkinter
+import os
+
+import numpy
+
 from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.file_filters import common_use_filter
+
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 from tk_builder.widgets import widget_descriptors
-import numpy
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
 class AppVariables(object):
-    image_fname = StringDescriptor(
-        'image_fname', default_value='None', docstring='')  # type: str
     image_reader = TypedDescriptor(
         'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
     arrow_id = IntegerDescriptor(
@@ -68,16 +71,15 @@ class WakeTool(WidgetPanel):
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
         self.side_panel.do_not_expand()
         self.side_panel.fill_x(False)
-        self.side_panel.file_selector.set_fname_filters([("*.NITF", ".nitf")])
+        self.side_panel.file_selector.set_fname_filters(common_use_filter)
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
         self.image_panel.canvas.update_outer_axes_on_zoom = False
 
     def select_file_command(self):
-        self.side_panel.file_selector.select_file_command()
-        if self.side_panel.file_selector.fname:
-            self.variables.image_fname = self.side_panel.file_selector.fname
-        self.variables.image_reader = ComplexImageReader(self.variables.image_fname)
-        self.image_panel.set_image_reader(self.variables.image_reader)
+        fname = self.side_panel.file_selector.select_file_command()
+        if fname:
+            self.variables.image_reader = ComplexImageReader(fname)
+            self.image_panel.set_image_reader(self.variables.image_reader)
 
     # noinspection PyUnusedLocal
     def line_draw_command(self):

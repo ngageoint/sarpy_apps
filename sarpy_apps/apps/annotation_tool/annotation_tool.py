@@ -16,6 +16,7 @@ from sarpy_apps.apps.annotation_tool.main_app_variables import AppVariables
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes import file_filters
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
@@ -114,7 +115,7 @@ class AnnotationTool(WidgetPanel):
 
     # context callbacks
     def select_sicd_file(self):
-        fname = askopenfilename(filetypes=[("nitf", ".nitf .NITF"), ("all files", "*")])
+        fname = askopenfilename(filetypes=file_filters.common_use_filter)
         if fname:
             image_reader = ComplexImageReader(fname)
             self.context_panel.image_panel.set_image_reader(image_reader)
@@ -123,7 +124,7 @@ class AnnotationTool(WidgetPanel):
             self.metaviewer.populate_from_reader(image_reader.base_reader)
 
     def select_annotation_file(self):
-        json_fname = askopenfilename(filetypes=[('json files', '*.json'), ("all files", "*")])
+        json_fname = askopenfilename(filetypes=[file_filters.json_files, file_filters.all_files])
         image_fname = os.path.basename(
             self.context_panel.image_panel.canvas.variables.canvas_image_object.image_reader.base_reader.file_name)
         with open(json_fname, 'r') as fi:
@@ -131,7 +132,7 @@ class AnnotationTool(WidgetPanel):
         # If version is in the dictionary the user has selected a schema and will be working on a new annotation
         if "version" in json_dict:
             self.variables.label_schema = LabelSchema.from_file(json_fname)
-            file_annotation_fname = asksaveasfilename(filetypes=[('json files', '*.json'), ("all files", "*")])
+            file_annotation_fname = asksaveasfilename(filetypes=[file_filters.json_files, file_filters.all_files])
             if file_annotation_fname != '':
                 self.variables.file_annotation_fname = file_annotation_fname
                 self.variables.file_annotation_collection = FileAnnotationCollection(label_schema=self.variables.label_schema,

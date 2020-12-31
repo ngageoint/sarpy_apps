@@ -13,9 +13,9 @@ from tk_builder.image_readers.image_reader import ImageReader
 from tk_builder.widgets import basic_widgets
 from tk_builder.panels.image_panel import ToolConstants
 
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, QuadPolImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.file_filters import common_use_filter
 
-from sarpy.io.complex.aggregate import AggregateReader
 import sarpy.visualization.remap as remap
 
 __classification__ = "UNCLASSIFIED"
@@ -98,11 +98,7 @@ class Taser(WidgetPanel):
             self.taser_image_panel.canvas.update_current_image()
 
     def callback_select_files(self):
-        ftypes = [
-            ('NITF files', ['*.nitf', '*.ntf', '*.NITF', '*.NTF']),
-            ('All files', '*')]
-
-        fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=ftypes)
+        fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_filter)
         if fnames is None:
             return
 

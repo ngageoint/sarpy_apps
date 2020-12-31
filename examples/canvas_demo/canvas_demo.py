@@ -70,8 +70,8 @@ class AppVariables(object):
     The canvas demo app variables.
     """
 
-    fname = StringDescriptor(
-        'fname', default_value='None', docstring='')  # type: str
+    browse_directory = StringDescriptor(
+        'browse_directory', default_value=os.path.expanduser('~'))  # type: str
     selection_rect_id = IntegerDescriptor(
         'selection_rect_id', docstring='')  # type: int
     image_reader = TypedDescriptor(
@@ -215,14 +215,14 @@ class CanvasDemo(WidgetPanel):
         self.canvas_demo_image_panel.canvas.update_current_image()
 
     def callback_initialize_canvas_image(self):
-        image_file_extensions = ['*.nitf', '*.NITF']
+        image_file_extensions = ['*.nitf', '*.NITF', '*.ntf', '*.NTF']
         ftypes = [
-            ('image files', image_file_extensions),
+            ('NITF files', image_file_extensions),
             ('All files', '*'),
         ]
-        new_fname = askopenfilename(initialdir=os.path.expanduser("~"), filetypes=ftypes)
+        new_fname = askopenfilename(initialdir=self.variables.browse_directory, filetypes=ftypes)
         if new_fname:
-            self.variables.fname = new_fname
+            self.variables.browse_directory = os.path.split(new_fname)[0]
             self.variables.image_reader = ComplexImageReader(new_fname)
             self.canvas_demo_image_panel.set_image_reader(self.variables.image_reader)
 
