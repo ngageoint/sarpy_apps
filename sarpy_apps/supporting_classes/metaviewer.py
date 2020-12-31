@@ -39,7 +39,7 @@ class Metaviewer(ttk.Treeview):
         self.pack(expand=True, fill='both')
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
-    def empty_empties(self):
+    def empty_entries(self):
         """
         Empty all entries - for the purpose of reinitializing.
 
@@ -147,7 +147,7 @@ class Metaviewer(ttk.Treeview):
                 pass
 
         # empty any present entries
-        self.empty_empties()
+        self.empty_entries()
         # populate relevant meta-data structures
         if reader.reader_type == "SICD":
             do_sicds()
