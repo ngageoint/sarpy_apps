@@ -1,12 +1,12 @@
 import os
 
 import tkinter
-from tkinter.filedialog import askopenfilenames
+from tkinter.filedialog import askopenfilenames, askdirectory
 
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.base_elements import StringDescriptor, TypedDescriptor, StringTupleDescriptor
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
@@ -14,6 +14,8 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.panels.image_panel import ToolConstants
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, QuadPolImageReader
+
+from sarpy.io.complex.aggregate import AggregateReader
 import sarpy.visualization.remap as remap
 
 __classification__ = "UNCLASSIFIED"
@@ -21,12 +23,12 @@ __author__ = "Jason Casey"
 
 
 class TaserButtonPanel(WidgetPanel):
-    _widget_list = ("fname_select",
-                    "rect_select",
-                    "remap_dropdown")
-    fname_select = widget_descriptors.ButtonDescriptor("fname_select")  # type: basic_widgets.Button
+    _widget_list = (
+        "open_file", "open_directory", "rect_select", "remap_dropdown")
+    open_file = widget_descriptors.ButtonDescriptor("open_file")  # type: basic_widgets.Button
+    open_directory = widget_descriptors.ButtonDescriptor("open_directory")  # type: basic_widgets.Button
     rect_select = widget_descriptors.ButtonDescriptor("rect_select")  # type: basic_widgets.Button
-    remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")         # type: basic_widgets.Combobox
+    remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")  # type: basic_widgets.Combobox
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -36,8 +38,9 @@ class TaserButtonPanel(WidgetPanel):
 
 
 class AppVariables(object):
-    fnames = StringTupleDescriptor(
-        'fnames', default_value='None', docstring='')  # type: [str]
+    browse_directory = StringDescriptor(
+        'browse_directory', default_value=os.path.expanduser('~'),
+        docstring='The directory for browsing for file selection.')  # type: [str]
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
@@ -61,7 +64,8 @@ class Taser(WidgetPanel):
         self.button_panel.set_spacing_between_buttons(0)
 
         # bind events to callbacks here
-        self.button_panel.fname_select.config(command=self.callback_select_files)
+        self.button_panel.open_file.config(command=self.callback_select_files)
+        self.button_panel.open_directory.config(command=self.callback_select_directory)
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
@@ -94,22 +98,40 @@ class Taser(WidgetPanel):
             self.taser_image_panel.canvas.update_current_image()
 
     def callback_select_files(self):
-        image_file_extensions = ['*.nitf', '*.ntf', '*.NITF', '*.NTF']
         ftypes = [
-            ('image files', image_file_extensions),
+            ('NITF files', ['*.nitf', '*.ntf', '*.NITF', '*.NTF']),
             ('All files', '*')]
 
-        fnames = askopenfilenames(initialdir=os.path.expanduser("~"), filetypes=ftypes)
+        fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=ftypes)
+        if fnames is None:
+            return
+
+        # update the default directory for browsing
+        self.variables.browse_directory = os.path.split(fnames[0])[0]
 
         # TODO: handle non-complex data possibilities here
-        if fnames:
-            if len(fnames) == 1:
-                self.variables.image_reader = ComplexImageReader(fnames[0])
-            else:
-                self.variables.image_reader = QuadPolImageReader(fnames)
-            self.taser_image_panel.set_image_reader(self.variables.image_reader)
-            # set remap value
-            self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
+        if len(fnames) == 1:
+            self.variables.image_reader = ComplexImageReader(fnames[0])
+        else:
+            self.variables.image_reader = ComplexImageReader(fnames)
+
+        self.taser_image_panel.set_image_reader(self.variables.image_reader)
+        # set remap value
+        self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
+
+    def callback_select_directory(self):
+        dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
+        if dirname is None:
+            return
+
+        # update the default directory for browsing
+        self.variables.browse_directory = os.path.split(dirname)[0]
+
+        self.variables.image_reader = ComplexImageReader(dirname)
+
+        self.taser_image_panel.set_image_reader(self.variables.image_reader)
+        # set remap value
+        self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(

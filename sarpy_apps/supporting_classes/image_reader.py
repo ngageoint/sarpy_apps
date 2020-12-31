@@ -51,6 +51,9 @@ class ComplexImageReader(ImageReader):
     def base_reader(self, value):
         if isinstance(value, string_types):
             value = open_complex(value)
+        elif isinstance(value, (tuple, list)):
+            value = AggregateComplexReader(value)
+
         if not isinstance(value, BaseReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type != "SICD":
