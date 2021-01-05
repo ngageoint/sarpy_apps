@@ -3,6 +3,9 @@ from tk_builder.panel_builder import RadioButtonPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class ModeSelections(RadioButtonPanel):
     _widget_list = ("slow_time",

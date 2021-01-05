@@ -3,6 +3,9 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class Buttons(WidgetPanel):
     _widget_list = ("select_area", "edit_selection")
@@ -15,7 +18,7 @@ class Buttons(WidgetPanel):
 
 
 class ContextImagePanel(WidgetPanel):
-    _widget_list = ("image_panel", "buttons")
+    _widget_list = ("buttons", "image_panel")
     buttons = widget_descriptors.PanelDescriptor("buttons", Buttons)  # type: Buttons
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
 

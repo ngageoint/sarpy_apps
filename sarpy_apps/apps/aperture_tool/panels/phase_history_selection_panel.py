@@ -1,6 +1,9 @@
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class PhaseHistoryPanel(WidgetPanel):
     _widget_list = ["r1c1", "cross_range_label", "r1c3", "range_label", "r1c5",

@@ -4,6 +4,9 @@ from sarpy_apps.apps.wake_tool.panels.info_panel import InfoPanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import widget_descriptors
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class SidePanel(WidgetPanel):
     _widget_list = ("file_selector", "buttons", "info_panel")

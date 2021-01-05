@@ -2,6 +2,9 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class ButtonPanel(WidgetPanel):
     _widget_list = ("pan", "select", "move_rect")

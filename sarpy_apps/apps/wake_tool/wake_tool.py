@@ -1,17 +1,23 @@
 import tkinter
+import os
+
+import numpy
+
 from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.file_filters import common_use_filter
+
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.image_canvas import TOOLS
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 from tk_builder.widgets import widget_descriptors
-import numpy as np
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
 
 
 class AppVariables(object):
-    image_fname = StringDescriptor(
-        'image_fname', default_value='None', docstring='')  # type: str
     image_reader = TypedDescriptor(
         'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
     arrow_id = IntegerDescriptor(
@@ -30,6 +36,10 @@ class AppVariables(object):
 
 
 class WakeTool(WidgetPanel):
+    """
+    Tool that displays information based on a line and point drawn on an image.  Information pertains
+    to the direction of the line and distance from the point to the line.
+    """
     _widget_list = ("side_panel", "image_panel")
     side_panel = widget_descriptors.PanelDescriptor(
         "side_panel", SidePanel, default_text="wake tool controls")      # type: SidePanel
@@ -40,40 +50,44 @@ class WakeTool(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_vertical_layout()
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.image_panel.resizeable = True
         self.variables = AppVariables()
 
         self.side_panel.set_spacing_between_buttons(0)
 
-        # need to pack both primary frame and self, since this is the main app window.
-
         # set up event listeners
-        self.side_panel.buttons.line_draw.on_left_mouse_click(self.callback_press_line_button)
-        self.side_panel.buttons.point_draw.on_left_mouse_click(self.callback_press_point_button)
+        self.side_panel.buttons.line_draw.config(command=self.line_draw_command)
+        self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
         self.image_panel.canvas.variables.line_width = self.variables.line_width
         self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
-        self.side_panel.file_selector.set_fname_filters([("*.NITF", ".nitf")])
-        self.side_panel.file_selector.select_file.on_left_mouse_click(self.callback_select_file)
+        self.image_panel.resizeable = True
+        self.image_panel.pack(expand=True, fill=tkinter.BOTH)
 
-    def callback_select_file(self, event):
-        self.side_panel.file_selector.event_select_file(event)
-        if self.side_panel.file_selector.fname:
-            self.variables.image_fname = self.side_panel.file_selector.fname
-        self.variables.image_reader = ComplexImageReader(self.variables.image_fname)
-        self.image_panel.set_image_reader(self.variables.image_reader)
+        self.image_panel.hide_margin_controls()
+        self.image_panel.hide_axes_controls()
+
+        self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
+        self.side_panel.do_not_expand()
+        self.side_panel.fill_x(False)
+        self.side_panel.file_selector.set_fname_filters(common_use_filter)
+        self.side_panel.file_selector.select_file.config(command=self.select_file_command)
+        self.image_panel.canvas.update_outer_axes_on_zoom = False
+
+    def select_file_command(self):
+        fname = self.side_panel.file_selector.select_file_command()
+        if fname:
+            self.variables.image_reader = ComplexImageReader(fname)
+            self.image_panel.set_image_reader(self.variables.image_reader)
 
     # noinspection PyUnusedLocal
-    def callback_press_line_button(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.line_draw)
+    def line_draw_command(self):
         self.image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging()
         self.image_panel.canvas.variables.current_shape_id = self.variables.arrow_id
 
     # noinspection PyUnusedLocal
-    def callback_press_point_button(self, event):
-        self.side_panel.buttons.set_active_button(self.side_panel.buttons.point_draw)
+    def draw_point_command(self):
         self.image_panel.canvas.set_current_tool_to_draw_point()
         self.image_panel.canvas.variables.current_shape_id = self.variables.point_id
 
@@ -122,9 +136,9 @@ class WakeTool(WidgetPanel):
         horizontal_line_image_coords = self.image_panel.canvas.get_vector_object(
             self.variables.horizontal_line_id).image_coords
         sicd_meta = self.variables.image_reader.base_reader.sicd_meta
-        points = np.asarray(np.reshape(horizontal_line_image_coords, (2, 2)))
+        points = numpy.asarray(numpy.reshape(horizontal_line_image_coords, (2, 2)))
         ecf_ground_points = sicd_meta.project_image_to_ground(points)
-        return float(np.linalg.norm(ecf_ground_points[0, :] - ecf_ground_points[1, :]))
+        return float(numpy.linalg.norm(ecf_ground_points[0, :] - ecf_ground_points[1, :]))
 
     def get_line_slope_and_intercept(self):
         line_coords = self.image_panel.canvas.coords(self.variables.arrow_id)
@@ -140,4 +154,5 @@ class WakeTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = WakeTool(root)
+    root.geometry("1000x800")
     root.mainloop()

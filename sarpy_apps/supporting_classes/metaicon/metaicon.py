@@ -1,6 +1,9 @@
+from typing import Tuple, List
 from tkinter import font
+import tkinter
 
 import numpy
+
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.general.base import BaseReader
 from sarpy.io.general.utils import string_types
@@ -11,6 +14,9 @@ from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
 
 
 class MetaIcon(ImagePanel):
@@ -28,23 +34,40 @@ class MetaIcon(ImagePanel):
         multipath_width = 2
         north_width = 2
 
-    def __init__(self, master):
-        super(MetaIcon, self).__init__(master)
-        self.parent = master
+    def __init__(self, parent):
+        super(MetaIcon, self).__init__(parent)
+        self.canvas.config(background='black')
+        self.parent = parent
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
         self.resizeable = True
+        self.axes_canvas.set_canvas_size(10, 10)
+
+        self.hide_zoom_in()
+        self.hide_zoom_out()
+        self.hide_pan()
+        self.hide_margin_controls()
+        self.hide_axes_controls()
+        self.hide_save_image()
+        self.hide_canvas_size_controls()
+
+        self.toolbar.save_canvas.config(text="save metaicon")
+        self.canvas.disable_mouse_zoom()
         self.on_resize(self.callback_resize)
+
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.parent.minsize(600, 450)
+
+    def hide_on_close(self):
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def close_window(self):
         self.parent.withdraw()
 
     def callback_resize(self, event):
-        super().callback_resize(event)
-        if self.data_container:
+        if self.data_container and self.resizeable:
             self.canvas.delete("all")
             self.create_from_metaicon_data_container(self.data_container)
 
@@ -67,6 +90,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def arrows_origin(self):
+        # type: () -> Tuple[float, float]
         """
         Tuple[float, float]: The arrow origin location.
         """
@@ -87,17 +111,6 @@ class MetaIcon(ImagePanel):
             raise TypeError('Got unexpected type {}'.format(type(value)))
         self._metadata_container = value
 
-    def close_window(self):
-        """
-        Close the meta-icon window.
-
-        Returns
-        -------
-        None
-        """
-
-        self.parent.withdraw()
-
     def create_from_metaicon_data_container(self, data_container):
         """
         Reinitialize from a metaicon data container.
@@ -112,8 +125,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.data_container = data_container
-        # metaicon_background = numpy.zeros((400, 400))
-        metaicon_background = numpy.zeros((self.canvas.variables.canvas_height, self.canvas.variables.canvas_width))
+        metaicon_background = numpy.zeros(
+            (self.canvas.variables.canvas_height, self.canvas.variables.canvas_width),
+            dtype=numpy.uint8)
         numpy_reader = NumpyImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
 
@@ -170,11 +184,12 @@ class MetaIcon(ImagePanel):
         if not isinstance(reader, BaseReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
-        if reader.is_sicd_type:
+        # TODO: re-implement support for cphd and sidd metadata
+        if reader.reader_type == 'SICD':
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
         elif isinstance(reader, CPHDReader):
-            data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta)
+            data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta, index)
         elif isinstance(reader, SIDDReader):
             data_container = MetaIconDataContainer.from_sidd(reader.sidd_meta[index])
         else:
@@ -187,11 +202,11 @@ class MetaIcon(ImagePanel):
         """
         float: The margin size in percent.
         """
-
         return self._margin_percent
 
     @property
     def line_positions(self):
+        # type: () -> List[Tuple[float, float]]
         """
         List[Tuple[float, float]]: The line positions.
         """
@@ -209,7 +224,7 @@ class MetaIcon(ImagePanel):
 
         xy_positions = []
         for pos in y_positions:
-            xy_positions.append((x_positions, pos))
+            xy_positions.append((x_positions, float(pos)))
         return xy_positions
 
     @property
@@ -274,6 +289,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def layover_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The layover arrow coordinates.
         """
@@ -282,6 +298,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def shadow_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
@@ -290,6 +307,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def multipath_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The multipath arrow coordinates.
         """
@@ -298,6 +316,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def north_arrow_coords(self):
+        # type: () -> Tuple[float, float, float, float]
         """
         Tuple[float, float, float, float]: The north arrow coordinates.
         """
@@ -305,6 +324,7 @@ class MetaIcon(ImagePanel):
         return self._get_arrow_coords(self.north_arrow_angle)
 
     def _get_arrow_coords(self, arrow_angle):
+        # type: (float) -> Tuple[float, float, float, float]
         """
         Gets the arrow coordinates.
 
@@ -446,4 +466,3 @@ class MetaIcon(ImagePanel):
             x_end = arrow_length * numpy.cos(arrow_angle_radians)
             y_end = arrow_length * numpy.sin(arrow_angle_radians) * aspect_ratio
         return x_end, y_end
-

@@ -15,16 +15,19 @@ from tk_builder.widgets import widget_descriptors
 import sarpy.visualization.remap as remap
 from sarpy.processing.aperture_filter import ApertureFilter
 
-from sarpy_apps.apps.aperture_tool.panels.image_info_panel.image_info_panel import ImageInfoPanel
-from sarpy_apps.apps.aperture_tool.panels.selected_region_popup.selected_region_popup import SelectedRegionPanel
+from sarpy_apps.apps.aperture_tool.panels.image_info_panel import ImageInfoPanel
+from sarpy_apps.apps.aperture_tool.panels.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
-from sarpy_apps.apps.aperture_tool.panels.phase_history_selecion_panel.phase_history_selection_panel \
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel \
     import PhaseHistoryPanel
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.apps.aperture_tool.panels.animation_popup.animation_panel import AnimationPanel
+from sarpy_apps.apps.aperture_tool.panels.animation_panel import AnimationPanel
 
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
 
 
 class ApertureTool(WidgetPanel):
@@ -54,7 +57,7 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel = ImageInfoPanel(self.image_info_popup_panel)
         self.image_info_popup_panel.withdraw()
 
-        self.image_info_panel.file_selector.select_file.on_left_mouse_click(self.callback_select_file)
+        self.image_info_panel.file_selector.select_file.config(command=self.select_file)
 
         self.ph_popup_panel = tkinter.Toplevel(self.primary)
         self.phase_history = PhaseHistoryPanel(self.ph_popup_panel)
@@ -73,11 +76,11 @@ class ApertureTool(WidgetPanel):
         self.animation_popup_panel.withdraw()
 
         # callbacks for animation
-        self.animation_panel.animation_settings.play.on_left_mouse_click(self.callback_play_animation)
-        self.animation_panel.animation_settings.step_forward.on_left_mouse_click(self.callback_step_forward)
-        self.animation_panel.animation_settings.step_back.on_left_mouse_click(self.callback_step_back)
-        self.animation_panel.animation_settings.stop.on_left_mouse_click(self.callback_stop_animation)
-        self.animation_panel.save.on_left_mouse_click(self.callback_save_animation)
+        self.animation_panel.animation_settings.play.config(command=self.callback_play_animation)
+        self.animation_panel.animation_settings.step_forward.config(command=self.callback_step_forward)
+        self.animation_panel.animation_settings.step_back.config(command=self.callback_step_back)
+        self.animation_panel.animation_settings.stop.config(command=self.callback_stop_animation)
+        self.animation_panel.save.config(command=self.callback_save_animation)
 
         menubar = Menu()
 
@@ -99,23 +102,55 @@ class ApertureTool(WidgetPanel):
 
         primary.config(menu=menubar)
 
-        self.frequency_vs_degree_panel.toolbar.zoom_in.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.zoom_out.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.pan.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.margins_checkbox.pack_forget()
-        self.frequency_vs_degree_panel.toolbar.axes_labels_checkbox.pack_forget()
+        self.frequency_vs_degree_panel.hide_zoom_in()
+        self.frequency_vs_degree_panel.hide_zoom_out()
+        self.frequency_vs_degree_panel.hide_pan()
+        self.frequency_vs_degree_panel.hide_margin_controls()
+        self.frequency_vs_degree_panel.hide_axes_controls()
+
+        self.filtered_panel.hide_pan()
+        self.filtered_panel.hide_zoom_out()
+        self.filtered_panel.hide_zoom_out()
+        self.filtered_panel.hide_margin_controls()
+        self.filtered_panel.hide_axes_controls()
 
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.frequency_vs_degree_panel.resizeable = True
         self.filtered_panel.resizeable = True
 
+        self.frequency_vs_degree_panel.pack(expand=True, fill=tkinter.BOTH)
+        self.filtered_panel.pack(expand=True, fill=tkinter.BOTH)
+
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
-        self.image_info_panel.phd_options.deskew_slow.config(command=self.callback_update_deskew_slow_time)
+        self.image_info_panel.phd_options.apply_deskew.config(command=self.callback_update_apply_deskew)
+        self.image_info_panel.phd_options.deskew_fast_slow.slow.config(command=self.callback_update_deskew_direction)
+        self.image_info_panel.phd_options.deskew_fast_slow.fast.config(command=self.callback_update_deskew_direction)
+
+        self.frequency_vs_degree_panel.axes_canvas.left_margin_pixels = 100
+        self.frequency_vs_degree_panel.axes_canvas.top_margin_pixels = 30
+        self.frequency_vs_degree_panel.axes_canvas.bottom_margin_pixels = 100
+        self.frequency_vs_degree_panel.axes_canvas.right_margin_pixels = 30
+
+        self.filtered_panel.canvas.set_canvas_size(600, 400)
+        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(600, 400)
+
+        self.on_resize(self.callback_resize)
+
+        self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
+        self.filtered_panel.canvas.disable_mouse_zoom()
+
+        self.filtered_panel.canvas.update_outer_axes_on_zoom = False
+
+        self.metaicon.hide_on_close()
+
+    def callback_resize(self, event):
+        self.update_fft_image()
+        self.update_filtered_image()
 
     # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
     # TODO: In a user-selected direction.
-    def callback_update_deskew_slow_time(self):
-        if self.image_info_panel.phd_options.deskew_slow.is_selected():
+    def callback_update_deskew_direction(self):
+        if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
             self.app_variables.aperture_filter.dimension = 1
         else:
             self.app_variables.aperture_filter.dimension = 0
@@ -127,6 +162,19 @@ class ApertureTool(WidgetPanel):
             self.app_variables.aperture_filter.apply_deweighting = True
         else:
             self.app_variables.aperture_filter.apply_deweighting = False
+        self.update_fft_image()
+        self.update_filtered_image()
+
+    def callback_update_apply_deskew(self):
+        if self.image_info_panel.phd_options.apply_deskew.is_selected():
+            self.app_variables.aperture_filter.apply_deskew = True
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="normal")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="normal")
+        else:
+            self.app_variables.aperture_filter.apply_deskew = False
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
+
         self.update_fft_image()
         self.update_filtered_image()
 
@@ -145,11 +193,11 @@ class ApertureTool(WidgetPanel):
             float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
 
     # noinspection PyUnusedLocal
-    def callback_step_forward(self, event):
+    def callback_step_forward(self):
         self.step_animation("forward")
 
     # noinspection PyUnusedLocal
-    def callback_step_back(self, event):
+    def callback_step_back(self):
         self.step_animation("back")
 
     def step_animation(self,
@@ -290,12 +338,12 @@ class ApertureTool(WidgetPanel):
         self.update_phase_history_selection()
 
     # noinspection PyUnusedLocal
-    def callback_stop_animation(self, event):
+    def callback_stop_animation(self):
         self.app_variables.animation_stop_pressed = True
         self.animation_panel.animation_settings.unpress_all_buttons()
 
     # noinspection PyUnusedLocal
-    def callback_play_animation(self, event):
+    def callback_play_animation(self):
         self.update_animation_params()
 
         direction_forward_or_back = "forward"
@@ -354,25 +402,26 @@ class ApertureTool(WidgetPanel):
         self.update_phase_history_selection()
 
     def update_fft_image(self):
-        fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
-        self.app_variables.fft_complex_data = fft_complex_data
+        if self.app_variables.aperture_filter is not None:
+            fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
+            self.app_variables.fft_complex_data = fft_complex_data
 
-        # self.app_variables.fft_display_data = remap.density(fft_complex_data)
-        fft_display_data = numpy.abs(fft_complex_data)
-        fft_display_data = fft_display_data - fft_display_data.min()
-        fft_display_data = fft_display_data / fft_display_data.max() * 255
-        self.app_variables.fft_display_data = fft_display_data
-        if not self.app_variables.aperture_filter.flip_x_axis:
-            self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
-        fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-        self.frequency_vs_degree_panel.set_image_reader(fft_reader)
-        self.frequency_vs_degree_panel.update_everything()
+            # self.app_variables.fft_display_data = remap.density(fft_complex_data)
+            fft_display_data = numpy.abs(fft_complex_data)
+            fft_display_data = fft_display_data - fft_display_data.min()
+            fft_display_data = fft_display_data / fft_display_data.max() * 255
+            self.app_variables.fft_display_data = fft_display_data
+            if not self.app_variables.aperture_filter.flip_x_axis:
+                self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
+            fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
+            self.frequency_vs_degree_panel.set_image_reader(fft_reader)
+            self.frequency_vs_degree_panel.update_everything()
 
     def select_file(self):
-        self.callback_select_file(None)
-
-    def callback_select_file(self, event):
-        sicd_fname = self.image_info_panel.file_selector.event_select_file(event)
+        sicd_fname = self.image_info_panel.file_selector.select_file_command()
+        if sicd_fname == '':
+            # no file was selected
+            return
         self.app_variables.sicd_reader_object = ComplexImageReader(sicd_fname)
 
         dim = 1
@@ -381,7 +430,26 @@ class ApertureTool(WidgetPanel):
                 dim = 0
 
         self.app_variables.aperture_filter = \
-            ApertureFilter(self.app_variables.sicd_reader_object.base_reader, dimension=dim)
+            ApertureFilter(self.app_variables.sicd_reader_object.base_reader,
+                           dimension=dim,
+                           apply_deskew=True,
+                           apply_deweighting=True)
+        self.image_info_panel.phd_options.uniform_weighting.value.set(True)
+        self.image_info_panel.phd_options.apply_deskew.value.set(True)
+        if dim == 0:
+            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(0)
+        else:
+            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(1)
+
+        # handle the case of no deskew:
+        if not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly and \
+                not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.DeltaKCOAPoly:
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
+            self.image_info_panel.phd_options.apply_deskew.config(state="disabled")
+            self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
+
+        # TODO: Check for default deweight value in Grid.Col/Row.WgtType
 
         # TODO: handle index, and generalize what sicd_reader_object could be...
         self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
@@ -417,9 +485,7 @@ class ApertureTool(WidgetPanel):
 
         self.update_phase_history_selection()
 
-        self.metaviewer.create_w_sicd(self.app_variables.sicd_reader_object.base_reader.sicd_meta)
-
-        self.frequency_vs_degree_panel.axes_canvas.set_canvas_size(800, 600)
+        self.metaviewer.populate_from_reader(self.app_variables.sicd_reader_object.base_reader)
 
         self.frequency_vs_degree_panel.axes_canvas.x_label = "Polar Angle (degrees)"
         self.frequency_vs_degree_panel.axes_canvas.y_label = "Frequency (GHz)"
@@ -433,7 +499,7 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.axes_canvas.image_y_min_val = frequencies[0]
         self.frequency_vs_degree_panel.axes_canvas.image_y_max_val = frequencies[-1]
 
-        self.frequency_vs_degree_panel.update_everything()
+        self.callback_resize(None)
 
     def get_fft_image_bounds(self,
                              ):  # type: (...) -> (int, int, int, int)
@@ -454,33 +520,38 @@ class ApertureTool(WidgetPanel):
         return full_im_y_start, full_im_x_start, full_im_y_end, full_im_x_end
 
     def update_filtered_image(self):
-        self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
+        if self.get_filtered_image() is not None:
+            self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
 
     def get_filtered_image(self):
         select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
         full_image_rect = self.frequency_vs_degree_panel.canvas.get_shape_image_coords(select_rect_id)
 
-        y1 = int(full_image_rect[0])
-        x1 = int(full_image_rect[1])
-        y2 = int(full_image_rect[2])
-        x2 = int(full_image_rect[3])
+        if full_image_rect is not None:
+            y1 = int(full_image_rect[0])
+            x1 = int(full_image_rect[1])
+            y2 = int(full_image_rect[2])
+            x2 = int(full_image_rect[3])
 
-        y_ul = min(y1, y2)
-        y_lr = max(y1, y2)
-        x_ul = min(x1, x2)
-        x_lr = max(x1, x2)
+            y_ul = min(y1, y2)
+            y_lr = max(y1, y2)
+            x_ul = min(x1, x2)
+            x_lr = max(x1, x2)
 
-        filtered_complex_image = self.app_variables.aperture_filter[y_ul:y_lr, x_ul:x_lr]
-        filtered_display_image = remap.density(filtered_complex_image)
-        return filtered_display_image
+            filtered_complex_image = self.app_variables.aperture_filter[y_ul:y_lr, x_ul:x_lr]
+            filtered_display_image = remap.density(filtered_complex_image)
+            return filtered_display_image
 
     # noinspection PyUnusedLocal
     # TODO: update variables, some don't exist in the current form.
-    def callback_save_animation(self, event):
+    def callback_save_animation(self):
         self.update_animation_params()
         filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
                                                 filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
 
+        extension = filename[-4:]
+        if extension.lower() != ".gif":
+            filename = filename + ".gif"
         frame_sequence = []
         direction_forward_or_back = "forward"
         if self.animation_panel.mode_panel.reverse.is_selected():
@@ -501,6 +572,7 @@ class ApertureTool(WidgetPanel):
             self.frequency_vs_degree_panel.update()
         fps = float(self.animation_panel.animation_settings.frame_rate.get())
         frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
+        self.animation_panel.animation_settings.enable_all_widgets()
 
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
@@ -634,10 +706,6 @@ class ApertureTool(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = ApertureTool(root)
-    root.geometry("1200x1000")
-    app.frequency_vs_degree_panel.canvas.set_canvas_size(500, 500)
-    app.filtered_panel.canvas.set_canvas_size(500, 500)
-    root.after(400, app.filtered_panel.update_everything)
-    root.after(400, app.frequency_vs_degree_panel.update_everything)
+    root.geometry("1200x600")
     root.mainloop()
 

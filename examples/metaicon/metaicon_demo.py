@@ -1,14 +1,19 @@
-import os
+import numpy
 import tkinter
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.complex_image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
+
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
 
 
 class MetaIconDemo(WidgetPanel):
-    _widget_list = ("metaicon", )
+    # The metaicon will be a popup, so leave the widget list unpopulated
+    _widget_list = ()
 
     metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
 
@@ -17,19 +22,65 @@ class MetaIconDemo(WidgetPanel):
 
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
+
         self.init_w_horizontal_layout()
-        self.metaicon.config(width=800, height=600)
 
-        path_to_sicd = os.path.expanduser("~/sicd_example_1_PFA_RE32F_IM32F_HH.nitf")
-        reader = ComplexImageReader(path_to_sicd)
-        self.metaicon.create_from_reader(reader.base_reader, index=0)
+        lat = 35.05452800184999
+        lon = -106.59258099877832
+        collect_start = numpy.datetime64('2016-09-21T16:41:07.000000')
+        collect_duration = 14.47132
+        collector_name = 'Sandia FARAD X-band'
+        core_name = '0508C01_PS0009_CC000000_N03_M1_PC054036_HH_wfcc_sv'
+        azimuth = 241.15240495122976
+        graze = 28.403774480669846
+        layover = 263.96070589564016
+        shadow = -90.0
+        multipath = 66.5880303387554
+        multipath_ground = 5.435625387525644
+        side_of_track = 'R'
+        col_impulse_response_width = 0.1903215223097113
+        row_impulse_response_width = 0.1606955380577428
+        grid_column_sample_spacing = 0.04462
+        grid_row_sample_spacing = 0.03767
+        image_plane = 'SLANT'
+        tx_rf_bandwidth = 2843.7592056795997
+        rniirs = None
+        polarization = 'H:H'
 
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        data_container = MetaIconDataContainer(lat=lat,
+                                               lon=lon,
+                                               collect_start=collect_start,
+                                               collect_duration=collect_duration,
+                                               collector_name=collector_name,
+                                               core_name=core_name,
+                                               azimuth=azimuth,
+                                               graze=graze,
+                                               layover=layover,
+                                               shadow=shadow,
+                                               multipath=multipath,
+                                               multipath_ground=multipath_ground,
+                                               side_of_track=side_of_track,
+                                               col_impulse_response_width=col_impulse_response_width,
+                                               row_impulse_response_width=row_impulse_response_width,
+                                               grid_column_sample_spacing=grid_column_sample_spacing,
+                                               grid_row_sample_spacing=grid_row_sample_spacing,
+                                               image_plane=image_plane,
+                                               tx_rf_bandwidth=tx_rf_bandwidth,
+                                               rniirs=rniirs,
+                                               polarization=polarization,
+                                               )
+        self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
+        self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon.create_from_metaicon_data_container(data_container)
+        # hide the main window so just the metaicon popup is showing
+        self.primary.withdraw()
+
+        # quit the program when the user closes the metaicon popup
+        self.metaicon_popup_panel.protocol("WM_DELETE_WINDOW", root.quit)
 
 
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = MetaIconDemo(root)
-    root.after(200, app.metaicon.update_everything())
     root.mainloop()
 
