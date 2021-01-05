@@ -2,8 +2,7 @@ import os
 import json
 
 import tkinter
-from tkinter.filedialog import askopenfilename
-from tkinter.filedialog import asksaveasfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import Menu
 
 import numpy
@@ -38,6 +37,7 @@ class AnnotationTool(WidgetPanel):
     annotate_panel = widget_descriptors.PanelDescriptor("annotate_panel", AnnotateImagePanel)  # type: AnnotateImagePanel
 
     def __init__(self, primary):
+        # TODO: why are there two primaries? This is confusing at least, and looks like an error.
         self.primary = tkinter.Frame(primary)
         primary_frame = tkinter.Frame(primary)
 
