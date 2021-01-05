@@ -2,8 +2,10 @@
 # NB: bump the version number in __about__.py to reflect the below.
 
 * .7 - Metaviewer updates
+       Taser tool updates
        Aperture tool updates
        Metaicon updates, based on sarpy changes
+       Annotation tool updates and creation of schema editor
        Preliminary RCS tool shell, with more functionality required
        Adjustments for tk_builder and sarpy updates
 * .6 - Animated gif capability added

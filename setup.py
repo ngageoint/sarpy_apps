@@ -29,7 +29,7 @@ setup(name=parameters['__title__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
       install_requires=[
-          'numpy', 'sarpy>=1.1.43', 'tk_builder>=1.0.5', 'Pillow',
+          'numpy', 'sarpy>=1.1.44', 'tk_builder>=1.0.5', 'Pillow',
           'typing;python_version<"3.4"', 'future;python_version<"3.4"'],
       zip_safe=True,
       test_suite="tests",
