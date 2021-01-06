@@ -39,6 +39,10 @@ class ComplexImageReader(ImageReader):
         self.base_reader = reader
 
     @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
+
+    @property
     def base_reader(self):
         # type: () -> BaseReader
         """
@@ -83,6 +87,14 @@ class ComplexImageReader(ImageReader):
             value = 0
         self._index = value
         self._data_size = data_sizes[value]
+
+    @property
+    def image_count(self):
+        """
+        int: The number of image segments.
+        """
+
+        return 0 if self._chippers is None else len(self._chippers)
 
     def __getitem__(self, item):
         cdata = self._chippers[self.index].__getitem__(item)
@@ -130,6 +142,10 @@ class QuadPolImageReader(ImageReader):
         self._remap_function = remap.density
         # set the reader
         self.base_reader = reader
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
 
     @property
     def base_reader(self):
@@ -364,6 +380,10 @@ class DerivedImageReader(ImageReader):
             value = 0
         self._index = value
         self._data_size = data_sizes[value]
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
 
     def __getitem__(self, item):
         return self._chippers[self.index].__getitem__(item)
