@@ -48,3 +48,4 @@ sar_images = ('SAR Images', nitf_files[1] + hdf5_files[1] + tiff_files[1])
 json_files = ('JSON Files', _include_uppercase('.json'))
 
 common_use_filter = [sar_images, nitf_files, hdf5_files, tiff_files, all_files]
+nitf_preferred_filter = [nitf_files, sar_images, hdf5_files, tiff_files, all_files]
