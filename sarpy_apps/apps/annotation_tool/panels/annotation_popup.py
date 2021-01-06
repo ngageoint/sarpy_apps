@@ -122,7 +122,7 @@ class AnnotationPopup(WidgetPanel):
         self.main_app_variables.file_annotation_collection = new_file_annotation_collection
         for key, val in self.main_app_variables.canvas_geom_ids_to_annotations_id_dict.items():
             self.main_app_variables.file_annotation_collection.add_annotation(val)
-        self.main_app_variables.file_annotation_collection.to_file(self.main_app_variables.file_annotation_fname)
+        self.main_app_variables.file_annotation_collection.to_file(self.main_app_variables.annotation_file_name)
         self.parent.destroy()
 
     def setup_confidence_selections(self):

@@ -1,12 +1,13 @@
 import os
-import json
+from shutil import copyfile
+import time
+from collections import OrderedDict
 
 import tkinter
+from tkinter.messagebox import showinfo, askyesnocancel, askyesno
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from tkinter import Menu
 
 import numpy
-from shutil import copyfile
 
 from sarpy_apps.apps.annotation_tool.panels.context_image_panel.context_image_panel import ContextImagePanel
 from sarpy_apps.apps.annotation_tool.panels.annotate_image_panel import AnnotateImagePanel
@@ -21,9 +22,8 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.widgets import widget_descriptors
 
-from sarpy.annotation.annotate import FileAnnotationCollection
-from sarpy.annotation.annotate import Annotation
-from sarpy.annotation.annotate import LabelSchema
+from sarpy.annotation.schema_processing import LabelSchema
+from sarpy.annotation.annotate import FileAnnotationCollection, Annotation
 from sarpy.geometry.geometry_elements import Polygon
 
 
@@ -37,9 +37,9 @@ class AnnotationTool(WidgetPanel):
     annotate_panel = widget_descriptors.PanelDescriptor("annotate_panel", AnnotateImagePanel)  # type: AnnotateImagePanel
 
     def __init__(self, primary):
-        # TODO: why are there two primaries? This is confusing at least, and looks like an error.
+        self._schema_browse_directory = os.path.expanduser('~')
+        self._image_brose_directory = os.path.expanduser('~')
         self.primary = tkinter.Frame(primary)
-        primary_frame = tkinter.Frame(primary)
 
         WidgetPanel.__init__(self, primary)
 
@@ -72,16 +72,17 @@ class AnnotationTool(WidgetPanel):
         self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
         self.metaviewer_popup_panel.withdraw()
-        menubar = Menu()
+        menubar = tkinter.Menu()
 
-        filemenu = Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open SICD", command=self.select_sicd_file)
-        filemenu.add_command(label="Open annotation", command=self.select_annotation_file)
+        filemenu = tkinter.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Open Image", command=self.select_image_file)
+        filemenu.add_command(label="Create New Annotation", command=self.create_new_annotation_file)
+        filemenu.add_command(label="Open Annotation", command=self.select_annotation_file)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
 
         # create more pulldown menus
-        popups_menu = Menu(menubar, tearoff=0)
+        popups_menu = tkinter.Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
 
@@ -95,7 +96,7 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.buttons.do_not_expand()
         self.annotate_panel.buttons.pack(side="bottom")
 
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         self.context_panel.image_panel.resizeable = True
         self.annotate_panel.image_panel.resizeable = True
@@ -113,65 +114,137 @@ class AnnotationTool(WidgetPanel):
     def metaicon_popup(self):
         self.metaicon_popup_panel.deiconify()
 
+    @property
+    def image_file_name(self):
+        """
+        None|str: The image file name.
+        """
+
+        return self.context_panel.image_panel.canvas.variables.canvas_image_object.image_reader.file_name
+
+    @property
+    def image_file_selected(self):
+        """
+        bool: Has the image file been selected?
+        """
+
+        return self.image_file_name is not None
+
     # context callbacks
-    def select_sicd_file(self):
-        fname = askopenfilename(filetypes=file_filters.common_use_filter)
-        if fname:
-            image_reader = ComplexImageReader(fname)
-            self.context_panel.image_panel.set_image_reader(image_reader)
-            self.annotate_panel.image_panel.set_image_reader(image_reader)
-            self.metaicon.create_from_reader(image_reader.base_reader, index=0)
-            self.metaviewer.populate_from_reader(image_reader.base_reader)
+    def select_image_file(self):
+        """
+        Select the image callback.
+
+        Returns
+        -------
+        None
+        """
+
+        fname = askopenfilename(title='Select image file',
+                                initialdir=self._image_brose_directory,
+                                filetypes=file_filters.nitf_preferred_filter)
+        if fname == '' or fname == ():
+            return
+
+        self._image_brose_directory = os.path.split(fname)[0]
+        image_reader = ComplexImageReader(fname)
+        if image_reader.image_count != 1:
+            showinfo('Single Image Required',
+                     message='The given image reader for file {} has {} distinct images. '
+                             'Annotation is only permitted for single image readers. '
+                             'Aborting'.format(image_reader.file_name, image_reader.image_count))
+            return
+
+        self.context_panel.image_panel.set_image_reader(image_reader)
+        self.annotate_panel.image_panel.set_image_reader(image_reader)
+        self.metaicon.create_from_reader(image_reader.base_reader, index=0)
+        self.metaviewer.populate_from_reader(image_reader.base_reader)
+
+    def create_new_annotation_file(self):
+        if not self.image_file_selected:
+            showinfo('No Image Selected', message='First select an image file for annotation.')
+            return
+
+        schema_fname = askopenfilename(
+            title='Select label schema',
+            initialdir=self._schema_browse_directory,
+            filetypes=[file_filters.json_files, file_filters.all_files])
+        if schema_fname in ['', ()]:
+            return
+
+        self._schema_browse_directory = os.path.split(schema_fname)[0]
+        try:
+            label_schema = LabelSchema.from_file(schema_fname)
+        except Exception as e:
+            showinfo(
+                'Failed Opening Schema',
+                message='Failed opening schema {} with exception {}. '
+                        'Aborting new annotation creation.'.format(schema_fname, e))
+            return
+
+        annotation_fname = None
+        while annotation_fname is None:
+            annotation_fname = asksaveasfilename(
+                title='Select annotation file',
+                initialdir=self._image_brose_directory,
+                filetypes=[file_filters.json_files, file_filters.all_files])
+            if annotation_fname in ['', ()]:
+                annotation_fname = None
+
+                response = askyesnocancel(
+                    'No annotation selected?',
+                    message='No annotation was selected, and the creation of new annotation file is incomplete. '
+                            'Should the effort be continued?')
+                if response is not True:
+                    # we've cancelled the effort
+                    break
+                # all other cases, annotation_fname is defined appropriately
+
+        if annotation_fname is None:
+            return
+
+        image_fname = os.path.basename(self.image_file_name)
+        annotation_collection = FileAnnotationCollection(
+            label_schema=label_schema, image_file_name=image_fname)
+        self.initialize_geometry(annotation_fname, annotation_collection)
 
     def select_annotation_file(self):
-        json_fname = askopenfilename(filetypes=[file_filters.json_files, file_filters.all_files])
-        image_fname = os.path.basename(
-            self.context_panel.image_panel.canvas.variables.canvas_image_object.image_reader.base_reader.file_name)
-        with open(json_fname, 'r') as fi:
-            json_dict = json.load(fi)
-        # If version is in the dictionary the user has selected a schema and will be working on a new annotation
-        if "version" in json_dict:
-            self.variables.label_schema = LabelSchema.from_file(json_fname)
-            file_annotation_fname = asksaveasfilename(filetypes=[file_filters.json_files, file_filters.all_files])
-            if file_annotation_fname != '':
-                self.variables.file_annotation_fname = file_annotation_fname
-                self.variables.file_annotation_collection = FileAnnotationCollection(label_schema=self.variables.label_schema,
-                                                                                     image_file_name=image_fname)
-            else:
-                print("select a valid label schema file.")
-        elif "label_schema" in json_dict:
-            # save a backup
-            backup_file_fname = os.path.join(os.path.dirname(json_fname), os.path.basename(json_fname) + '.bak')
-            copyfile(json_fname, backup_file_fname)
-            self.variables.file_annotation_fname = json_fname
-            self.variables.file_annotation_collection = FileAnnotationCollection.from_dict(json_dict)
-            self.variables.label_schema = self.variables.file_annotation_collection.label_schema
-            if self.variables.file_annotation_collection.image_file_name == image_fname:
-                self.context_panel.buttons.enable_all_buttons()
-                # create canvas shapes from existing annotations and create dictionary to keep track of canvas geometries
-                # that are mapped to the annotations
-                for feature in self.variables.file_annotation_collection.annotations.features:
-                    geometry = feature.geometry
-                    if isinstance(geometry, Polygon):
-                        image_coords = geometry.get_coordinate_list()[0]  # the "outer" ring is always first
-                    else:
-                        raise TypeError('Unhandled geometry type {}'.format(type(geometry)))
-                    image_coords_1d = list(numpy.reshape(image_coords, numpy.asarray(image_coords).size))
-                    tmp_shape_id = self.annotate_panel.image_panel.canvas.create_new_polygon((0, 0, 1, 1))
-                    self.annotate_panel.image_panel.canvas.set_shape_pixel_coords(tmp_shape_id, image_coords_1d)
-                    self.variables.canvas_geom_ids_to_annotations_id_dict[str(tmp_shape_id)] = feature
-                self.annotate_panel.image_panel.canvas.redraw_all_shapes()
-            else:
-                print("the image filename and the filename of the annotation do not match.  Select an annotation")
-                print("that matches the input filename.")
-        else:
-            print("select a valid schema file or existing annotation file..")
+        if not self.image_file_selected:
+            showinfo('No Image Selected', message='First select an image file for annotation.')
+            return
 
-    # noinspection PyUnusedLocal
+        annotation_fname = askopenfilename(
+            initialdir=self._image_brose_directory,
+            filetypes=[file_filters.json_files, file_filters.all_files])
+        if annotation_fname in ['', ()]:
+            return
+
+        try:
+            annotation_collection = FileAnnotationCollection.from_file(annotation_fname)
+        except Exception as e:
+            showinfo('File Annotation Error',
+                     message='Opening annotation file {} failed with error {}. Aborting.'.format(annotation_fname, e))
+            return
+
+        # validate the the image selected matches the annottaion image name
+        image_fname = os.path.basename(self.image_file_name)
+        if annotation_collection.image_file_name != image_fname:
+            showinfo('Image File Mismatch',
+                     message='The annotation selected applies to image file {}, '
+                             'while the selected image file is {}. '
+                             'Aborting.'.format(annotation_collection.image_file_name, image_fname))
+            return
+
+        response = askyesno('Create annotation backup?', message='Should a backup of the annotation file be created?')
+        if response is True:
+            backup_fname = annotation_fname + '.{0:0.0f}.bak'.format(time.time())
+            copyfile(annotation_fname, backup_fname)
+        # initialize the geometry
+        self.initialize_geometry(annotation_fname, annotation_collection)
+
     def callback_context_set_to_select(self):
         self.context_panel.image_panel.canvas.set_current_tool_to_selection_tool()
 
-    # noinspection PyUnusedLocal
     def callback_context_set_to_edit_selection(self):
         self.context_panel.image_panel.canvas.set_current_tool_to_edit_shape()
 
@@ -186,7 +259,6 @@ class AnnotationTool(WidgetPanel):
             self.annotate_panel.image_panel.canvas.zoom_to_canvas_selection(annotate_zoom_rect, animate=True)
 
     # annotate callbacks
-    # noinspection PyUnusedLocal
     def callback_set_to_select_closest_shape(self):
         self.annotate_panel.image_panel.canvas.set_current_tool_to_select_closest_shape()
 
@@ -224,7 +296,6 @@ class AnnotationTool(WidgetPanel):
     def callback_handle_annotate_mouse_wheel(self, event):
         self.annotate_panel.image_panel.canvas.callback_mouse_zoom(event)
 
-    # noinspection PyUnusedLocal
     def callback_delete_shape(self):
         tool_shape_ids = self.annotate_panel.image_panel.canvas.get_tool_shape_ids()
         current_geom_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
@@ -238,7 +309,6 @@ class AnnotationTool(WidgetPanel):
         else:
             print("no shape selected")
 
-    # noinspection PyUnusedLocal
     def callback_annotation_popup(self):
         current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
         if current_canvas_shape_id:
@@ -247,6 +317,76 @@ class AnnotationTool(WidgetPanel):
             AnnotationPopup(popup, self.variables)
         else:
             print("Please select a geometry first.")
+
+    # utility functions
+    def insert_feature(self, feature):
+        """
+        Insert a new feature. It is assumes it is already rendered, or will be
+        rendered outside of this effort.
+
+        Parameters
+        ----------
+        feature : Annotation
+
+        Returns
+        -------
+        None
+        """
+
+        def insert_polygon(the_feature, the_geometry):
+            # type: (Annotation, Polygon) -> None
+
+            # this will only render an outer ring
+            image_coords = the_geometry._outer_ring.coordinates.flatten()
+            tmp_shape_id = self.annotate_panel.image_panel.canvas.create_new_polygon((0, 0, 1, 1))
+            self.annotate_panel.image_panel.canvas.set_shape_pixel_coords(tmp_shape_id, image_coords)
+            self.variables.canvas_geom_ids_to_annotations_id_dict[str(tmp_shape_id)] = the_feature
+
+        geometry = feature.geometry
+        if isinstance(geometry, Polygon):
+            insert_polygon(feature, geometry)
+        else:
+            showinfo(
+                'Unhandled Geometry',
+                message='Annotation id {} has unsupported feature type {} which '
+                        'will be omitted from display. Any save of the annotation '
+                        'will not contain this feature.'.format(feature.uid, type(geometry)))
+
+    def initialize_geometry(self, annotation_file_name, annotation_collection):
+        """
+        Initialize the geometry elements from the annotation.
+
+        Parameters
+        ----------
+        annotation_file_name : str
+        annotation_collection : FileAnnotationCollection
+
+        Returns
+        -------
+        None
+        """
+
+        # set our appropriate variables
+        self.variables.annotation_file_name = annotation_file_name
+        self.variables.label_schema = annotation_collection.label_schema
+        self.variables.file_annotation_collection = annotation_collection
+
+        # dump all the old shapes
+        self.annotate_panel.image_panel.canvas.reinitialize_shapes()
+        self.context_panel.image_panel.canvas.reinitialize_shapes()
+
+        # reinitialize dictionary relating canvas shapes and annotation shapes
+        self.variables.canvas_geom_ids_to_annotations_id_dict = OrderedDict()
+
+        # populate all the shapes
+        for feature in self.variables.file_annotation_collection.annotations.features:
+            self.insert_feature(feature)
+        # draw all the shapes on the annotation panel
+        self.annotate_panel.image_panel.canvas.redraw_all_shapes()
+        # TODO: draw all shapes on the context_panel
+
+        # enable appropriate GUI elements
+        self.context_panel.buttons.enable_all_buttons()
 
 
 def main():

@@ -18,8 +18,8 @@ class AppVariables(object):
     file_annotation_collection = TypedDescriptor(
         'file_annotation_collection', FileAnnotationCollection,
         docstring='The file annotation collection.')  # type: FileAnnotationCollection
-    file_annotation_fname = StringDescriptor(
-        'file_annotation_fname',
+    annotation_file_name = StringDescriptor(
+        'annotation_file_name',
         docstring='The path for the annotation results file.')  # type: str
     annotate_canvas = TypedDescriptor(
         'annotate_canvas', AxesImageCanvas,
