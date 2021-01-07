@@ -6,14 +6,16 @@ __author__ = "Jason Casey"
 
 
 class PhaseHistoryPanel(WidgetPanel):
-    _widget_list = ["r1c1", "cross_range_label", "r1c3", "range_label", "r1c5",
-                    "start_percent_label", "start_percent_cross", "r2c3", "start_percent_range", "r2c5",
-                    "stop_percent_label", "stop_percent_cross", "r3c3", "stop_percent_range", "r3c5",
-                    "fraction_label", "fraction_cross", "r4c3", "fraction_range", "r4c5",
-                    "resolution_label", "resolution_cross", "resolution_cross_units", "resolution_range", "resolution_range_units",
-                    "sample_spacing_label", "sample_spacing_cross", "sample_spacing_cross_units", "sample_spacing_range", "sample_spacing_range_units",
-                    "ground_resolution_label", "ground_resolution_cross", "ground_resolution_cross_units", "ground_resolution_range", "ground_resolution_range_units",
-                    "full_aperture_button", "english_units_checkbox"]
+    _widget_list = (
+        "r1c1", "cross_range_label", "r1c3", "range_label", "r1c5",
+        "start_percent_label", "start_percent_cross", "r2c3", "start_percent_range", "r2c5",
+        "stop_percent_label", "stop_percent_cross", "r3c3", "stop_percent_range", "r3c5",
+        "fraction_label", "fraction_cross", "r4c3", "fraction_range", "r4c5",
+        "resolution_label", "resolution_cross", "resolution_cross_units", "resolution_range",
+        "resolution_range_units", "sample_spacing_label", "sample_spacing_cross", "sample_spacing_cross_units",
+        "sample_spacing_range", "sample_spacing_range_units", "ground_resolution_label", "ground_resolution_cross",
+        "ground_resolution_cross_units", "ground_resolution_range", "ground_resolution_range_units",
+        "full_aperture_button", "english_units_checkbox")
 
     r1c1 = widget_descriptors.LabelDescriptor("r1c1", default_text="")
     r1c3 = widget_descriptors.LabelDescriptor("r1c3", default_text="")

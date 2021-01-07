@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+This module provides a version of the rcs tool.
+"""
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import os
 
 import numpy
@@ -6,6 +15,7 @@ from tkinter.filedialog import askopenfilename
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
+from tk_builder.panels.pyplot_panel import PyplotPanel
 
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
@@ -15,14 +25,22 @@ from tk_builder.widgets.image_canvas import ToolConstants
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes import file_filters
 
-from sarpy_apps.apps.rcs_tool.popups.rcs_plot import RcsPlot
 
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+###########
+# plot panel
+
+class RcsPlot(WidgetPanel):
+    _widget_list = ("azimuth_plot", "range_plot")
+    azimuth_plot = widget_descriptors.PyplotPanelDescriptor("azimuth_plot")  # type: PyplotPanel
+    range_plot = widget_descriptors.PyplotPanelDescriptor("range_plot")  # type: PyplotPanel
+
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+        self.init_w_vertical_layout()
 
 
 ###########
-# associated GUI elements
+# Main GUI elements
 
 class RoiRadiobuttons(RadioButtonPanel):
     _widget_list = ("rectangle", "polygon",)

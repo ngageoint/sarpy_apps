@@ -1,5 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+This module provides a tool for creating annotation for a SAR image.
+"""
 
-from typing import Union
+__classification__ = "UNCLASSIFIED"
+__author__ = "Thomas McCullough"
+
+
 import os
 import tkinter
 from tkinter import ttk
@@ -15,10 +22,6 @@ from tk_builder.widgets.widget_descriptors import ButtonDescriptor, LabelDescrip
 from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes import file_filters
-
-
-__author__ = "Thomas McCullough"
-__classification__ = "UNCLASSIFIED"
 
 
 ####

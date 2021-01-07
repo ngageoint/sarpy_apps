@@ -2,7 +2,7 @@ import tkinter
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
-from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
+from sarpy_apps.apps.aperture_tool.aperture_tool import AppVariables
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
 

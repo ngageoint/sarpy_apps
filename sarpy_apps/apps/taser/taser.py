@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+This module provides a version of the taser tool.
+"""
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import os
 
 import tkinter
@@ -17,9 +26,6 @@ from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_filter
 
 import sarpy.visualization.remap as remap
-
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
 
 
 class TaserButtonPanel(WidgetPanel):

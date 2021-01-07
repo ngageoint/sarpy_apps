@@ -1,21 +1,86 @@
-import tkinter
-import os
-
-import numpy
-
-from sarpy_apps.apps.wake_tool.panels.side_panel import SidePanel
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.file_filters import common_use_filter
-
-from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets.image_canvas import TOOLS
-from tk_builder.panel_builder import WidgetPanel
-from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
-from tk_builder.widgets import widget_descriptors
+# -*- coding: utf-8 -*-
+"""
+This module provides a version of the wake tool.
+"""
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
+
+import tkinter
+
+import numpy
+
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.file_filters import common_use_filter
+
+from tk_builder.panels.image_panel import ImagePanel
+from tk_builder.panels.file_selector import FileSelector
+from tk_builder.widgets import basic_widgets, widget_descriptors
+from tk_builder.widgets.image_canvas import TOOLS
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
+
+
+######
+# Panel definitions
+
+class ButtonPanel(WidgetPanel):
+    _widget_list = ("line_draw", "point_draw")
+    line_draw = widget_descriptors.ButtonDescriptor("line_draw", default_text="line")  # type: basic_widgets.Button
+    point_draw = widget_descriptors.ButtonDescriptor("point_draw", default_text="point")  # type:  basic_widgets.Button
+
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+        self.init_w_box_layout(2, column_widths=8, row_heights=2)
+
+
+class InfoPanel(WidgetPanel):
+    _widget_list = (
+        "canvas_distance_label", "canvas_distance_val",
+        "pixel_distance_label", "pixel_distance_val",
+        "geo_distance_label", "geo_distance_val")
+
+    canvas_distance_label = widget_descriptors.LabelDescriptor(
+        "canvas_distance_label", default_text="canvas distance")  # type: basic_widgets.Label
+    pixel_distance_label = widget_descriptors.LabelDescriptor(
+        "pixel_distance_label", default_text="pixel distance")  # type: basic_widgets.Label
+    geo_distance_label = widget_descriptors.LabelDescriptor(
+        "geo_distance_label", default_text="geo distance")  # type: basic_widgets.Label
+
+    canvas_distance_val = widget_descriptors.EntryDescriptor(
+        "canvas_distance_val", default_text="")  # type: basic_widgets.Entry
+    pixel_distance_val = widget_descriptors.EntryDescriptor(
+        "pixel_distance_val", default_text="")  # type: basic_widgets.Entry
+    geo_distance_val = widget_descriptors.EntryDescriptor(
+        "geo_distance_val", default_text="")  # type: basic_widgets.Entry
+
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+
+        self.init_w_box_layout(n_columns=2, column_widths=[20, 10])
+
+        self.canvas_distance_val.config(state='disabled')
+        self.pixel_distance_val.config(state='disabled')
+        self.geo_distance_val.config(state='disabled')
+
+
+class SidePanel(WidgetPanel):
+    _widget_list = ("file_selector", "buttons", "info_panel")
+    buttons = widget_descriptors.PanelDescriptor(
+        "buttons", ButtonPanel, default_text="wake tool buttons")    # type: ButtonPanel
+    file_selector = widget_descriptors.FileSelectorDescriptor(
+        "file_selector")  # type: FileSelector
+    info_panel = widget_descriptors.PanelDescriptor(
+        "info_panel", InfoPanel, default_text="info panel")  # type: InfoPanel
+
+    def __init__(self, parent):
+        WidgetPanel.__init__(self, parent)
+        self.init_w_basic_widget_list(2, [1, 2])
+
+
+#######
+# Main App
 
 class AppVariables(object):
     image_reader = TypedDescriptor(
@@ -151,8 +216,12 @@ class WakeTool(WidgetPanel):
         return line_slope, line_intercept
 
 
-if __name__ == '__main__':
+def main():
     root = tkinter.Tk()
     app = WakeTool(root)
     root.geometry("1000x800")
     root.mainloop()
+
+
+if __name__ == '__main__':
+    main()
