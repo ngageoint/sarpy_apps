@@ -564,7 +564,7 @@ class AnnotationTool(WidgetPanel):
         fname = askopenfilename(
             title='Select image file',
             initialdir=self._image_browse_directory,
-            filetypes=file_filters.nitf_preferred_filter)
+            filetypes=file_filters.nitf_preferred_collection)
 
         if fname in ['', ()]:
             return

@@ -23,7 +23,7 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.panels.image_panel import ToolConstants
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.file_filters import common_use_filter
+from sarpy_apps.supporting_classes.file_filters import common_use_collection
 
 import sarpy.visualization.remap as remap
 
@@ -104,7 +104,7 @@ class Taser(WidgetPanel):
             self.taser_image_panel.canvas.update_current_image()
 
     def callback_select_files(self):
-        fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_filter)
+        fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None:
             return
 

@@ -12,7 +12,7 @@ import tkinter
 import numpy
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.file_filters import common_use_filter
+from sarpy_apps.supporting_classes.file_filters import common_use_collection
 
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.file_selector import FileSelector
@@ -136,7 +136,7 @@ class WakeTool(WidgetPanel):
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
         self.side_panel.do_not_expand()
         self.side_panel.fill_x(False)
-        self.side_panel.file_selector.set_fname_filters(common_use_filter)
+        self.side_panel.file_selector.set_fname_filters(common_use_collection)
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
         self.image_panel.canvas.config.update_outer_axes_on_zoom = False
 

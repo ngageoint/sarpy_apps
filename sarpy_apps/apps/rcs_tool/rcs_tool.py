@@ -333,7 +333,7 @@ class RcsTool(WidgetPanel):
             self.rcs_table.delete(current_shape_id)
 
     def select_file(self):
-        fname = askopenfilename(initialdir=self._browse_directory, filetypes=file_filters.common_use_filter)
+        fname = askopenfilename(initialdir=self._browse_directory, filetypes=file_filters.common_use_collection)
         if fname is None or fname == '':
             return
         self._browse_directory = os.path.split(fname)[0]
