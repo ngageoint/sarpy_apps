@@ -186,7 +186,7 @@ class ApertureTool(WidgetPanel):
         self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
         self.filtered_panel.canvas.disable_mouse_zoom()
 
-        self.filtered_panel.canvas.update_outer_axes_on_zoom = False
+        self.filtered_panel.canvas.config.update_outer_axes_on_zoom = False
 
         self.metaicon.hide_on_close()
 
@@ -380,7 +380,7 @@ class ApertureTool(WidgetPanel):
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
         self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_canvas_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id, new_rect)
+            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid, new_rect)
         self.update_filtered_image()
         self.update_phase_history_selection()
 
@@ -515,14 +515,14 @@ class ApertureTool(WidgetPanel):
 
         self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
         self.frequency_vs_degree_panel.canvas.variables.current_shape_id = \
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id
+            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid
         self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_image_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id, self.get_fft_image_bounds())
+            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid, self.get_fft_image_bounds())
         vector_object = self.frequency_vs_degree_panel.canvas.get_vector_object(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid)
         vector_object.image_drag_limits = self.get_fft_image_bounds()
         self.frequency_vs_degree_panel.canvas.show_shape(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid)
 
         filtered_numpy_reader = NumpyImageReader(self.get_filtered_image())
         self.filtered_panel.set_image_reader(filtered_numpy_reader)
@@ -571,7 +571,7 @@ class ApertureTool(WidgetPanel):
             self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
 
     def get_filtered_image(self):
-        select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect_id
+        select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect.uid
         full_image_rect = self.frequency_vs_degree_panel.canvas.get_shape_image_coords(select_rect_id)
 
         if full_image_rect is not None:
@@ -624,7 +624,7 @@ class ApertureTool(WidgetPanel):
     def update_phase_history_selection(self):
         image_bounds = self.get_fft_image_bounds()
         current_bounds = self.frequency_vs_degree_panel.canvas.shape_image_coords_to_canvas_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect_id)
+            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid)
         x_min = min(current_bounds[1], current_bounds[3])
         x_max = max(current_bounds[1], current_bounds[3])
         y_min = min(current_bounds[0], current_bounds[2])

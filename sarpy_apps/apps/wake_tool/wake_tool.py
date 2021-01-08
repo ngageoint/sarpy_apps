@@ -17,7 +17,7 @@ from sarpy_apps.supporting_classes.file_filters import common_use_filter
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.widgets.image_canvas import TOOLS
+from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 
@@ -123,7 +123,7 @@ class WakeTool(WidgetPanel):
         self.side_panel.buttons.line_draw.config(command=self.line_draw_command)
         self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
-        self.image_panel.canvas.variables.line_width = self.variables.line_width
+        self.image_panel.canvas.variables.state.line_width = self.variables.state.line_width
         self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
@@ -138,7 +138,7 @@ class WakeTool(WidgetPanel):
         self.side_panel.fill_x(False)
         self.side_panel.file_selector.set_fname_filters(common_use_filter)
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
-        self.image_panel.canvas.update_outer_axes_on_zoom = False
+        self.image_panel.canvas.config.update_outer_axes_on_zoom = False
 
     def select_file_command(self):
         fname = self.side_panel.file_selector.select_file_command()
@@ -160,9 +160,9 @@ class WakeTool(WidgetPanel):
         # first do all the normal mouse click functionality of the canvas
         self.image_panel.canvas.callback_handle_left_mouse_click(event)
         # now set the object ID's accordingly, we do this so we don't draw multiple arrows or points
-        if self.image_panel.canvas.variables.current_tool == TOOLS.DRAW_ARROW_BY_DRAGGING:
+        if self.image_panel.canvas.variables.current_tool == ToolConstants.DRAW_ARROW_BY_DRAGGING:
             self.variables.arrow_id = self.image_panel.canvas.variables.current_shape_id
-        if self.image_panel.canvas.variables.current_tool == TOOLS.DRAW_POINT_BY_CLICKING:
+        if self.image_panel.canvas.variables.current_tool == ToolConstants.DRAW_POINT_BY_CLICKING:
             self.variables.point_id = self.image_panel.canvas.variables.current_shape_id
         if self.variables.point_id is not None and self.variables.arrow_id is not None:
             self.update_distance()

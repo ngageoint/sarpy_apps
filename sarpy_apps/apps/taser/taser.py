@@ -16,7 +16,7 @@ from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
-from tk_builder.widgets.image_canvas import TOOLS
+from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
 from tk_builder.widgets import basic_widgets
@@ -82,9 +82,9 @@ class Taser(WidgetPanel):
 
     def callback_left_mouse_release(self, event):
         self.taser_image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.taser_image_panel.canvas.variables.current_tool == TOOLS.SELECT_TOOL:
-            full_image_width = self.taser_image_panel.canvas.variables.canvas_width
-            fill_image_height = self.taser_image_panel.canvas.variables.canvas_height
+        if self.taser_image_panel.canvas.variables.current_tool == ToolConstants.SELECT_TOOL:
+            full_image_width = self.taser_image_panel.canvas.variables.state.canvas_width
+            fill_image_height = self.taser_image_panel.canvas.variables.state.canvas_height
             self.taser_image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
             self.display_canvas_rect_selection_in_pyplot_frame()
 
@@ -137,7 +137,7 @@ class Taser(WidgetPanel):
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
-            self.taser_image_panel.canvas.variables.select_rect_id)
+            self.taser_image_panel.canvas.variables.select_rect.uid)
         if image_data is not None:
             self.pyplot_panel.update_image(image_data)
 

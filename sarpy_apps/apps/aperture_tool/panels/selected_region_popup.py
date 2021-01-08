@@ -51,7 +51,8 @@ class SelectedRegionPanel(WidgetPanel):
         self.image_panel.canvas.set_current_tool_to_selection_tool()
 
     def submit_aoi(self):
-        selection_image_coords = self.image_panel.canvas.get_shape_image_coords(self.image_panel.canvas.variables.select_rect_id)
+        selection_image_coords = self.image_panel.canvas.get_shape_image_coords(
+            self.image_panel.canvas.variables.select_rect.uid)
         if selection_image_coords:
             self.app_variables.selected_region = selection_image_coords
             y1 = int(min(selection_image_coords[0], selection_image_coords[2]))

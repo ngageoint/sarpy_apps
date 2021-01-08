@@ -687,7 +687,7 @@ class AnnotationTool(WidgetPanel):
         self.context_panel.image_panel.canvas.callback_handle_left_mouse_release(event)
         if self.context_panel.image_panel.canvas.variables.current_tool == ToolConstants.SELECT_TOOL or \
            self.context_panel.image_panel.canvas.variables.current_tool == ToolConstants.TRANSLATE_SHAPE_TOOL:
-            rect_id = self.context_panel.image_panel.canvas.variables.select_rect_id
+            rect_id = self.context_panel.image_panel.canvas.variables.select_rect.uid
             image_rect = self.context_panel.image_panel.canvas.get_shape_image_coords(rect_id)
             annotate_zoom_rect = self.annotate_panel.image_panel.canvas.variables.canvas_image_object.full_image_yx_to_canvas_coords(
                 image_rect)

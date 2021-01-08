@@ -95,7 +95,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float]: The arrow origin location.
         """
 
-        return self.canvas.variables.canvas_width*0.75, self.canvas.variables.canvas_height*0.6
+        return self.canvas.variables.state.canvas_width*0.75, self.canvas.variables.state.canvas_height*0.6
 
     @property
     def data_container(self):
@@ -126,7 +126,7 @@ class MetaIcon(ImagePanel):
 
         self.data_container = data_container
         metaicon_background = numpy.zeros(
-            (self.canvas.variables.canvas_height, self.canvas.variables.canvas_width),
+            (self.canvas.variables.state.canvas_height, self.canvas.variables.state.canvas_width),
             dtype=numpy.uint8)
         numpy_reader = NumpyImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
@@ -212,8 +212,8 @@ class MetaIcon(ImagePanel):
         """
 
         n_lines = 9
-        height = self.canvas.variables.canvas_height
-        width = self.canvas.variables.canvas_width
+        height = self.canvas.variables.state.canvas_height
+        width = self.canvas.variables.state.canvas_width
         margin = height * (self.margin_percent * 0.01 * 2)
         top_margin = margin/2
         height_w_margin = height - margin
@@ -285,7 +285,7 @@ class MetaIcon(ImagePanel):
         float: The arrow lengths in pixels.
         """
 
-        return self.canvas.variables.canvas_width * 0.15
+        return self.canvas.variables.state.canvas_width * 0.15
 
     @property
     def layover_arrow_coords(self):
@@ -415,8 +415,8 @@ class MetaIcon(ImagePanel):
         """
 
         flight_direction_arrow_start = (
-            self.canvas.variables.canvas_width * 0.65, self.canvas.variables.canvas_height * 0.9)
-        flight_direction_arrow_end = (self.canvas.variables.canvas_width * 0.95, flight_direction_arrow_start[1])
+            self.canvas.variables.state.canvas_width * 0.65, self.canvas.variables.state.canvas_height * 0.9)
+        flight_direction_arrow_end = (self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
         if self.data_container.side_of_track == 'R':
             self.canvas.create_new_arrow((flight_direction_arrow_start[0],
                                           flight_direction_arrow_start[1],
@@ -427,7 +427,7 @@ class MetaIcon(ImagePanel):
                                           flight_direction_arrow_end[1],
                                           flight_direction_arrow_start[0],
                                           flight_direction_arrow_start[1]), fill=self.Colors.flight_direction, width=3)
-        self.canvas.create_new_text((flight_direction_arrow_start[0] - self.canvas.variables.canvas_width * 0.04,
+        self.canvas.create_new_text((flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
                                  flight_direction_arrow_start[1]),
                                 text="R",
                                 fill=self.Colors.flight_direction,

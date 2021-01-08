@@ -9,6 +9,8 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets.image_canvas import ShapeTypeConstants
+
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 
 import sarpy.geometry.point_projection as point_projection
@@ -124,8 +126,7 @@ class CanvasDemo(WidgetPanel):
 
         kml_util = KmlUtil()
 
-        canvas_shapes = self.canvas_demo_image_panel.canvas.variables.shape_ids
-        for shape_id in canvas_shapes:
+        for shape_id in self.canvas_demo_image_panel.canvas.variables.shape_ids:
             image_coords = self.canvas_demo_image_panel.canvas.get_shape_image_coords(shape_id)
             shape_type = self.canvas_demo_image_panel.canvas.get_shape_type(shape_id)
             if image_coords:
@@ -142,17 +143,17 @@ class CanvasDemo(WidgetPanel):
 
                 xy_point_list = [(x, y) for x, y in zip(world_x_coordinates, world_y_coordinates)]
 
-                if shape_id == self.canvas_demo_image_panel.canvas.variables.zoom_rect_id:
+                if shape_id == self.canvas_demo_image_panel.canvas.variables.zoom_rect.uid:
                     pass
-                elif shape_type == self.canvas_demo_image_panel.canvas.variables.select_rect_id:
+                elif shape_type == self.canvas_demo_image_panel.canvas.variables.select_rect.uid:
                     pass
-                elif shape_type == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.POINT:
+                elif shape_type == ShapeTypeConstants.POINT:
                     kml_util.add_point(str(shape_id), xy_point_list[0])
-                elif canvas_shapes == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.LINE:
+                elif shape_type == ShapeTypeConstants.LINE:
                     kml_util.add_linestring(str(shape_id), xy_point_list)
-                elif shape_type == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.POLYGON:
+                elif shape_type == ShapeTypeConstants.POLYGON:
                     kml_util.add_polygon(str(shape_id), xy_point_list)
-                elif shape_type == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.RECT:
+                elif shape_type == ShapeTypeConstants.RECT:
                     kml_util.add_polygon(str(shape_id), xy_point_list)
         kml_util.write_to_file(kml_save_fname)
 
@@ -165,7 +166,7 @@ class CanvasDemo(WidgetPanel):
 
     def callback_handle_canvas_left_mouse_release(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.canvas_demo_image_panel.canvas.variables.select_rect_id == self.canvas_demo_image_panel.canvas.variables.current_shape_id:
+        if self.canvas_demo_image_panel.canvas.variables.select_rect.uid == self.canvas_demo_image_panel.canvas.variables.current_shape_id:
             self.update_selection()
 
     def callback_edit(self):
@@ -210,7 +211,7 @@ class CanvasDemo(WidgetPanel):
         selection = self.button_panel.remap_dropdown.get()
         self.variables.image_reader.set_remap_type(remap_dict[selection])
         image_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
-            self.canvas_demo_image_panel.canvas.variables.select_rect_id)
+            self.canvas_demo_image_panel.canvas.variables.select_rect.uid)
         self.pyplot_panel.update_image(image_data)
         self.canvas_demo_image_panel.canvas.update_current_image()
 

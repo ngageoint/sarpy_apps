@@ -288,7 +288,7 @@ class RcsTool(WidgetPanel):
             if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.ellipse:
                 shape = "Ellipse"
             if self.rcs_table.n_entries == n_shapes_on_canvas - 1:
-                table_vals = (shape, self.image_panel.canvas.variables.foreground_color, "yes", "0", "0")
+                table_vals = (shape, self.image_panel.canvas.variables.state.foreground_color, "yes", "0", "0")
                 self.rcs_table.insert_row(self.image_panel.canvas.variables.current_shape_id, table_vals)
             else:
                 pass
