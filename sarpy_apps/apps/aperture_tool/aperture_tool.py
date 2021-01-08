@@ -13,13 +13,15 @@ import numpy
 import scipy.constants.constants as scipy_constants
 
 import tkinter
-from tkinter import filedialog
-from tkinter import Menu
+from tkinter.filedialog import asksaveasfilename
+
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
+from tk_builder.base_elements import TypedDescriptor, \
+    IntegerDescriptor, BooleanDescriptor, FloatDescriptor
 
 import sarpy.visualization.remap as remap
 from sarpy.processing.aperture_filter import ApertureFilter
@@ -27,12 +29,6 @@ from sarpy.processing.aperture_filter import ApertureFilter
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-
-from tk_builder.base_elements import TypedDescriptor, \
-    IntegerDescriptor, BooleanDescriptor, FloatDescriptor
-
-
-
 from sarpy_apps.apps.aperture_tool.panels.image_info_panel import ImageInfoPanel
 from sarpy_apps.apps.aperture_tool.panels.selected_region_popup import SelectedRegionPanel
 from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel \
@@ -40,41 +36,54 @@ from sarpy_apps.apps.aperture_tool.panels.phase_history_selection_panel \
 from sarpy_apps.apps.aperture_tool.panels.animation_panel import AnimationPanel
 
 
-#########
-# Main Aperture Tool
+class AnimationProperties(object):
+    """
+    Properties for animation.
+    """
+
+    n_frames = IntegerDescriptor(
+        'n_frames',
+        docstring='')  # type: int
+    aperture_faction = FloatDescriptor(
+        'aperture_faction',
+        docstring='')  # type: float
+    cycle_continuously = BooleanDescriptor(
+        'cycle_continuously', default_value=False,
+        docstring='')  # type: bool
+    current_position = IntegerDescriptor(
+        'current_position', default_value=0,
+        docstring='')  # type: int
+    stop_pressed = BooleanDescriptor(
+        'stop_pressed', default_value=False,
+        docstring='')  # type: bool
+    min_aperture_percent = FloatDescriptor(
+        'min_aperture_percent',
+        docstring='')  # type: float
+    max_aperture_percent = FloatDescriptor(
+        'max_aperture_percent',
+        docstring='')  # type: float
+
 
 class AppVariables(object):
     sicd_reader_object = TypedDescriptor(
         'sicd_reader_object', ComplexImageReader,
         docstring='')  # type: ComplexImageReader
-    aperture_filter = TypedDescriptor('aperture_filter',
-                                      ApertureFilter,
-                                      docstring='')  # type: ApertureFilter
+    aperture_filter = TypedDescriptor(
+        'aperture_filter', ApertureFilter,
+        docstring='')  # type: ApertureFilter
     fft_complex_data = TypedDescriptor(
         'fft_complex_data', numpy.ndarray,
         docstring='')  # type: numpy.ndarray
     selected_region_complex_data = TypedDescriptor(
         'selected_region_complex_data', numpy.ndarray,
         docstring='')  # type: numpy.ndarray
-    # animation properties
-    animation_n_frames = IntegerDescriptor(
-        'animation_n_frames', docstring='')  # type: int
-    animation_aperture_faction = FloatDescriptor(
-        'animation_aperture_faction', docstring='')  # type: float
-    animation_cycle_continuously = BooleanDescriptor(
-        'animation_cycle_continuously', default_value=False, docstring='')  # type: bool
-    animation_current_position = IntegerDescriptor(
-        'animation_current_position', default_value=0, docstring='')  # type: int
-    animation_stop_pressed = BooleanDescriptor(
-        'animation_stop_pressed', default_value=False, docstring='')  # type: bool
-    animation_min_aperture_percent = FloatDescriptor(
-        'animation_min_aperture_percent', docstring='')  # type: float
-    animation_max_aperture_percent = FloatDescriptor(
-        'animation_max_aperture_percent', docstring='')  # type: float
+    animation = TypedDescriptor(
+        'animation', AnimationProperties,
+        docstring='The animation configuration.')  # type: AnimationProperties
 
     def __init__(self):
-        # TODO: what are the details here? Use a descriptor as above?
-        self.selected_region = None     # type: tuple
+        self.selected_region = None     # type: Union[None, Tuple]
+        self.animation = AnimationProperties()
 
 
 class ApertureTool(WidgetPanel):
@@ -129,15 +138,15 @@ class ApertureTool(WidgetPanel):
         self.animation_panel.animation_settings.stop.config(command=self.callback_stop_animation)
         self.animation_panel.save.config(command=self.callback_save_animation)
 
-        menubar = Menu()
+        menubar = tkinter.Menu()
 
-        filemenu = Menu(menubar, tearoff=0)
+        filemenu = tkinter.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Open", command=self.select_file)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
 
         # create more pulldown menus
-        popups_menu = Menu(menubar, tearoff=0)
+        popups_menu = tkinter.Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Main Controls", command=self.main_controls_popup)
         popups_menu.add_command(label="Phase History", command=self.ph_popup)
         popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
@@ -229,14 +238,14 @@ class ApertureTool(WidgetPanel):
         self.quit()
 
     def update_animation_params(self):
-        self.app_variables.animation_n_frames = int(self.animation_panel.animation_settings.number_of_frames.get())
-        self.app_variables.animation_aperture_faction = \
+        self.app_variables.animation.n_frames = int(self.animation_panel.animation_settings.number_of_frames.get())
+        self.app_variables.animation.aperture_faction = \
             float(self.animation_panel.fast_slow_settings.aperture_fraction.get())
-        self.app_variables.animation_cycle_continuously = \
+        self.app_variables.animation.cycle_continuously = \
             self.animation_panel.animation_settings.cycle_continuously.is_selected()
-        self.app_variables.animation_min_aperture_percent = \
+        self.app_variables.animation.min_aperture_percent = \
             float(self.animation_panel.resolution_settings.min_res.get()) * 0.01
-        self.app_variables.animation_max_aperture_percent = \
+        self.app_variables.animation.max_aperture_percent = \
             float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
 
     # noinspection PyUnusedLocal
@@ -259,31 +268,31 @@ class ApertureTool(WidgetPanel):
         mode = self.animation_panel.mode_panel.mode_selections.selection()
 
         if direction_forward_or_back == "forward":
-            if self.app_variables.animation_current_position < self.app_variables.animation_n_frames - 1:
-                self.app_variables.animation_current_position += 1
+            if self.app_variables.animation.current_position < self.app_variables.animation.n_frames - 1:
+                self.app_variables.animation.current_position += 1
         elif direction_forward_or_back == "back":
-            if self.app_variables.animation_current_position > 0:
-                self.app_variables.animation_current_position -= 1
+            if self.app_variables.animation.current_position > 0:
+                self.app_variables.animation.current_position -= 1
         if self.animation_panel.mode_panel.mode_selections.selection() == self.animation_panel.mode_panel.mode_selections.slow_time:
-            aperture_distance = full_canvas_x_aperture * self.app_variables.animation_aperture_faction
+            aperture_distance = full_canvas_x_aperture * self.app_variables.animation.aperture_faction
 
             start_locs = numpy.linspace(fft_canvas_bounds[0],
                                         fft_canvas_bounds[2] - aperture_distance,
-                                        self.app_variables.animation_n_frames)
+                                        self.app_variables.animation.n_frames)
 
-            x_start = start_locs[self.app_variables.animation_current_position]
+            x_start = start_locs[self.app_variables.animation.current_position]
             new_rect = (x_start,
                         fft_canvas_bounds[1],
                         x_start + aperture_distance,
                         fft_canvas_bounds[3])
         elif mode == self.animation_panel.mode_panel.mode_selections.fast_time:
-            aperture_distance = full_canvas_y_aperture * self.app_variables.animation_aperture_faction
+            aperture_distance = full_canvas_y_aperture * self.app_variables.animation.aperture_faction
 
             start_locs = numpy.linspace(fft_canvas_bounds[1],
                                         fft_canvas_bounds[3] - aperture_distance,
-                                        self.app_variables.animation_n_frames)
+                                        self.app_variables.animation.n_frames)
             start_locs = numpy.flip(start_locs)
-            y_start = start_locs[self.app_variables.animation_current_position]
+            y_start = start_locs[self.app_variables.animation.current_position]
             new_rect = (fft_canvas_bounds[0],
                         y_start,
                         fft_canvas_bounds[2],
@@ -295,29 +304,29 @@ class ApertureTool(WidgetPanel):
             ylr = fft_canvas_bounds[3]
 
             canvas_xul_start = \
-                (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
+                (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation.max_aperture_percent / 2
             canvas_xlr_start = \
-                (xul + xlr) / 2 + full_canvas_x_aperture * self.app_variables.animation_max_aperture_percent / 2
+                (xul + xlr) / 2 + full_canvas_x_aperture * self.app_variables.animation.max_aperture_percent / 2
             canvas_yul_start = \
-                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
             canvas_ylr_start = \
-                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
 
             canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
             canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
             canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
             canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
 
-            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation_n_frames)
-            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation_n_frames)
-            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation_n_frames)
-            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation_n_frames)
+            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation.n_frames)
+            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation.n_frames)
+            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation.n_frames)
+            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation.n_frames)
 
-            frame_num = self.app_variables.animation_current_position
+            frame_num = self.app_variables.animation.current_position
 
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
@@ -328,25 +337,25 @@ class ApertureTool(WidgetPanel):
             ylr = fft_canvas_bounds[3]
 
             canvas_xul_start = (xul + xlr) / 2 - full_canvas_x_aperture * \
-                               self.app_variables.animation_max_aperture_percent / 2
+                               self.app_variables.animation.max_aperture_percent / 2
             canvas_xlr_start = (xul + xlr) / 2 + full_canvas_x_aperture * \
-                               self.app_variables.animation_max_aperture_percent / 2
+                               self.app_variables.animation.max_aperture_percent / 2
             canvas_yul_start = yul
             canvas_ylr_start = ylr
 
             canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
             canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
             canvas_yul_stop = yul
             canvas_ylr_stop = ylr
 
-            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation_n_frames)
-            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation_n_frames)
-            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation_n_frames)
-            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation_n_frames)
+            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation.n_frames)
+            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation.n_frames)
+            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation.n_frames)
+            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation.n_frames)
 
-            frame_num = self.app_variables.animation_current_position
+            frame_num = self.app_variables.animation.current_position
 
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
@@ -359,23 +368,23 @@ class ApertureTool(WidgetPanel):
             canvas_xul_start = xul
             canvas_xlr_start = xlr
             canvas_yul_start = \
-                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
             canvas_ylr_start = \
-                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation_max_aperture_percent / 2
+                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
 
             canvas_xul_stop = xul
             canvas_xlr_stop = xlr
             canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
             canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * \
-                              self.app_variables.animation_min_aperture_percent / 2
+                              self.app_variables.animation.min_aperture_percent / 2
 
-            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation_n_frames)
-            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation_n_frames)
-            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation_n_frames)
-            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation_n_frames)
+            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation.n_frames)
+            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation.n_frames)
+            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation.n_frames)
+            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation.n_frames)
 
-            frame_num = self.app_variables.animation_current_position
+            frame_num = self.app_variables.animation.current_position
 
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
@@ -386,7 +395,7 @@ class ApertureTool(WidgetPanel):
 
     # noinspection PyUnusedLocal
     def callback_stop_animation(self):
-        self.app_variables.animation_stop_pressed = True
+        self.app_variables.animation.stop_pressed = True
         self.animation_panel.animation_settings.unpress_all_buttons()
 
     # noinspection PyUnusedLocal
@@ -403,12 +412,12 @@ class ApertureTool(WidgetPanel):
             self.animation_panel.animation_settings.disable_all_widgets()
             self.animation_panel.animation_settings.stop.config(state="normal")
             if direction_forward_or_back == "forward":
-                self.app_variables.animation_current_position = -1
+                self.app_variables.animation.current_position = -1
             else:
-                self.app_variables.animation_current_position = self.app_variables.animation_n_frames
-            for i in range(self.app_variables.animation_n_frames):
+                self.app_variables.animation.current_position = self.app_variables.animation.n_frames
+            for i in range(self.app_variables.animation.n_frames):
                 self.update_animation_params()
-                if self.app_variables.animation_stop_pressed:
+                if self.app_variables.animation.stop_pressed:
                     self.animation_panel.animation_settings.enable_all_widgets()
                     break
                 tic = time.time()
@@ -418,13 +427,13 @@ class ApertureTool(WidgetPanel):
                 if (toc - tic) < time_between_frames:
                     time.sleep(time_between_frames - (toc - tic))
 
-        self.app_variables.animation_stop_pressed = False
+        self.app_variables.animation.stop_pressed = False
         if self.animation_panel.animation_settings.cycle_continuously.is_selected():
-            while not self.app_variables.animation_stop_pressed:
+            while not self.app_variables.animation.stop_pressed:
                 play_animation()
         else:
             play_animation()
-        self.app_variables.animation_stop_pressed = False
+        self.app_variables.animation.stop_pressed = False
         self.animation_panel.animation_settings.enable_all_widgets()
         self.animation_panel.unpress_all_buttons()
 
@@ -589,12 +598,12 @@ class ApertureTool(WidgetPanel):
             filtered_display_image = remap.density(filtered_complex_image)
             return filtered_display_image
 
-    # noinspection PyUnusedLocal
     # TODO: update variables, some don't exist in the current form.
     def callback_save_animation(self):
         self.update_animation_params()
-        filename = filedialog.asksaveasfilename(initialdir=os.path.expanduser("~"), title="Select file",
-                                                filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
+        filename = asksaveasfilename(
+            initialdir=os.path.expanduser("~"), title="Select file",
+            filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
 
         extension = filename[-4:]
         if extension.lower() != ".gif":
@@ -608,10 +617,10 @@ class ApertureTool(WidgetPanel):
         self.animation_panel.animation_settings.disable_all_widgets()
         self.animation_panel.animation_settings.stop.config(state="normal")
         if direction_forward_or_back == "forward":
-            self.app_variables.animation_current_position = -1
+            self.app_variables.animation.current_position = -1
         else:
-            self.app_variables.animation_current_position = self.app_variables.animation_n_frames
-        for i in range(self.app_variables.animation_n_frames):
+            self.app_variables.animation.current_position = self.app_variables.animation.n_frames
+        for i in range(self.app_variables.animation.n_frames):
             filtered_image = self.get_filtered_image()
             frame_sequence.append(filtered_image)
             self.update_animation_params()

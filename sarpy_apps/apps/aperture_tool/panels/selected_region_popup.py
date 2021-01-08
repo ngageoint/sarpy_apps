@@ -1,4 +1,6 @@
 import tkinter
+from tkinter.messagebox import showinfo
+
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
@@ -25,10 +27,15 @@ class SelectedRegionPanel(WidgetPanel):
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")  # type: ImagePanel
     toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)   # type: Toolbar
 
-    def __init__(self,
-                 parent,
-                 app_variables,         # type: AppVariables
-                 ):
+    def __init__(self, parent, app_variables):
+        """
+
+        Parameters
+        ----------
+        parent : tkinter.Tk|tkinter.TopLevel
+        app_variables : AppVariables
+        """
+
         # set the parent frame
         WidgetPanel.__init__(self, parent)
 
@@ -64,5 +71,5 @@ class SelectedRegionPanel(WidgetPanel):
             self.app_variables.selected_region_complex_data = complex_data
             self.parent.destroy()
         else:
-            # TODO: where would this go? Should be a popup or something?
-            print("need to select region first")
+            showinfo('No Region Selected', message='Select region for action.')
+            return
