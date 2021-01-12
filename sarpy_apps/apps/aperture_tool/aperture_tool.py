@@ -11,6 +11,7 @@ import os
 import time
 import numpy
 import scipy.constants.constants as scipy_constants
+from typing import Union, Tuple
 
 import tkinter
 from tkinter.filedialog import asksaveasfilename
@@ -199,12 +200,11 @@ class ApertureTool(WidgetPanel):
 
         self.metaicon.hide_on_close()
 
+    # noinspection PyUnusedLocal
     def callback_resize(self, event):
         self.update_fft_image()
         self.update_filtered_image()
 
-    # TODO: make changes in the aperture filter / normalize_sicd to use logic that makes sense for deskewing
-    # TODO: In a user-selected direction.
     def callback_update_deskew_direction(self):
         if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
             self.app_variables.aperture_filter.dimension = 1
@@ -248,20 +248,28 @@ class ApertureTool(WidgetPanel):
         self.app_variables.animation.max_aperture_percent = \
             float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
 
-    # noinspection PyUnusedLocal
     def callback_step_forward(self):
         self.step_animation("forward")
 
-    # noinspection PyUnusedLocal
     def callback_step_back(self):
         self.step_animation("back")
 
-    def step_animation(self,
-                       direction_forward_or_back,  # type: str
-                       ):
+    def step_animation(self, direction_forward_or_back):
+        """
+        Steps the animation.
+
+        Parameters
+        ----------
+        direction_forward_or_back : str
+
+        Returns
+        -------
+        None
+        """
+
         self.update_animation_params()
-        fft_canvas_bounds = \
-            self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(self.get_fft_image_bounds())
+        fft_canvas_bounds = self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(
+            self.get_fft_image_bounds())
         full_canvas_x_aperture = fft_canvas_bounds[2] - fft_canvas_bounds[0]
         full_canvas_y_aperture = fft_canvas_bounds[3] - fft_canvas_bounds[1]
 
@@ -273,53 +281,46 @@ class ApertureTool(WidgetPanel):
         elif direction_forward_or_back == "back":
             if self.app_variables.animation.current_position > 0:
                 self.app_variables.animation.current_position -= 1
-        if self.animation_panel.mode_panel.mode_selections.selection() == self.animation_panel.mode_panel.mode_selections.slow_time:
+
+        if mode == self.animation_panel.mode_panel.mode_selections.slow_time:
             aperture_distance = full_canvas_x_aperture * self.app_variables.animation.aperture_faction
 
-            start_locs = numpy.linspace(fft_canvas_bounds[0],
-                                        fft_canvas_bounds[2] - aperture_distance,
-                                        self.app_variables.animation.n_frames)
+            start_locs = numpy.linspace(
+                fft_canvas_bounds[0], fft_canvas_bounds[2] - aperture_distance, self.app_variables.animation.n_frames)
 
             x_start = start_locs[self.app_variables.animation.current_position]
-            new_rect = (x_start,
-                        fft_canvas_bounds[1],
-                        x_start + aperture_distance,
-                        fft_canvas_bounds[3])
+            new_rect = (x_start, fft_canvas_bounds[1], x_start + aperture_distance, fft_canvas_bounds[3])
         elif mode == self.animation_panel.mode_panel.mode_selections.fast_time:
             aperture_distance = full_canvas_y_aperture * self.app_variables.animation.aperture_faction
 
-            start_locs = numpy.linspace(fft_canvas_bounds[1],
-                                        fft_canvas_bounds[3] - aperture_distance,
-                                        self.app_variables.animation.n_frames)
+            start_locs = numpy.linspace(
+                fft_canvas_bounds[1], fft_canvas_bounds[3] - aperture_distance, self.app_variables.animation.n_frames)
             start_locs = numpy.flip(start_locs)
             y_start = start_locs[self.app_variables.animation.current_position]
-            new_rect = (fft_canvas_bounds[0],
-                        y_start,
-                        fft_canvas_bounds[2],
-                        y_start + aperture_distance)
-        elif mode == self.animation_panel.mode_panel.mode_selections.aperture_percent:
-            xul = fft_canvas_bounds[0]
-            xlr = fft_canvas_bounds[2]
-            yul = fft_canvas_bounds[1]
-            ylr = fft_canvas_bounds[3]
+            new_rect = (
+                fft_canvas_bounds[0], y_start, fft_canvas_bounds[2], y_start + aperture_distance)
+        else:
+            xul, yul, xlr, ylr = fft_canvas_bounds
+            mid_x = 0.5*(xul+xlr)
+            mid_y = 0.5*(yul+ylr)
+            max_x_width = 0.5*full_canvas_x_aperture*self.app_variables.animation.max_aperture_percent
+            max_y_width = 0.5*full_canvas_y_aperture*self.app_variables.animation.max_aperture_percent
+            min_x_width = 0.5*full_canvas_x_aperture*self.app_variables.animation.min_aperture_percent
+            min_y_width = 0.5*full_canvas_y_aperture*self.app_variables.animation.min_aperture_percent
 
-            canvas_xul_start = \
-                (xul + xlr) / 2 - full_canvas_x_aperture * self.app_variables.animation.max_aperture_percent / 2
-            canvas_xlr_start = \
-                (xul + xlr) / 2 + full_canvas_x_aperture * self.app_variables.animation.max_aperture_percent / 2
-            canvas_yul_start = \
-                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
-            canvas_ylr_start = \
-                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
+            if mode == self.animation_panel.mode_panel.mode_selections.full_az_bandwidth:
+                canvas_xul_start, canvas_xlr_start = xul, xlr
+                canvas_xul_stop, canvas_xlr_stop = xul, xlr
+            else:
+                canvas_xul_start, canvas_xlr_start = mid_x - max_x_width, mid_x + max_x_width
+                canvas_xul_stop, canvas_xlr_stop = mid_x - min_x_width, mid_x + min_x_width
 
-            canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-            canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-            canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
+            if mode == self.animation_panel.mode_panel.mode_selections.full_range_bandwidth:
+                canvas_yul_start, canvas_ylr_start = yul, ylr
+                canvas_yul_stop, canvas_ylr_stop  = yul, ylr
+            else:
+                canvas_yul_start, canvas_ylr_start = mid_y - max_y_width, mid_y + max_y_width
+                canvas_yul_stop, canvas_ylr_stop = mid_y - min_y_width, mid_y + min_y_width
 
             x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation.n_frames)
             x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation.n_frames)
@@ -327,65 +328,6 @@ class ApertureTool(WidgetPanel):
             y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation.n_frames)
 
             frame_num = self.app_variables.animation.current_position
-
-            new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
-
-        elif mode == self.animation_panel.mode_panel.mode_selections.full_range_bandwidth:
-            xul = fft_canvas_bounds[0]
-            xlr = fft_canvas_bounds[2]
-            yul = fft_canvas_bounds[1]
-            ylr = fft_canvas_bounds[3]
-
-            canvas_xul_start = (xul + xlr) / 2 - full_canvas_x_aperture * \
-                               self.app_variables.animation.max_aperture_percent / 2
-            canvas_xlr_start = (xul + xlr) / 2 + full_canvas_x_aperture * \
-                               self.app_variables.animation.max_aperture_percent / 2
-            canvas_yul_start = yul
-            canvas_ylr_start = ylr
-
-            canvas_xul_stop = (canvas_xul_start + canvas_xlr_start) / 2 - full_canvas_x_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-            canvas_xlr_stop = (canvas_xul_start + canvas_xlr_start) / 2 + full_canvas_x_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-            canvas_yul_stop = yul
-            canvas_ylr_stop = ylr
-
-            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation.n_frames)
-            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation.n_frames)
-            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation.n_frames)
-            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation.n_frames)
-
-            frame_num = self.app_variables.animation.current_position
-
-            new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
-
-        elif mode == self.animation_panel.mode_panel.mode_selections.full_az_bandwidth:
-            xul = fft_canvas_bounds[0]
-            xlr = fft_canvas_bounds[2]
-            yul = fft_canvas_bounds[1]
-            ylr = fft_canvas_bounds[3]
-
-            canvas_xul_start = xul
-            canvas_xlr_start = xlr
-            canvas_yul_start = \
-                (yul + ylr) / 2 - full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
-            canvas_ylr_start = \
-                (yul + ylr) / 2 + full_canvas_y_aperture * self.app_variables.animation.max_aperture_percent / 2
-
-            canvas_xul_stop = xul
-            canvas_xlr_stop = xlr
-            canvas_yul_stop = (canvas_yul_start + canvas_ylr_start) / 2 - full_canvas_y_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-            canvas_ylr_stop = (canvas_yul_start + canvas_ylr_start) / 2 + full_canvas_y_aperture * \
-                              self.app_variables.animation.min_aperture_percent / 2
-
-            x_uls = numpy.linspace(canvas_xul_start, canvas_xul_stop, self.app_variables.animation.n_frames)
-            x_lrs = numpy.linspace(canvas_xlr_start, canvas_xlr_stop, self.app_variables.animation.n_frames)
-            y_uls = numpy.linspace(canvas_yul_start, canvas_yul_stop, self.app_variables.animation.n_frames)
-            y_lrs = numpy.linspace(canvas_ylr_start, canvas_ylr_stop, self.app_variables.animation.n_frames)
-
-            frame_num = self.app_variables.animation.current_position
-
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
         self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_canvas_coords(
@@ -393,12 +335,10 @@ class ApertureTool(WidgetPanel):
         self.update_filtered_image()
         self.update_phase_history_selection()
 
-    # noinspection PyUnusedLocal
     def callback_stop_animation(self):
         self.app_variables.animation.stop_pressed = True
         self.animation_panel.animation_settings.unpress_all_buttons()
 
-    # noinspection PyUnusedLocal
     def callback_play_animation(self):
         self.update_animation_params()
 
@@ -557,8 +497,8 @@ class ApertureTool(WidgetPanel):
 
         self.callback_resize(None)
 
-    def get_fft_image_bounds(self,
-                             ):  # type: (...) -> (int, int, int, int)
+    def get_fft_image_bounds(self):
+        # type: (...) -> (int, int, int, int)
         meta = self.app_variables.sicd_reader_object.base_reader.sicd_meta
 
         row_ratio = meta.Grid.Row.ImpRespBW * meta.Grid.Row.SS
