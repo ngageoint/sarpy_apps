@@ -17,7 +17,7 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.widgets.image_canvas import ToolConstants
+from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 
@@ -148,10 +148,9 @@ class WakeTool(WidgetPanel):
 
     # noinspection PyUnusedLocal
     def line_draw_command(self):
-        self.image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging()
+        self.image_panel.canvas.set_current_tool_to_draw_arrow()
         self.image_panel.canvas.variables.current_shape_id = self.variables.arrow_id
 
-    # noinspection PyUnusedLocal
     def draw_point_command(self):
         self.image_panel.canvas.set_current_tool_to_draw_point()
         self.image_panel.canvas.variables.current_shape_id = self.variables.point_id
@@ -160,10 +159,15 @@ class WakeTool(WidgetPanel):
         # first do all the normal mouse click functionality of the canvas
         self.image_panel.canvas.callback_handle_left_mouse_click(event)
         # now set the object ID's accordingly, we do this so we don't draw multiple arrows or points
-        if self.image_panel.canvas.variables.current_tool == ToolConstants.DRAW_ARROW_BY_DRAGGING:
-            self.variables.arrow_id = self.image_panel.canvas.variables.current_shape_id
-        if self.image_panel.canvas.variables.current_tool == ToolConstants.DRAW_POINT_BY_CLICKING:
-            self.variables.point_id = self.image_panel.canvas.variables.current_shape_id
+        # get the current shape, and potentially update
+        vector_object = self.image_panel.canvas.get_current_nontool_vector_object()
+        if vector_object is None:
+            return
+        elif vector_object.type == ShapeTypeConstants.ARROW:
+            self.variables.arrow_id = vector_object.uid
+        elif vector_object.type == ShapeTypeConstants.POINT:
+            self.variables.point_id = vector_object.uid
+
         if self.variables.point_id is not None and self.variables.arrow_id is not None:
             self.update_distance()
 

@@ -684,9 +684,10 @@ class AnnotationTool(WidgetPanel):
         self.context_panel.image_panel.canvas.set_current_tool_to_edit_shape()
 
     def callback_context_handle_left_mouse_release(self, event):
+        # TODO: review this functionality here?
         self.context_panel.image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.context_panel.image_panel.canvas.variables.current_tool == ToolConstants.SELECT_TOOL or \
-           self.context_panel.image_panel.canvas.variables.current_tool == ToolConstants.TRANSLATE_SHAPE_TOOL:
+        if self.context_panel.image_panel.canvas.variables.current_tool in [
+                ToolConstants.SELECT_TOOL, ToolConstants.SHIFT_SHAPE_TOOL]:
             rect_id = self.context_panel.image_panel.canvas.variables.select_rect.uid
             image_rect = self.context_panel.image_panel.canvas.get_shape_image_coords(rect_id)
             annotate_zoom_rect = self.annotate_panel.image_panel.canvas.variables.canvas_image_object.full_image_yx_to_canvas_coords(
@@ -708,8 +709,9 @@ class AnnotationTool(WidgetPanel):
 
     def callback_annotate_handle_right_mouse_click(self, event):
         self.annotate_panel.image_panel.canvas.callback_handle_right_mouse_click(event)
-        # TODO: should this be happening by overriding the canvas methods?
-        if self.annotate_panel.image_panel.canvas.variables.current_tool == ToolConstants.DRAW_POLYGON_BY_CLICKING:
+
+        # TODO: this is definitely stupid
+        if self.annotate_panel.image_panel.canvas.variables.current_tool == ToolConstants.EDIT_SHAPE_TOOL:
             # craft the polygon
             current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
             image_coords = self.annotate_panel.image_panel.canvas.get_shape_image_coords(current_canvas_shape_id)
@@ -723,7 +725,7 @@ class AnnotationTool(WidgetPanel):
 
     def callback_set_to_draw_polygon(self):
         self.annotate_panel.image_panel.canvas.variables.current_shape_id = None
-        self.annotate_panel.image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
+        self.annotate_panel.image_panel.canvas.set_current_tool_to_draw_polygon()
 
     def callback_set_to_edit_shape(self):
         self.annotate_panel.image_panel.canvas.set_current_tool_to_edit_shape()

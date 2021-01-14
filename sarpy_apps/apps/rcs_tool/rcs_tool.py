@@ -278,10 +278,8 @@ class RcsTool(WidgetPanel):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
         n_shapes_on_canvas = len(self.image_panel.canvas.get_non_tool_shape_ids())
 
-        if self.image_panel.current_tool == ToolConstants.DRAW_RECT_BY_DRAGGING or \
-           self.image_panel.current_tool == ToolConstants.DRAW_POLYGON_BY_CLICKING or \
-           self.image_panel.current_tool == ToolConstants.DRAW_ELLIPSE_BY_DRAGGING:
-
+        # TODO: review this, since it's broken
+        if self.image_panel.current_tool == ToolConstants.EDIT_SHAPE_TOOL:
             shape = "Rectangle"
             if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
                 shape = "Polygon"
@@ -319,12 +317,12 @@ class RcsTool(WidgetPanel):
         if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.rectangle:
             self.image_panel.canvas.set_current_tool_to_draw_rect()
         elif self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
-            self.image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
+            self.image_panel.canvas.set_current_tool_to_draw_polygon()
         else:
             self.image_panel.canvas.set_current_tool_to_draw_ellipse()
 
     def edit_shape(self):
-        self.image_panel.canvas.set_current_tool_to_edit_shape(select_closest_first=True)
+        self.image_panel.canvas.set_current_tool_to_edit_shape()
 
     def delete_shape(self):
         current_shape_id = self.image_panel.canvas.variables.current_shape_id
