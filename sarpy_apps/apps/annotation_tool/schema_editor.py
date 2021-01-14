@@ -410,7 +410,7 @@ class SchemaEditor(WidgetPanel):
         self._unsaved_edits = None
 
         self.primary = tkinter.Frame(root)
-        super(WidgetPanel, self).__init__(root)
+        WidgetPanel.__init__(self, self.primary)
         self.init_w_rows()
 
         # setup the GUI callbacks
