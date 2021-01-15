@@ -13,13 +13,10 @@ import numpy
 import tkinter
 from tkinter.filedialog import askopenfilename
 
-from tk_builder.panel_builder import WidgetPanel
+from tk_builder.widgets import widget_descriptors, basic_widgets
+from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.pyplot_panel import PyplotPanel
-
-from tk_builder.widgets import widget_descriptors
-from tk_builder.widgets import basic_widgets
-from tk_builder.panel_builder import RadioButtonPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
@@ -221,7 +218,7 @@ class RcsTool(WidgetPanel):
         # define variables
         self._browse_directory = os.path.expanduser('~')
         self.primary = primary
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
 
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_basic_widget_list(2, [2, 1])

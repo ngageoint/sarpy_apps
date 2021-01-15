@@ -20,7 +20,7 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets import widget_descriptors, basic_widgets
 from tk_builder.base_elements import TypedDescriptor, \
     IntegerDescriptor, BooleanDescriptor, FloatDescriptor
 
@@ -104,7 +104,7 @@ class ApertureTool(WidgetPanel):
         self.app_variables = AppVariables()
         self.primary = primary
 
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_horizontal_layout()
 

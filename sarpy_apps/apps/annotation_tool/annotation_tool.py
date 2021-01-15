@@ -33,7 +33,7 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanD
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.panels.image_panel import ImagePanel
 
-from sarpy.compliance import string_types
+from sarpy.compliance import string_types, integer_types
 from sarpy.annotation.schema_processing import LabelSchema
 from sarpy.annotation.annotate import FileAnnotationCollection, Annotation, AnnotationMetadata
 from sarpy.geometry.geometry_elements import Polygon
@@ -165,7 +165,7 @@ class AnnotationPopup(WidgetPanel):
         self.main_app_variables = main_app_variables
 
         self.parent = parent
-        self.primary_frame = tkinter.Frame(parent)
+        self.primary_frame = basic_widgets.Frame(parent)
         WidgetPanel.__init__(self, self.primary_frame)
 
         self.init_w_rows()
@@ -262,7 +262,7 @@ class AppVariables(object):
         self._feature_id_dict = OrderedDict()
         self._annotate_id_dict = OrderedDict()
         self._context_id_dict = OrderedDict()
-        self._current_annotate_canvas_id = ''
+        self._current_annotate_canvas_id = None
         self._current_feature_id = ''
 
     @property
@@ -295,24 +295,24 @@ class AppVariables(object):
     @property
     def current_annotate_canvas_id(self):
         """
-        str: The current annotation feature id.
+        None|int: The current annotation feature id.
         """
 
         return self._current_annotate_canvas_id
 
     @current_annotate_canvas_id.setter
     def current_annotate_canvas_id(self, value):
-        if value is None or value.strip() == '':
-            self._current_annotate_canvas_id = ''
-            self._current_feature_id = ''
+        if value is None:
+            self._current_annotate_canvas_id = None
+            self._current_feature_id = None
         else:
             self._current_annotate_canvas_id = value
-            self._current_feature_id = self._annotate_id_dict.get(value, '')
+            self._current_feature_id = self._annotate_id_dict.get(value, None)
 
     @property
     def current_feature_id(self):
         """
-        str: The current feature id.
+        None|str: The current feature id.
         """
 
         return self._current_feature_id
@@ -457,7 +457,7 @@ class AppVariables(object):
         self._feature_id_dict = OrderedDict()
         self._annotate_id_dict = OrderedDict()
         self._context_id_dict = OrderedDict()
-        self._current_annotate_canvas_id = ''
+        self._current_annotate_canvas_id = None
 
 
 class AnnotationTool(WidgetPanel):
@@ -468,9 +468,9 @@ class AnnotationTool(WidgetPanel):
     def __init__(self, primary):
         self._schema_browse_directory = os.path.expanduser('~')
         self._image_browse_directory = os.path.expanduser('~')
-        self.primary = tkinter.Frame(primary)
+        self.primary = basic_widgets.Frame(primary)
 
-        WidgetPanel.__init__(self, self.primary)  # TODO: primary or self.primary?
+        WidgetPanel.__init__(self, self.primary)
 
         self.init_w_horizontal_layout()
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -696,6 +696,9 @@ class AnnotationTool(WidgetPanel):
 
     # annotate callbacks
     def callback_set_to_select_closest_shape(self):
+        if self.variables.file_annotation_collection is None:
+            showinfo('No Annotation file set up', message='Please define an Annotation file first')
+            return
         self.annotate_panel.image_panel.canvas.set_current_tool_to_select_closest_shape()
 
     def callback_annotate_handle_left_mouse_release(self, event):
@@ -703,9 +706,6 @@ class AnnotationTool(WidgetPanel):
 
     def callback_annotate_handle_canvas_left_mouse_click(self, event):
         self.annotate_panel.image_panel.canvas.callback_handle_left_mouse_click(event)
-        # current_shape = self.annotate_panel.image_panel.canvas.variables.current_shape_id
-        # self.annotate_panel.image_panel.canvas.variables.current_shape_id = current_shape
-        # self.annotate_panel.image_panel.canvas.callback_handle_left_mouse_click(event)
 
     def callback_annotate_handle_right_mouse_click(self, event):
         self.annotate_panel.image_panel.canvas.callback_handle_right_mouse_click(event)
@@ -724,18 +724,29 @@ class AnnotationTool(WidgetPanel):
             self.insert_feature(annotation, annotate_canvas_id=current_canvas_shape_id)
 
     def callback_set_to_draw_polygon(self):
+        if self.variables.file_annotation_collection is None:
+            showinfo('No Annotation file set up', message='Please define an Annotation file first')
+            return
         self.annotate_panel.image_panel.canvas.variables.current_shape_id = None
         self.annotate_panel.image_panel.canvas.set_current_tool_to_draw_polygon()
 
     def callback_set_to_edit_shape(self):
+        if self.variables.file_annotation_collection is None:
+            showinfo('No Annotation file set up', message='Please define an Annotation file first')
+            return
         self.annotate_panel.image_panel.canvas.set_current_tool_to_edit_shape()
 
     def callback_handle_annotate_mouse_wheel(self, event):
         self.annotate_panel.image_panel.canvas.callback_mouse_zoom(event)
 
     def callback_delete_shape(self):
+        if self.variables.file_annotation_collection is None:
+            showinfo('No Annotation file set up', message='Please define an Annotation file first')
+            return
+
         current_geom_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
-        if current_geom_id == '' or current_geom_id in self.annotate_panel.image_panel.canvas.get_tool_shape_ids():
+        if current_geom_id is None or \
+                current_geom_id in self.annotate_panel.image_panel.canvas.get_tool_shape_ids():
             showinfo('No Shape Selected', message='No shape is currently selected.')
             return
 
@@ -786,13 +797,18 @@ class AnnotationTool(WidgetPanel):
             # TODO: sync any display of the feature list?
 
     def callback_annotation_popup(self):
+        if self.variables.file_annotation_collection is None:
+            showinfo('No Annotation file set up', message='Please define an Annotation file first')
+            return
+
         current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
-        if current_canvas_shape_id:
-            popup = tkinter.Toplevel(self.parent)
-            self.variables.current_annotate_canvas_id = current_canvas_shape_id
-            AnnotationPopup(popup, self.variables)
-        else:
-            print("Please select a geometry first.")
+        if current_canvas_shape_id is None:
+            showinfo('No shape selected', message='Please draw/select a shape feature first.')
+            return
+
+        popup = tkinter.Toplevel(self.parent)
+        self.variables.current_annotate_canvas_id = current_canvas_shape_id
+        AnnotationPopup(popup, self.variables)
 
     # utility functions
     def insert_feature(self, feature, annotate_canvas_id=None):

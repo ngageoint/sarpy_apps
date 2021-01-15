@@ -1,14 +1,16 @@
 import os
 
 import tkinter
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
+
+import numpy
+
+from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
-from tk_builder.widgets import basic_widgets
-from tk_builder.widgets import widget_descriptors
+from tk_builder.utils.geometry_utils.kml_util import KmlUtil
+from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
@@ -17,7 +19,6 @@ import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
 import sarpy.visualization.remap as remap
 
-import numpy
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
@@ -90,7 +91,7 @@ class CanvasDemo(WidgetPanel):
     canvas_demo_image_panel = widget_descriptors.ImagePanelDescriptor("canvas_demo_image_panel")   # type: ImagePanel
 
     def __init__(self, primary):
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
@@ -122,7 +123,7 @@ class CanvasDemo(WidgetPanel):
         self.canvas_demo_image_panel.canvas.on_left_mouse_release(self.callback_handle_canvas_left_mouse_release)
 
     def callback_save_kml(self):
-        kml_save_fname = tkinter.filedialog.asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
+        kml_save_fname = asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
 
         kml_util = KmlUtil()
 

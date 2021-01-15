@@ -52,7 +52,7 @@ def _validate_schema(schema):
 ###########
 # Treeview for a label schema, and associated widget
 
-class SchemaViewer(ttk.Treeview):
+class SchemaViewer(basic_widgets.Treeview):
     """
     For the purpose of viewing the schema definition.
     """
@@ -78,8 +78,8 @@ class SchemaViewer(ttk.Treeview):
         except AttributeError:
             pass
         # define the column headings
-        self.heading('#0', text='ID')
-        self.heading('#1', text='Name')
+        self.heading('#0', text='Name')
+        self.heading('#1', text='ID')
 
     def empty_entries(self):
         """
@@ -109,7 +109,7 @@ class SchemaViewer(ttk.Treeview):
         """
 
         def iterate(the_id, parent_id):
-            self.insert(parent_id, 'end', the_id, text=the_id, values=(schema.labels[the_id], ))
+            self.insert(parent_id, 'end', the_id, text=schema.labels[the_id], values=(the_id, ))
             for child_id in schema.subtypes.get(the_id, []):
                 iterate(child_id, the_id)
 
@@ -144,7 +144,7 @@ class _SchemaSelectionWidget(object):
         self.root.wm_title('Select Label Schema Entry')
         self.viewer = SchemaViewer(self.root, geometry_size='250x400')
         self.viewer.fill_from_label_schema(label_schema)
-        self.submit_button = tkinter.Button(self.root, text='Submit', command=self.set_value)
+        self.submit_button = basic_widgets.Button(self.root, text='Submit', command=self.set_value)
         self.submit_button.pack()
         self.root.mainloop()
 
@@ -298,9 +298,11 @@ class _LabelEntryWidget(object):
             self.entry_widget.name_entry.set_text(the_name)
             self.entry_widget.parent_entry.set_text(parent_id)
         else:
+            id_suggestion = self.label_schema.suggested_next_id
+            str_id_suggestion = '<SET>' if id_suggestion is None else str(id_suggestion)
             self.entry_widget.header_message.set_text(
-                '<ID> is immutable once set, and <Name> is for simple interpretation.')
-            self.entry_widget.id_entry.set_text('<SET>')
+                '<ID> is immutable once finalized, and <Name> is for simple interpretation.')
+            self.entry_widget.id_entry.set_text(str_id_suggestion)
             self.entry_widget.name_entry.set_text('<SET>')
             self.entry_widget.parent_entry.set_text('')
         self.entry_widget.cancel_button.config(command=self.cancel_callback)
@@ -409,7 +411,7 @@ class SchemaEditor(WidgetPanel):
         self._new_file = None
         self._unsaved_edits = None
 
-        self.primary = tkinter.Frame(root)
+        self.primary = basic_widgets.Frame(root)
         WidgetPanel.__init__(self, self.primary)
         self.init_w_rows()
 
@@ -450,7 +452,7 @@ class SchemaEditor(WidgetPanel):
     # main schema element edit callbacks - piggyback on validation methods
     def _version_entry_validate(self):
         the_value = self.version_entry.get().strip()
-        if self.label_schema.version != the_value:
+        if the_value != '' and self.label_schema.version != the_value:
             self._unsaved_edits = True
             self.label_schema._version = the_value
             self.label_schema.update_version_date(value=None)
@@ -493,13 +495,13 @@ class SchemaEditor(WidgetPanel):
         None
         """
 
-        self.version_entry.set_text(self.label_schema.version)
         self.version_entry.config(state='normal')
+        self.version_entry.set_text(self.label_schema.version)
 
         self.version_date_entry.set_text(self.label_schema.version_date)
 
-        self.classification_entry.set_text(self.label_schema.classification)
         self.classification_entry.config(state='normal')
+        self.classification_entry.set_text(self.label_schema.classification)
 
         self.confidence_entry.config(state='normal')
         if self.label_schema.confidence_values is None:
@@ -508,6 +510,7 @@ class SchemaEditor(WidgetPanel):
             self.confidence_entry.set_text(
                 ' '.join('{}'.format(entry) for entry in self.label_schema.confidence_values))
 
+        self.confidence_entry.config(state='normal')
         if self.label_schema.permitted_geometries is None:
             self.geometries_entry.set_text('')
         else:
@@ -623,7 +626,7 @@ class SchemaEditor(WidgetPanel):
         """
 
         if self._file_name is None:
-            junk = showinfo('No Schema Selected', message='Choose schema location from File menu')
+            showinfo('No Schema Selected', message='Choose schema location from File menu')
             return
 
         if self._unsaved_edits:
@@ -656,6 +659,10 @@ def main():
     """
 
     root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('clam')
+
     app = SchemaEditor(root)
     root.mainloop()
 

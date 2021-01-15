@@ -12,15 +12,12 @@ import os
 import tkinter
 from tkinter.filedialog import askopenfilenames, askdirectory
 
-from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.panel_builder import WidgetPanel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
-from tk_builder.widgets.image_canvas import ToolConstants
-from tk_builder.widgets import widget_descriptors
 from tk_builder.image_readers.image_reader import ImageReader
-from tk_builder.widgets import basic_widgets
-from tk_builder.panels.image_panel import ToolConstants
+from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
+from tk_builder.panels.image_panel import ImagePanel, ToolConstants
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
@@ -60,7 +57,7 @@ class Taser(WidgetPanel):
     pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
 
     def __init__(self, primary):
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
@@ -142,7 +139,12 @@ class Taser(WidgetPanel):
             self.pyplot_panel.update_image(image_data)
 
 
-if __name__ == '__main__':
+def main():
+    # TODO: add style
     root = tkinter.Tk()
     app = Taser(root)
     root.mainloop()
+
+
+if __name__ == '__main__':
+    main()

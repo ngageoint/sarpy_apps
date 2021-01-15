@@ -14,12 +14,12 @@ import numpy
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
-from tk_builder.panel_builder import WidgetPanel
-from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
+from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
 
 ######
@@ -111,7 +111,7 @@ class WakeTool(WidgetPanel):
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")  # type: ImagePanel
 
     def __init__(self, primary):
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_vertical_layout()
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -221,6 +221,7 @@ class WakeTool(WidgetPanel):
 
 
 def main():
+    # TODO: add style here
     root = tkinter.Tk()
     app = WakeTool(root)
     root.geometry("1000x800")

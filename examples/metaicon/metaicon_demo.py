@@ -1,7 +1,8 @@
 import numpy
 import tkinter
+
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
@@ -20,7 +21,7 @@ class MetaIconDemo(WidgetPanel):
     def __init__(self, primary):
         self.primary = primary
 
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
 
         self.init_w_horizontal_layout()
@@ -76,11 +77,14 @@ class MetaIconDemo(WidgetPanel):
         self.primary.withdraw()
 
         # quit the program when the user closes the metaicon popup
-        self.metaicon_popup_panel.protocol("WM_DELETE_WINDOW", root.quit)
+        self.metaicon_popup_panel.protocol("WM_DELETE_WINDOW", self.primary.quit)
 
 
-if __name__ == '__main__':
+def main():
     root = tkinter.Tk()
     app = MetaIconDemo(root)
     root.mainloop()
 
+
+if __name__ == '__main__':
+    main()
