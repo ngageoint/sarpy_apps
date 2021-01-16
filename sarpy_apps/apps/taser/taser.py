@@ -10,6 +10,7 @@ __author__ = "Jason Casey"
 import os
 
 import tkinter
+from tkinter import ttk
 from tkinter.filedialog import askopenfilenames, askdirectory
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
@@ -72,24 +73,29 @@ class Taser(WidgetPanel):
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
         self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
-        self.taser_image_panel.canvas.on_left_mouse_release(self.callback_left_mouse_release)
+        self.taser_image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.button_panel.pack(fill=tkinter.X, expand=tkinter.NO)
         self.taser_image_panel.resizeable = True
 
-    def callback_left_mouse_release(self, event):
-        self.taser_image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.taser_image_panel.canvas.variables.current_tool == ToolConstants.SELECT_TOOL:
-            full_image_width = self.taser_image_panel.canvas.variables.state.canvas_width
-            fill_image_height = self.taser_image_panel.canvas.variables.state.canvas_height
-            self.taser_image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
-            self.display_canvas_rect_selection_in_pyplot_frame()
-
     # noinspection PyUnusedLocal
+    def handle_selection_change(self, event):
+        """
+        Handle a change in the selection area.
+
+        Parameters
+        ----------
+        event
+        """
+
+        full_image_width = self.taser_image_panel.canvas.variables.state.canvas_width
+        fill_image_height = self.taser_image_panel.canvas.variables.state.canvas_height
+        self.taser_image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
+        self.display_canvas_rect_selection_in_pyplot_frame()
+
     def callback_set_to_select(self):
         self.taser_image_panel.current_tool = ToolConstants.SELECT_TOOL
 
-    # define custom callbacks here
     # noinspection PyUnusedLocal
     def callback_remap(self, event):
         remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
@@ -101,6 +107,7 @@ class Taser(WidgetPanel):
             self.taser_image_panel.canvas.update_current_image()
 
     def callback_select_files(self):
+        self.taser_image_panel.current_tool = None
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None:
             return
@@ -133,15 +140,28 @@ class Taser(WidgetPanel):
         self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
-        image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
-            self.taser_image_panel.canvas.variables.select_rect.uid)
+        def get_extent(coords):
+            left = min(coords[1::2])
+            right = max(coords[1::2])
+            top = max(coords[0::2])
+            bottom = min(coords[0::2])
+            return left, right, top, bottom
+
+        select_id = self.taser_image_panel.canvas.variables.select_rect.uid
+        image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id)
+        # craft the extent value
+        rect_coords = self.taser_image_panel.canvas.get_shape_image_coords(select_id)
+
         if image_data is not None:
-            self.pyplot_panel.update_image(image_data)
+            self.pyplot_panel.update_image(image_data, extent=get_extent(rect_coords))
 
 
 def main():
-    # TODO: add style
     root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('clam')
+
     app = Taser(root)
     root.mainloop()
 
