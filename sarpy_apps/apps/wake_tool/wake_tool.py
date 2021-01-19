@@ -130,15 +130,11 @@ class WakeTool(WidgetPanel):
         self.image_panel.resizeable = True
         self.image_panel.pack(expand=True, fill=tkinter.BOTH)
 
-        self.image_panel.hide_margin_controls()
-        self.image_panel.hide_axes_controls()
-
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
         self.side_panel.do_not_expand()
         self.side_panel.fill_x(False)
         self.side_panel.file_selector.set_fname_filters(common_use_collection)
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
-        self.image_panel.canvas.config.update_outer_axes_on_zoom = False
 
     def select_file_command(self):
         fname = self.side_panel.file_selector.select_file_command()

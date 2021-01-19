@@ -36,21 +36,16 @@ class MetaIcon(ImagePanel):
 
     def __init__(self, parent):
         super(MetaIcon, self).__init__(parent)
-        self.canvas.config(background='black')
         self.parent = parent
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
         self.resizeable = True
-        self.axes_canvas.set_canvas_size(10, 10)
+        self.canvas.set_canvas_size(10, 10)
 
-        self.hide_zoom_in()
-        self.hide_zoom_out()
-        self.hide_pan()
-        self.hide_margin_controls()
-        self.hide_axes_controls()
-        self.hide_save_image()
+        self.hide_tools()
+        self.hide_shapes()
         self.hide_canvas_size_controls()
 
         self.toolbar.save_canvas.config(text="save metaicon")

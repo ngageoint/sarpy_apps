@@ -276,7 +276,7 @@ class RcsTool(WidgetPanel):
         n_shapes_on_canvas = len(self.image_panel.canvas.get_non_tool_shape_ids())
 
         # TODO: review this, since it's broken
-        if self.image_panel.current_tool == ToolConstants.EDIT_SHAPE_TOOL:
+        if self.image_panel.current_tool == ToolConstants.EDIT_SHAPE:
             shape = "Rectangle"
             if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
                 shape = "Polygon"
@@ -311,6 +311,7 @@ class RcsTool(WidgetPanel):
         print(self.rcs_table.table.item(current_item))  # TODO: what is this for?
 
     def set_tool(self):
+        # TODO: make this defunct
         if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.rectangle:
             self.image_panel.canvas.set_current_tool_to_draw_rect()
         elif self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:

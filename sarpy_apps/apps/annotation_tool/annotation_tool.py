@@ -53,8 +53,8 @@ class DashboardButtonPanel(WidgetPanel):
     select = widget_descriptors.ButtonDescriptor("select")  # type: basic_widgets.Button
     move_rect = widget_descriptors.ButtonDescriptor("move_rect")  # type: basic_widgets.Button
 
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
+    def __init__(self, master):
+        WidgetPanel.__init__(self, master)
         self.init_w_horizontal_layout()
 
 
@@ -65,8 +65,8 @@ class ContextMasterDash(WidgetPanel):
     _widget_list = ("buttons",)
     buttons = widget_descriptors.PanelDescriptor("buttons", DashboardButtonPanel)  # type: DashboardButtonPanel
 
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
+    def __init__(self, master):
+        WidgetPanel.__init__(self, master)
         self.init_w_basic_widget_list(3, [1, 1, 2])
 
 
@@ -79,8 +79,8 @@ class ContextButtons(WidgetPanel):
     select_area = widget_descriptors.ButtonDescriptor("select_area")  # type: basic_widgets.Button
     edit_selection = widget_descriptors.ButtonDescriptor("edit_selection")  # type: basic_widgets.Button
 
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
+    def __init__(self, master):
+        WidgetPanel.__init__(self, master)
         self.init_w_horizontal_layout()
 
 
@@ -92,8 +92,8 @@ class ContextImagePanel(WidgetPanel):
     buttons = widget_descriptors.PanelDescriptor("buttons", ContextButtons)  # type: ContextButtons
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
 
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
+    def __init__(self, master):
+        WidgetPanel.__init__(self, master)
         self.init_w_vertical_layout()
 
 
@@ -108,8 +108,8 @@ class AnnotationButtons(WidgetPanel):
     delete = widget_descriptors.ButtonDescriptor("delete")  # type: basic_widgets.Button
     annotate = widget_descriptors.ButtonDescriptor("annotate")  # type: basic_widgets.Button
 
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
+    def __init__(self, master):
+        WidgetPanel.__init__(self, master)
         self.init_w_horizontal_layout()
 
 
@@ -118,9 +118,9 @@ class AnnotateImagePanel(WidgetPanel):
     buttons = widget_descriptors.PanelDescriptor("buttons", AnnotationButtons)   # type: AnnotationButtons
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
 
-    def __init__(self, parent):
+    def __init__(self, master):
         # set the master frame
-        WidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, master)
         self.init_w_vertical_layout()
 
 
@@ -151,21 +151,21 @@ class AnnotationPopup(WidgetPanel):
     confidence_label = widget_descriptors.LabelDescriptor(
         "confidence_label", default_text='Confidence:')  # type: basic_widgets.Label
 
-    def __init__(self, parent, main_app_variables):
+    def __init__(self, master, main_app_variables):
         """
 
         Parameters
         ----------
-        parent
-            The app parent.
+        master
+            The app master.
         main_app_variables : AppVariables
         """
 
         self.label_schema = main_app_variables.label_schema
         self.main_app_variables = main_app_variables
 
-        self.parent = parent
-        self.primary_frame = basic_widgets.Frame(parent)
+        self.master = master
+        self.primary_frame = basic_widgets.Frame(master)
         WidgetPanel.__init__(self, self.primary_frame)
 
         self.init_w_rows()
@@ -225,7 +225,7 @@ class AnnotationPopup(WidgetPanel):
         self.annotation.add_annotation_metadata(annotation_metadata)
         # save the annotation file automatically now?
         self.main_app_variables.file_annotation_collection.to_file(self.main_app_variables.annotation_file_name)
-        self.parent.destroy()
+        self.master.destroy()
 
     def setup_confidence_selections(self):
         self.confidence.update_combobox_values(self.main_app_variables.label_schema.confidence_values)
@@ -678,7 +678,7 @@ class AnnotationTool(WidgetPanel):
         self.initialize_geometry(annotation_fname, annotation_collection)
 
     def callback_context_set_to_select(self):
-        self.context_panel.image_panel.canvas.set_current_tool_to_selection_tool()
+        self.context_panel.image_panel.canvas.set_current_tool_to_select()
 
     def callback_context_set_to_edit_selection(self):
         self.context_panel.image_panel.canvas.set_current_tool_to_edit_shape()
@@ -686,8 +686,8 @@ class AnnotationTool(WidgetPanel):
     def callback_context_handle_left_mouse_release(self, event):
         # TODO: review this functionality here?
         self.context_panel.image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.context_panel.image_panel.canvas.variables.current_tool in [
-                ToolConstants.SELECT_TOOL, ToolConstants.SHIFT_SHAPE_TOOL]:
+        if self.context_panel.image_panel.current_tool in [
+                ToolConstants.SELECT, ToolConstants.SHIFT_SHAPE]:
             rect_id = self.context_panel.image_panel.canvas.variables.select_rect.uid
             image_rect = self.context_panel.image_panel.canvas.get_shape_image_coords(rect_id)
             annotate_zoom_rect = self.annotate_panel.image_panel.canvas.variables.canvas_image_object.full_image_yx_to_canvas_coords(
@@ -711,7 +711,7 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.image_panel.canvas.callback_handle_right_mouse_click(event)
 
         # TODO: this is definitely stupid
-        if self.annotate_panel.image_panel.canvas.variables.current_tool == ToolConstants.EDIT_SHAPE_TOOL:
+        if self.annotate_panel.image_panel.canvas.current_tool == ToolConstants.EDIT_SHAPE:
             # craft the polygon
             current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
             image_coords = self.annotate_panel.image_panel.canvas.get_shape_image_coords(current_canvas_shape_id)
@@ -806,7 +806,7 @@ class AnnotationTool(WidgetPanel):
             showinfo('No shape selected', message='Please draw/select a shape feature first.')
             return
 
-        popup = tkinter.Toplevel(self.parent)
+        popup = tkinter.Toplevel(self.master)
         self.variables.current_annotate_canvas_id = current_canvas_shape_id
         AnnotationPopup(popup, self.variables)
 

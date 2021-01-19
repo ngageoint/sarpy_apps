@@ -28,10 +28,9 @@ import sarpy.visualization.remap as remap
 
 class TaserButtonPanel(WidgetPanel):
     _widget_list = (
-        "open_file", "open_directory", "rect_select", "remap_dropdown")
+        "open_file", "open_directory", "remap_dropdown")
     open_file = widget_descriptors.ButtonDescriptor("open_file")  # type: basic_widgets.Button
     open_directory = widget_descriptors.ButtonDescriptor("open_directory")  # type: basic_widgets.Button
-    rect_select = widget_descriptors.ButtonDescriptor("rect_select")  # type: basic_widgets.Button
     remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")  # type: basic_widgets.Combobox
 
     def __init__(self, parent):
@@ -61,17 +60,21 @@ class Taser(WidgetPanel):
         primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
+        # self.button_panel = TaserButtonPanel()
 
         self.init_w_horizontal_layout()
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)
 
+        # TODO: hide elements on the image panel
+        self.taser_image_panel.hide_tools('shape_drawing')
+        self.taser_image_panel.hide_shapes()
+
         # bind events to callbacks here
         self.button_panel.open_file.config(command=self.callback_select_files)
         self.button_panel.open_directory.config(command=self.callback_select_directory)
         self.button_panel.remap_dropdown.on_selection(self.callback_remap)
-        self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
         self.taser_image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -88,13 +91,13 @@ class Taser(WidgetPanel):
         event
         """
 
+        if self.variables.image_reader is None:
+            return
+
         full_image_width = self.taser_image_panel.canvas.variables.state.canvas_width
         fill_image_height = self.taser_image_panel.canvas.variables.state.canvas_height
         self.taser_image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
         self.display_canvas_rect_selection_in_pyplot_frame()
-
-    def callback_set_to_select(self):
-        self.taser_image_panel.current_tool = ToolConstants.SELECT_TOOL
 
     # noinspection PyUnusedLocal
     def callback_remap(self, event):
@@ -107,14 +110,14 @@ class Taser(WidgetPanel):
             self.taser_image_panel.canvas.update_current_image()
 
     def callback_select_files(self):
-        self.taser_image_panel.current_tool = None
+        self.taser_image_panel.canvas.set_current_tool_to_view()
+        self.taser_image_panel.canvas.set_current_tool_to_view()
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None:
             return
 
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(fnames[0])[0]
-
         # TODO: handle non-complex data possibilities here
         if len(fnames) == 1:
             self.variables.image_reader = ComplexImageReader(fnames[0])
@@ -122,21 +125,20 @@ class Taser(WidgetPanel):
             self.variables.image_reader = ComplexImageReader(fnames)
 
         self.taser_image_panel.set_image_reader(self.variables.image_reader)
-        # set remap value
+        self.pyplot_panel.make_blank()
         self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
-        if dirname is None:
+        if dirname is None or dirname in [(), '']:
             return
 
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
 
         self.variables.image_reader = ComplexImageReader(dirname)
-
         self.taser_image_panel.set_image_reader(self.variables.image_reader)
-        # set remap value
+        self.pyplot_panel.make_blank()
         self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
 
     def display_canvas_rect_selection_in_pyplot_frame(self):

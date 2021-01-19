@@ -27,13 +27,10 @@ __author__ = "Jason Casey"
 class CanvasDemoButtonPanel(WidgetPanel):
     _widget_list = ("fname_select",
                     "rect_select",
-                    "draw_line_w_drag",
-                    "draw_line_w_click",
-                    "draw_arrow_w_drag",
-                    "draw_arrow_w_click",
-                    "draw_rect_w_drag",
-                    "draw_rect_w_click",
-                    "draw_polygon_w_click",
+                    "draw_line",
+                    "draw_arrow",
+                    "draw_rect",
+                    "draw_polygon",
                     "draw_point",
                     "edit",
                     "color_selector",
@@ -41,13 +38,10 @@ class CanvasDemoButtonPanel(WidgetPanel):
                     )
     fname_select = widget_descriptors.ButtonDescriptor("fname_select")  # type: basic_widgets.Button
     rect_select = widget_descriptors.ButtonDescriptor("rect_select")  # type: basic_widgets.Button
-    draw_line_w_drag = widget_descriptors.ButtonDescriptor("draw_line_w_drag")  # type: basic_widgets.Button
-    draw_line_w_click = widget_descriptors.ButtonDescriptor("draw_line_w_click")  # type: basic_widgets.Button
-    draw_arrow_w_drag = widget_descriptors.ButtonDescriptor("draw_arrow_w_drag")  # type: basic_widgets.Button
-    draw_arrow_w_click = widget_descriptors.ButtonDescriptor("draw_arrow_w_click")  # type: basic_widgets.Button
-    draw_rect_w_drag = widget_descriptors.ButtonDescriptor("draw_rect_w_drag")  # type: basic_widgets.Button
-    draw_rect_w_click = widget_descriptors.ButtonDescriptor("draw_rect_w_click")  # type: basic_widgets.Button
-    draw_polygon_w_click = widget_descriptors.ButtonDescriptor("draw_polygon_w_click")  # type: basic_widgets.Button
+    draw_line = widget_descriptors.ButtonDescriptor("draw_line")  # type: basic_widgets.Button
+    draw_arrow = widget_descriptors.ButtonDescriptor("draw_arrow")  # type: basic_widgets.Button
+    draw_rect = widget_descriptors.ButtonDescriptor("draw_rect")  # type: basic_widgets.Button
+    draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon")  # type: basic_widgets.Button
     draw_point = widget_descriptors.ButtonDescriptor("draw_point")  # type: basic_widgets.Button
     color_selector = widget_descriptors.ButtonDescriptor("color_selector")      # type: basic_widgets.Button
     edit = widget_descriptors.ButtonDescriptor("edit")      # type: basic_widgets.Button
@@ -107,13 +101,10 @@ class CanvasDemo(WidgetPanel):
         self.button_panel.fname_select.config(command=self.callback_initialize_canvas_image)
         self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
-        self.button_panel.draw_line_w_drag.config(command=self.callback_draw_line_w_drag)
-        self.button_panel.draw_line_w_click.config(command=self.callback_draw_line_w_click)
-        self.button_panel.draw_arrow_w_drag.config(command=self.callback_draw_arrow_w_drag)
-        self.button_panel.draw_arrow_w_click.config(command=self.callback_draw_arrow_w_click)
-        self.button_panel.draw_rect_w_drag.config(command=self.callback_draw_rect_w_drag)
-        self.button_panel.draw_rect_w_click.config(command=self.callback_draw_rect_w_click)
-        self.button_panel.draw_polygon_w_click.config(command=self.callback_draw_polygon_w_click)
+        self.button_panel.draw_line.config(command=self.callback_draw_line)
+        self.button_panel.draw_arrow.config(command=self.callback_draw_arrow)
+        self.button_panel.draw_rect.config(command=self.callback_draw_rect)
+        self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
         self.button_panel.draw_point.config(command=self.callback_draw_point)
         self.button_panel.edit.config(command=self.callback_edit)
         self.button_panel.color_selector.config(command=self.callback_activate_color_selector)
@@ -176,32 +167,23 @@ class CanvasDemo(WidgetPanel):
     def callback_activate_color_selector(self):
         self.canvas_demo_image_panel.canvas.activate_color_selector()
 
-    def callback_draw_line_w_drag(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line_by_dragging()
+    def callback_draw_line(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line()
 
-    def callback_draw_line_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line_by_clicking()
+    def callback_draw_arrow(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow()
 
-    def callback_draw_arrow_w_drag(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging()
-
-    def callback_draw_arrow_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow_by_clicking()
-
-    def callback_draw_rect_w_drag(self):
+    def callback_draw_rect(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect()
 
-    def callback_draw_rect_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect_by_clicking()
-
-    def callback_draw_polygon_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
+    def callback_draw_polygon(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_polygon()
 
     def callback_draw_point(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_point()
 
     def callback_set_to_select(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_selection_tool()
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_select()
 
     # define custom callbacks here
     def callback_remap(self):
