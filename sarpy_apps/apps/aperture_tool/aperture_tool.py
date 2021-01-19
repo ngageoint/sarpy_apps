@@ -384,8 +384,6 @@ class SelectedRegionPanel(WidgetPanel):
             return
 
 
-
-
 ###########
 # The main app
 
