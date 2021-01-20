@@ -63,7 +63,7 @@ class MetaIcon(ImagePanel):
 
     def callback_resize(self, event):
         if self.data_container:
-            self.canvas.delete("all")
+            self.canvas.reinitialize_shapes()
             self.create_from_metaicon_data_container(self.data_container)
 
     @property
