@@ -1,12 +1,16 @@
-import tkinter as tk
-from tkinter import ttk
+"""
+A viewer for the meta-data associated with the file readers.
+"""
+
+__classification__ = "UNCLASSIFIED"
+__author__ = ("Jason Casey", "Thomas McCullough")
+
+
+from tk_builder.widgets import basic_widgets
 
 from sarpy.compliance import integer_types, string_types
 from sarpy.io.general.base import BaseReader
 from sarpy.io.general.nitf import NITFDetails
-
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
 
 
 def _primitive_list(the_list):
@@ -19,7 +23,7 @@ def _primitive_list(the_list):
     return primitive
 
 
-class Metaviewer(ttk.Treeview):
+class Metaviewer(basic_widgets.Treeview):
     """
     For viewing a rendering of a json compatible object.
     """
@@ -29,7 +33,7 @@ class Metaviewer(ttk.Treeview):
 
         Parameters
         ----------
-        master : tk.Tk|tk.TopLevel
+        master : tkinter.Tk|tkinter.TopLevel
             The GUI element which is the parent or master of this node.
         """
 

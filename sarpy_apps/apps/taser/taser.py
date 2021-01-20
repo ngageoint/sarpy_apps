@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-This module provides a version of the taser tool.
+This module provides a general viewer tool.
 """
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 
 import os
@@ -14,30 +14,16 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilenames, askdirectory
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
-from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.image_reader import ImageReader
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-from tk_builder.panels.image_panel import ImagePanel, ToolConstants
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
+from sarpy_apps.supporting_classes.metaviewer import Metaviewer
+from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-
-import sarpy.visualization.remap as remap
-
-
-class TaserButtonPanel(WidgetPanel):
-    _widget_list = (
-        "open_file", "open_directory", "remap_dropdown")
-    open_file = widget_descriptors.ButtonDescriptor("open_file")  # type: basic_widgets.Button
-    open_directory = widget_descriptors.ButtonDescriptor("open_directory")  # type: basic_widgets.Button
-    remap_dropdown = widget_descriptors.ComboboxDescriptor("remap_dropdown")  # type: basic_widgets.Combobox
-
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
-        self.init_w_vertical_layout()
-        remap_values = [entry[0] for entry in remap.get_remap_list()]
-        self.remap_dropdown.update_combobox_values(remap_values)
 
 
 class AppVariables(object):
@@ -51,8 +37,7 @@ class AppVariables(object):
 
 
 class Taser(WidgetPanel):
-    _widget_list = ("button_panel", "taser_image_panel", "pyplot_panel")
-    button_panel = widget_descriptors.PanelDescriptor("button_panel", TaserButtonPanel)   # type: TaserButtonPanel
+    _widget_list = ("taser_image_panel", "pyplot_panel")
     taser_image_panel = widget_descriptors.ImagePanelDescriptor("taser_image_panel")   # type: ImagePanel
     pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
 
@@ -60,26 +45,57 @@ class Taser(WidgetPanel):
         primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
-        # self.button_panel = TaserButtonPanel()
 
         self.init_w_horizontal_layout()
 
-        # define panels widget_wrappers in primary frame
-        self.button_panel.set_spacing_between_buttons(0)
+        # define our meta icon and metaviewer popups
+        self.metaicon_popup_panel = tkinter.Toplevel(self.master)
+        self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon_popup_panel.withdraw()
 
-        # TODO: hide elements on the image panel
+        self.metaviewer_popup_panel = tkinter.Toplevel(self.master)
+        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
+        self.metaviewer_popup_panel.withdraw()
+
+        # define menus
+        menubar = tkinter.Menu()
+        # file menu
+        filemenu = tkinter.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Open Image", command=self.callback_select_files)
+        filemenu.add_command(label="Open Directory", command=self.callback_select_directory)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.exit)
+        # menus for informational popups
+        popups_menu = tkinter.Menu(menubar, tearoff=0)
+        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # ensure menus cascade
+        menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="Popups", menu=popups_menu)
+
+        # handle packing
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        primary.config(menu=menubar)
+
+        # hide extraneous tool elements
         self.taser_image_panel.hide_tools('shape_drawing')
         self.taser_image_panel.hide_shapes()
 
-        # bind events to callbacks here
-        self.button_panel.open_file.config(command=self.callback_select_files)
-        self.button_panel.open_directory.config(command=self.callback_select_directory)
-        self.button_panel.remap_dropdown.on_selection(self.callback_remap)
-
+        # bind canvas events for proper functionality
+        # this makes for bad performance on a larger image - do not activate
+        # self.taser_image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
         self.taser_image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.button_panel.pack(fill=tkinter.X, expand=tkinter.NO)
-        self.taser_image_panel.resizeable = True
+        self.taser_image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
+        self.taser_image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+    def exit(self):
+        self.quit()
+
+    def metaviewer_popup(self):
+        self.metaviewer_popup_panel.deiconify()
+
+    def metaicon_popup(self):
+        self.metaicon_popup_panel.deiconify()
 
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):
@@ -100,46 +116,72 @@ class Taser(WidgetPanel):
         self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal
-    def callback_remap(self, event):
-        remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
-        selection = self.button_panel.remap_dropdown.get()
-        remap_type = remap_dict[selection]
+    def handle_remap_change(self, event):
+        """
+        Handle that the remap for the image canvas has changed.
+
+        Parameters
+        ----------
+        event
+        """
         if self.variables.image_reader is not None:
-            self.variables.image_reader.set_remap_type(remap_type)
             self.display_canvas_rect_selection_in_pyplot_frame()
-            self.taser_image_panel.canvas.update_current_image()
+
+    #noinspection PyUnusedLocal
+    def handle_image_index_changed(self, event):
+        """
+        Handle that the image index has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.populate_metaicon()
+
+    def update_reader(self, the_reader):
+        """
+        Update the reader.
+
+        Parameters
+        ----------
+        the_reader : ImageReader
+        """
+
+        # change the tool to view
+        self.taser_image_panel.canvas.set_current_tool_to_view()
+        self.taser_image_panel.canvas.set_current_tool_to_view()
+        # update the reader
+        self.variables.image_reader = the_reader
+        self.taser_image_panel.set_image_reader(the_reader)
+        # refresh appropriate GUI elements
+        self.pyplot_panel.make_blank()
+        self.populate_metaicon()
+        self.populate_metaviewer()
 
     def callback_select_files(self):
-        self.taser_image_panel.canvas.set_current_tool_to_view()
-        self.taser_image_panel.canvas.set_current_tool_to_view()
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None:
             return
-
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(fnames[0])[0]
+
         # TODO: handle non-complex data possibilities here
         if len(fnames) == 1:
-            self.variables.image_reader = ComplexImageReader(fnames[0])
+            the_reader = ComplexImageReader(fnames[0])
         else:
-            self.variables.image_reader = ComplexImageReader(fnames)
-
-        self.taser_image_panel.set_image_reader(self.variables.image_reader)
-        self.pyplot_panel.make_blank()
-        self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
+            the_reader = ComplexImageReader(fnames)
+        self.update_reader(the_reader)
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
-
-        self.variables.image_reader = ComplexImageReader(dirname)
-        self.taser_image_panel.set_image_reader(self.variables.image_reader)
-        self.pyplot_panel.make_blank()
-        self.variables.image_reader.set_remap_type(self.button_panel.remap_dropdown.get())
+        # TODO: handle non-complex data possibilities here
+        the_reader = ComplexImageReader(dirname)
+        self.update_reader(the_reader)
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         def get_extent(coords):
@@ -149,13 +191,48 @@ class Taser(WidgetPanel):
             bottom = min(coords[0::2])
             return left, right, top, bottom
 
-        select_id = self.taser_image_panel.canvas.variables.select_rect.uid
-        image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id)
-        # craft the extent value
-        rect_coords = self.taser_image_panel.canvas.get_shape_image_coords(select_id)
+        threshold = self.taser_image_panel.canvas.variables.config.select_size_threshold
 
-        if image_data is not None:
-            self.pyplot_panel.update_image(image_data, extent=get_extent(rect_coords))
+        select_id = self.taser_image_panel.canvas.variables.select_rect.uid
+        rect_coords = self.taser_image_panel.canvas.get_shape_image_coords(select_id)
+        extent = get_extent(rect_coords)
+
+        if abs(extent[1] - extent[0]) < threshold or abs(extent[2] - extent[3]) < threshold:
+            self.pyplot_panel.make_blank()
+        else:
+            image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id)
+            if image_data is not None:
+                self.pyplot_panel.update_image(image_data, extent=extent)
+            else:
+                self.pyplot_panel.make_blank()
+
+    def populate_metaicon(self):
+        """
+        Populate the metaicon.
+        """
+
+        if self.taser_image_panel.canvas.variables.canvas_image_object is None or \
+                self.taser_image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            self.metaicon.make_empty()
+
+        image_reader = self.taser_image_panel.canvas.variables.canvas_image_object.image_reader
+
+        assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
+        self.metaicon.create_from_reader(image_reader.base_reader, index=self.taser_image_panel.canvas.get_image_index())
+
+    def populate_metaviewer(self):
+        """
+        Populate the metaviewer.
+        """
+
+        if self.taser_image_panel.canvas.variables.canvas_image_object is None or \
+                self.taser_image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            self.metaviewer.empty_entries()
+
+        image_reader = self.taser_image_panel.canvas.variables.canvas_image_object.image_reader
+
+        assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
+        self.metaviewer.populate_from_reader(image_reader.base_reader)
 
 
 def main():

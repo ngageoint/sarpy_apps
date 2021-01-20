@@ -12,7 +12,7 @@ from sarpy.io.phase_history.cphd import CPHDReader
 
 from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
-from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 __classification__ = "UNCLASSIFIED"
@@ -41,12 +41,12 @@ class MetaIcon(ImagePanel):
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
         self._font_family = 'Times New Roman'
-        self.resizeable = True
         self.canvas.set_canvas_size(10, 10)
 
         self.hide_tools()
         self.hide_shapes()
-        self.hide_canvas_size_controls()
+        self.hide_remap_combo()
+        self.hide_select_index()
 
         self.toolbar.save_canvas.config(text="save metaicon")
         self.canvas.disable_mouse_zoom()
@@ -62,7 +62,7 @@ class MetaIcon(ImagePanel):
         self.parent.withdraw()
 
     def callback_resize(self, event):
-        if self.data_container and self.resizeable:
+        if self.data_container:
             self.canvas.delete("all")
             self.create_from_metaicon_data_container(self.data_container)
 
@@ -105,6 +105,17 @@ class MetaIcon(ImagePanel):
         if not isinstance(value, MetaIconDataContainer):
             raise TypeError('Got unexpected type {}'.format(type(value)))
         self._metadata_container = value
+
+    def make_empty(self):
+        """
+        Reinitialize as an empty metaicon.
+
+        Returns
+        -------
+        None
+        """
+
+        self.create_from_metaicon_data_container(MetaIconDataContainer())
 
     def create_from_metaicon_data_container(self, data_container):
         """
@@ -247,6 +258,9 @@ class MetaIcon(ImagePanel):
 
         shadow = self.data_container.shadow
         azimuth = self.data_container.azimuth
+        if shadow is None or azimuth is None:
+            return None
+
         if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
             shadow = azimuth - 180 - self.data_container.multipath_ground
         shadow = 90 - (shadow - azimuth)
@@ -260,6 +274,9 @@ class MetaIcon(ImagePanel):
 
         multipath = self.data_container.multipath
         azimuth = self.data_container.azimuth
+        if multipath is None or azimuth is None:
+            return None
+
         if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
             multipath = azimuth - 180
         north = azimuth + 90
@@ -271,6 +288,9 @@ class MetaIcon(ImagePanel):
         """
         float: The north arrow angle.
         """
+
+        if self.data_container.azimuth is None:
+            return None
 
         return self.data_container.azimuth + 90
 
@@ -325,12 +345,15 @@ class MetaIcon(ImagePanel):
 
         Parameters
         ----------
-        arrow_angle : float
+        arrow_angle : None|float
 
         Returns
         -------
         Tuple[float, float, float, float]
         """
+
+        if arrow_angle is None:
+            return 0., 0., 0., 0.
 
         arrow_rad = numpy.deg2rad(arrow_angle)
         x_end, y_end = self._adjust_arrow_aspect_ratio(self.arrow_lengths, arrow_rad)

@@ -30,7 +30,6 @@ from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
-from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.panels.image_panel import ImagePanel
 
 from sarpy.compliance import string_types, integer_types
@@ -527,8 +526,6 @@ class AnnotationTool(WidgetPanel):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-        self.context_panel.image_panel.resizeable = True
-        self.annotate_panel.image_panel.resizeable = True
         # self.context_panel.pack(expand=True, fill=tkinter.BOTH)
         # self.annotate_panel.pack(expand=True, fill=tkinter.BOTH)
 

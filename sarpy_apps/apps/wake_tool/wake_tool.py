@@ -105,6 +105,7 @@ class WakeTool(WidgetPanel):
     Tool that displays information based on a line and point drawn on an image.  Information pertains
     to the direction of the line and distance from the point to the line.
     """
+
     _widget_list = ("side_panel", "image_panel")
     side_panel = widget_descriptors.PanelDescriptor(
         "side_panel", SidePanel, default_text="wake tool controls")      # type: SidePanel
@@ -123,11 +124,10 @@ class WakeTool(WidgetPanel):
         self.side_panel.buttons.line_draw.config(command=self.line_draw_command)
         self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
-        self.image_panel.canvas.variables.state.line_width = self.variables.state.line_width
+        self.image_panel.canvas.variables.state.line_width = self.variables.line_width
         self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
-        self.image_panel.resizeable = True
         self.image_panel.pack(expand=True, fill=tkinter.BOTH)
 
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")

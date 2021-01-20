@@ -18,7 +18,7 @@ from tkinter.filedialog import asksaveasfilename
 from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, BooleanDescriptor, FloatDescriptor
-from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyImageReader
 from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
 from tk_builder.panels.file_selector import FileSelector
 from tk_builder.panels.image_panel import ImagePanel
@@ -352,7 +352,6 @@ class SelectedRegionPanel(WidgetPanel):
         self.init_w_vertical_layout()
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
-        self.image_panel.resizeable = True
 
         sicd_reader = ComplexImageReader(app_variables.sicd_reader_object.base_reader.file_name)
         self.image_panel.set_image_reader(sicd_reader)
@@ -514,16 +513,14 @@ class ApertureTool(WidgetPanel):
         # configure our panels
         self.frequency_vs_degree_panel.hide_tools()
         self.frequency_vs_degree_panel.hide_shapes()
-        self.frequency_vs_degree_panel.hide_canvas_size_controls()
-        self.frequency_vs_degree_panel.resizeable = True
+        self.frequency_vs_degree_panel.hide_select_index()
 
         self.frequency_vs_degree_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.frequency_vs_degree_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
 
         self.filtered_panel.hide_tools()
         self.filtered_panel.hide_shapes()
-        self.filtered_panel.hide_canvas_size_controls()
-        self.filtered_panel.resizeable = True
+        self.filtered_panel.hide_select_index()
 
         # TODO: is this necessary?
         # self.frequency_vs_degree_panel.pack(expand=True, fill=tkinter.BOTH)
@@ -536,19 +533,10 @@ class ApertureTool(WidgetPanel):
 
         self.filtered_panel.canvas.set_canvas_size(600, 400)
 
-        self.on_resize(self.callback_resize)
-
         self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
         self.filtered_panel.canvas.disable_mouse_zoom()
 
         self.metaicon.hide_on_close()
-
-    # noinspection PyUnusedLocal
-    def callback_resize(self, event):
-        # TODO: this should be frivilous
-        # self.update_fft_image()
-        # self.update_filtered_image()
-        pass
 
     def callback_update_deskew_direction(self):
         if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
