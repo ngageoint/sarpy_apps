@@ -161,7 +161,7 @@ class Taser(WidgetPanel):
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
-        if fnames is None:
+        if fnames is None or fnames in ['', ()]:
             return
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(fnames[0])[0]
