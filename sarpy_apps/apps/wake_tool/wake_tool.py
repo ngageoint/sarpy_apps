@@ -4,11 +4,10 @@ This module provides a version of the wake tool.
 """
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 
 import tkinter
-
 import numpy
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
@@ -121,14 +120,14 @@ class WakeTool(WidgetPanel):
         self.side_panel.set_spacing_between_buttons(0)
 
         # set up event listeners
-        self.side_panel.buttons.line_draw.config(command=self.line_draw_command)
+        self.side_panel.buttons.line_draw.config(command=self.arrow_draw_command)
         self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
         self.image_panel.canvas.variables.state.line_width = self.variables.line_width
-        self.image_panel.canvas.on_left_mouse_click(self.callback_handle_left_mouse_click)
-        self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
-
         self.image_panel.pack(expand=True, fill=tkinter.BOTH)
+        # hide unnecessary tools
+        self.image_panel.hide_tools(['shape_drawing', 'select'])
+        self.image_panel.hide_shapes()
 
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
         self.side_panel.do_not_expand()
@@ -136,40 +135,96 @@ class WakeTool(WidgetPanel):
         self.side_panel.file_selector.set_fname_filters(common_use_collection)
         self.side_panel.file_selector.select_file.config(command=self.select_file_command)
 
+        # bind useful events from our canvas
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.callback_index_changed)  # has the effect of refreshing the canvas
+        self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.callback_shape_edited)  # has the effect that the shape is finished drawing (i.e. changed)
+        self.image_panel.canvas.bind('<<ShapeCoordsEdit>>', self.callback_shape_edited)  # has the effect that the shape is edited
+        self.image_panel.canvas.bind('<<ShapeCreate>>', self.callback_shape_create)  # has the effect that a new shape is created
+        self.image_panel.canvas.bind('<<ShapeDelete>>', self.callback_shape_delete)  # has the effect that a shape is deleted
+
+    def callback_shape_create(self, event):
+        """
+        Handle a shape creation callback.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if event.y == ShapeTypeConstants.ARROW:
+            if self.variables.arrow_id is None:
+                self.variables.arrow_id = event.x
+            elif self.variables.arrow_id == event.x:
+                pass  # I don't know how this would happen
+            else:
+                old_arrow = self.variables.arrow_id
+                self.variables.arrow_id = event.x
+                self.image_panel.canvas.delete_shape(old_arrow)  # this should never happen
+        elif event.y == ShapeTypeConstants.POINT:
+            if self.variables.point_id is None:
+                self.variables.point_id = event.x
+            elif self.variables.point_id == event.x:
+                pass  # how?
+            else:
+                old_point = self.variables.point_id
+                self.variables.arrow_id = event.x
+                self.image_panel.canvas.delete_shape(old_point)  # this should never happen
+
+    def callback_shape_delete(self, event):
+        if event.y == ShapeTypeConstants.ARROW and self.variables.arrow_id == event.x:
+            self.variables.arrow_id = None
+        elif event.y == ShapeTypeConstants.POINT and self.variables.point_id == event.x:
+            self.variables.point_id = None
+        self.update_distance()
+
+    def callback_shape_edited(self, event):
+        """
+        Callback for a shape having coordinates edited.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if (event.y == ShapeTypeConstants.ARROW and event.x == self.variables.arrow_id) or \
+                (event.y == ShapeTypeConstants.POINT and event.x == self.variables.point_id):
+            self.update_distance()
+
+    # noinspection PyUnusedLocal
+    def callback_index_changed(self, event):
+        """
+        Callback that our index has changed - should have refreshed the canvas shapes already.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if self.variables.arrow_id is not None:
+            self.image_panel.canvas.delete_shape(self.variables.arrow_id)
+        if self.variables.point_id is not None:
+            self.image_panel.canvas.delete_shape(self.variables.point_id)
+        self.update_distance()
+
     def select_file_command(self):
         fname = self.side_panel.file_selector.select_file_command()
         if fname:
             self.variables.image_reader = ComplexImageReader(fname)
             self.image_panel.set_image_reader(self.variables.image_reader)
 
-    # noinspection PyUnusedLocal
-    def line_draw_command(self):
-        self.image_panel.canvas.set_current_tool_to_draw_arrow()
-        self.image_panel.canvas.variables.current_shape_id = self.variables.arrow_id
+    def arrow_draw_command(self):
+        """
+        Callback for drawing/editing the arrow.
+        """
+
+        self.image_panel.canvas.set_current_tool_to_draw_arrow(self.variables.arrow_id)
 
     def draw_point_command(self):
-        self.image_panel.canvas.set_current_tool_to_draw_point()
-        self.image_panel.canvas.variables.current_shape_id = self.variables.point_id
+        """
+        Callback for drawing/editing the point.
+        """
 
-    def callback_handle_left_mouse_click(self, event):
-        # first do all the normal mouse click functionality of the canvas
-        self.image_panel.canvas.callback_handle_left_mouse_click(event)
-        # now set the object ID's accordingly, we do this so we don't draw multiple arrows or points
-        # get the current shape, and potentially update
-        vector_object = self.image_panel.canvas.get_current_nontool_vector_object()
-        if vector_object is None:
-            return
-        elif vector_object.type == ShapeTypeConstants.ARROW:
-            self.variables.arrow_id = vector_object.uid
-        elif vector_object.type == ShapeTypeConstants.POINT:
-            self.variables.point_id = vector_object.uid
-
-        if self.variables.point_id is not None and self.variables.arrow_id is not None:
-            self.update_distance()
-
-    def callback_on_left_mouse_motion(self, event):
-        self.image_panel.canvas.callback_handle_left_mouse_motion(event)
-        self.update_distance()
+        self.image_panel.canvas.set_current_tool_to_draw_point(self.variables.point_id)
 
     def update_distance(self):
         if self.variables.point_id is not None and self.variables.arrow_id is not None:

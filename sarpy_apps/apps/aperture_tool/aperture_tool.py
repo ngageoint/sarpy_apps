@@ -328,6 +328,10 @@ class Toolbar(WidgetPanel):
 
 
 class SelectedRegionPanel(WidgetPanel):
+    """
+    The widget for selecting the Area of Interest for the aperture tool.
+    """
+
     _widget_list = ("toolbar", "image_panel")
     image_panel = widget_descriptors.ImagePanelDescriptor(
         "image_panel")  # type: ImagePanel
@@ -415,6 +419,10 @@ class AnimationProperties(object):
 
 
 class AppVariables(object):
+    """
+    App variables for the aperture tool.
+    """
+
     sicd_reader_object = TypedDescriptor(
         'sicd_reader_object', ComplexImageReader,
         docstring='')  # type: ComplexImageReader
@@ -437,6 +445,11 @@ class AppVariables(object):
 
 
 class ApertureTool(WidgetPanel):
+    """
+    The widget for understanding the relationship between the phase data and the
+    reconstructed complex image.
+    """
+
     _widget_list = ("frequency_vs_degree_panel", "filtered_panel")
 
     frequency_vs_degree_panel = widget_descriptors.ImagePanelDescriptor(
@@ -521,10 +534,6 @@ class ApertureTool(WidgetPanel):
         self.filtered_panel.hide_tools()
         self.filtered_panel.hide_shapes()
         self.filtered_panel.hide_select_index()
-
-        # TODO: is this necessary?
-        # self.frequency_vs_degree_panel.pack(expand=True, fill=tkinter.BOTH)
-        # self.filtered_panel.pack(expand=True, fill=tkinter.BOTH)
 
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
         self.image_info_panel.phd_options.apply_deskew.config(command=self.callback_update_apply_deskew)
@@ -819,8 +828,6 @@ class ApertureTool(WidgetPanel):
         self.update_phase_history_selection()
 
         self.metaviewer.populate_from_reader(self.app_variables.sicd_reader_object.base_reader)
-
-        self.callback_resize(None)
 
     def get_fft_image_bounds(self):
         # type: (...) -> (int, int, int, int)
