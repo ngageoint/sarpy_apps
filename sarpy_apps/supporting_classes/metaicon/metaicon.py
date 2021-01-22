@@ -49,7 +49,6 @@ class MetaIcon(ImagePanel):
         self.hide_select_index()
 
         self.toolbar.save_canvas.config(text="save metaicon")
-        self.canvas.disable_mouse_zoom()
         self.on_resize(self.callback_resize)
 
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)

@@ -439,9 +439,6 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel.phd_options.deskew_fast_slow.slow.config(command=self.callback_update_deskew_direction)
         self.image_info_panel.phd_options.deskew_fast_slow.fast.config(command=self.callback_update_deskew_direction)
 
-        self.phase_history_panel.canvas.disable_mouse_zoom()
-        self.filtered_panel.canvas.disable_mouse_zoom()
-
     def callback_update_deskew_direction(self):
         if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
             self.app_variables.aperture_filter.dimension = 1

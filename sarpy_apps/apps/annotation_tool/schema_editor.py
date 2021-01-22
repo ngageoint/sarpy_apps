@@ -176,6 +176,7 @@ class _SchemaSelectionWidget(object):
         if selected_value is None or selected_value == '':
             return
 
+        # noinspection PyBroadException
         try:
             self.viewer.selection_set(selected_value)
         except:
@@ -190,6 +191,7 @@ class _SchemaSelectionWidget(object):
         None
         """
 
+        # noinspection PyBroadException
         try:
             self.root.destroy()
         except:
@@ -325,19 +327,19 @@ class _LabelEntryWidget(object):
         if self.edit_id is None:
             # if this is a new entry, then verify that both id and name are set
             if the_id == '<SET>' or the_name == '<SET>':
-                junk = showinfo('Entries Not Initialized', message='Both `ID` and `Name` must be set.')
+                showinfo('Entries Not Initialized', message='Both `ID` and `Name` must be set.')
                 return
 
             try:
                 self.label_schema.add_entry(the_id, the_name, the_parent=the_parent)
             except Exception as e:
-                junk = showinfo("Creation Error", message="Got Error: {}".format(e))
+                showinfo("Creation Error", message="Got Error: {}".format(e))
                 return
         else:
             try:
                 self.label_schema.change_entry(the_id, the_name, the_parent)
             except Exception as e:
-                junk = showinfo("Edit Error", message="Got Error: {}".format(e))
+                showinfo("Edit Error", message="Got Error: {}".format(e))
                 return
         self.root.quit()
 
@@ -350,6 +352,7 @@ class _LabelEntryWidget(object):
         None
         """
 
+        # noinspection PyBroadException
         try:
             self.root.destroy()
         except:
@@ -472,6 +475,8 @@ class SchemaEditor(WidgetPanel):
             the_values = None
         else:
             temp_values = the_value.split()
+
+            # noinspection PyBroadException
             try:
                 the_values = [int(entry) for entry in temp_values]
             except:
@@ -530,12 +535,12 @@ class SchemaEditor(WidgetPanel):
         """
 
         if self._file_name is None:
-            junk = showinfo('No Schema Selected', message='Choose schema location from File menu')
+            showinfo('No Schema Selected', message='Choose schema location from File menu')
             return
 
         selected = self.treeview.focus()
         if selected == '':
-            junk = showinfo('No Element Selected', message='Choose element from treeview')
+            showinfo('No Element Selected', message='Choose element from treeview')
             return
         else:
             self._unsaved_edits = True
@@ -553,7 +558,7 @@ class SchemaEditor(WidgetPanel):
         """
 
         if self._file_name is None:
-            junk = showinfo('No Schema Selected', message='Choose schema location from File menu')
+            showinfo('No Schema Selected', message='Choose schema location from File menu')
             return
 
         self._unsaved_edits = True
@@ -663,6 +668,7 @@ def main():
     the_style = ttk.Style()
     the_style.theme_use('clam')
 
+    # noinspection PyUnusedLocal
     app = SchemaEditor(root)
     root.mainloop()
 
