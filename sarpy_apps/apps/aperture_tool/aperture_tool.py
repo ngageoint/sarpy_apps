@@ -10,17 +10,20 @@ __author__ = ("Jason Casey", "Thomas McCullough")
 import os
 import time
 import numpy
-import scipy.constants.constants as scipy_constants
 from typing import Union, Tuple
 
+from scipy.constants import foot, inch
+
 import tkinter
-from tkinter.filedialog import asksaveasfilename
+from tkinter import ttk
+
+from tkinter.filedialog import asksaveasfilename, askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
-from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, BooleanDescriptor, FloatDescriptor
+from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, \
+    BooleanDescriptor, FloatDescriptor, StringDescriptor
 from tk_builder.image_reader import NumpyImageReader
 from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
-from tk_builder.panels.file_selector import FileSelector
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.widgets import widget_descriptors, basic_widgets
@@ -31,6 +34,7 @@ from sarpy.processing.aperture_filter import ApertureFilter
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
+from sarpy_apps.supporting_classes.file_filters import common_use_collection
 
 # TODO: review the RadioButtonPanel situation?
 
@@ -214,17 +218,17 @@ class ChipSizePanel(WidgetPanel):
 
 
 class ImageInfoPanel(WidgetPanel):
-    _widget_list = ("file_selector", "chip_size_panel", "phd_options")
-    file_selector = widget_descriptors.PanelDescriptor("file_selector", FileSelector)          # type: FileSelector
-    chip_size_panel = widget_descriptors.PanelDescriptor("chip_size_panel", ChipSizePanel)     # type: ChipSizePanel
-    phd_options = widget_descriptors.PanelDescriptor("phd_options", PhdOptionsPanel)  # type: PhdOptionsPanel
+    _widget_list = ("file_label", "chip_size_panel", "phd_options")
+    file_label = widget_descriptors.LabelDescriptor(
+        "file_label", default_text='', docstring='The file name label.')  # type: basic_widgets.Label
+    chip_size_panel = widget_descriptors.PanelDescriptor(
+        "chip_size_panel", ChipSizePanel)  # type: ChipSizePanel
+    phd_options = widget_descriptors.PanelDescriptor(
+        "phd_options", PhdOptionsPanel)  # type: PhdOptionsPanel
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        # self.init_w_basic_widget_list(n_rows=2, n_widgets_per_row_list=[1, 2])
         self.init_w_vertical_layout()
-
-        self.file_selector.set_fname_filters([("NITF files", ".nitf .NITF .ntf .NTF")])
         self.master.protocol("WM_DELETE_WINDOW", self.close_window)
 
 
@@ -315,80 +319,8 @@ class PhaseHistoryPanel(WidgetPanel):
 
 
 ###########
-# selected region popup
+# The aperture tool, depends on selecting a region
 
-class Toolbar(WidgetPanel):
-    _widget_list = ("select_aoi", "submit_aoi")
-    select_aoi = widget_descriptors.ButtonDescriptor("select_aoi")  # type: basic_widgets.Button
-    submit_aoi = widget_descriptors.ButtonDescriptor("submit_aoi")  # type: basic_widgets.Button
-
-    def __init__(self, parent):
-        WidgetPanel.__init__(self, parent)
-        self.init_w_horizontal_layout()
-
-
-class SelectedRegionPanel(WidgetPanel):
-    """
-    The widget for selecting the Area of Interest for the aperture tool.
-    """
-
-    _widget_list = ("toolbar", "image_panel")
-    image_panel = widget_descriptors.ImagePanelDescriptor(
-        "image_panel")  # type: ImagePanel
-    toolbar = widget_descriptors.PanelDescriptor(
-        "toolbar", Toolbar)   # type: Toolbar
-
-    def __init__(self, parent, app_variables):
-        """
-
-        Parameters
-        ----------
-        parent : tkinter.Tk|tkinter.TopLevel
-        app_variables : AppVariables
-        """
-
-        # set the parent frame
-        WidgetPanel.__init__(self, parent)
-
-        self.parent = parent
-        self.app_variables = app_variables
-
-        self.init_w_vertical_layout()
-        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
-
-        sicd_reader = ComplexImageReader(app_variables.sicd_reader_object.base_reader.file_name)
-        self.image_panel.set_image_reader(sicd_reader)
-
-        self.image_panel.hide_controls()
-
-        self.toolbar.select_aoi.config(command=self.set_current_tool_to_select)
-        self.toolbar.submit_aoi.config(command=self.submit_aoi)
-        self.toolbar.do_not_expand()
-
-    def set_current_tool_to_select(self):
-        self.image_panel.canvas.set_current_tool_to_select()
-
-    def submit_aoi(self):
-        selection_image_coords = self.image_panel.canvas.get_shape_image_coords(
-            self.image_panel.canvas.variables.select_rect.uid)
-        if selection_image_coords:
-            self.app_variables.selected_region = selection_image_coords
-            y1 = int(min(selection_image_coords[0], selection_image_coords[2]))
-            x1 = int(min(selection_image_coords[1], selection_image_coords[3]))
-            y2 = int(max(selection_image_coords[0], selection_image_coords[2]))
-            x2 = int(max(selection_image_coords[1], selection_image_coords[3]))
-            complex_data = self.app_variables.sicd_reader_object.base_reader[y1:y2, x1:x2]
-            self.app_variables.aperture_filter.set_sub_image_bounds((y1, y2), (x1, x2))
-            self.app_variables.selected_region_complex_data = complex_data
-            self.parent.destroy()
-        else:
-            showinfo('No Region Selected', message='Select region for action.')
-            return
-
-
-###########
-# The main app
 
 class AnimationProperties(object):
     """
@@ -418,54 +350,37 @@ class AnimationProperties(object):
         docstring='')  # type: float
 
 
-class AppVariables(object):
-    """
-    App variables for the aperture tool.
-    """
-
-    sicd_reader_object = TypedDescriptor(
-        'sicd_reader_object', ComplexImageReader,
-        docstring='')  # type: ComplexImageReader
-    aperture_filter = TypedDescriptor(
-        'aperture_filter', ApertureFilter,
-        docstring='')  # type: ApertureFilter
-    fft_complex_data = TypedDescriptor(
-        'fft_complex_data', numpy.ndarray,
-        docstring='')  # type: numpy.ndarray
-    selected_region_complex_data = TypedDescriptor(
-        'selected_region_complex_data', numpy.ndarray,
-        docstring='')  # type: numpy.ndarray
-    animation = TypedDescriptor(
-        'animation', AnimationProperties,
-        docstring='The animation configuration.')  # type: AnimationProperties
-
-    def __init__(self):
-        self.selected_region = None     # type: Union[None, Tuple]
-        self.animation = AnimationProperties()
-
-
 class ApertureTool(WidgetPanel):
     """
     The widget for understanding the relationship between the phase data and the
     reconstructed complex image.
     """
 
-    _widget_list = ("frequency_vs_degree_panel", "filtered_panel")
+    _widget_list = ("phase_history_panel", "filtered_panel")
 
-    frequency_vs_degree_panel = widget_descriptors.ImagePanelDescriptor(
-        "frequency_vs_degree_panel")  # type: ImagePanel
+    phase_history_panel = widget_descriptors.ImagePanelDescriptor(
+        "phase_history_panel")  # type: ImagePanel
     filtered_panel = widget_descriptors.ImagePanelDescriptor(
         "filtered_panel")  # type: ImagePanel
 
     image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)  # type: ImageInfoPanel
-    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
     phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)  # type: PhaseHistoryPanel
-    metaviewer = widget_descriptors.PanelDescriptor("metaviewer", Metaviewer)  # type: Metaviewer
     animation_panel = widget_descriptors.PanelDescriptor("animation_panel", AnimationPanel)   # type: AnimationPanel
 
-    def __init__(self, primary):
-        self.app_variables = AppVariables()
+    def __init__(self, primary, app_variables):
+        """
+
+        Parameters
+        ----------
+        primary : tkinter.Tk|tkinter.TopLevel
+        app_variables : AppVariables
+        """
+
+        self.app_variables = app_variables
         self.primary = primary
+        self._can_use_tool = True
+        self._update_on_changed = True
+        self._skip_update = False
 
         primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
@@ -476,23 +391,27 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel = ImageInfoPanel(self.image_info_popup_panel)
         self.image_info_popup_panel.withdraw()
 
-        self.image_info_panel.file_selector.select_file.config(command=self.select_file)
-
         self.ph_popup_panel = tkinter.Toplevel(self.primary)
         self.phase_history = PhaseHistoryPanel(self.ph_popup_panel)
         self.ph_popup_panel.withdraw()
 
-        self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
-        self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon_popup_panel.withdraw()
-
-        self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
-        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer_popup_panel.withdraw()
-
         self.animation_popup_panel = tkinter.Toplevel(self.primary)
         self.animation_panel = AnimationPanel(self.animation_popup_panel)
         self.animation_popup_panel.withdraw()
+
+        menubar = tkinter.Menu()
+        popups_menu = tkinter.Menu(menubar, tearoff=0)
+        popups_menu.add_command(label="Main Controls", command=self.main_controls_popup)
+        popups_menu.add_command(label="Phase History", command=self.ph_popup)
+        popups_menu.add_command(label="Animation", command=self.animation_fast_slow_popup)
+        menubar.add_cascade(label="Popups", menu=popups_menu)
+
+        primary.config(menu=menubar)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.phase_history_panel.master.pack(side='left', fill=tkinter.BOTH, expand=tkinter.YES)
+        self.filtered_panel.master.pack(side='right', fill=tkinter.BOTH, expand=tkinter.YES)
+        self.filtered_panel.canvas.set_canvas_size(300, 400)
+        self.phase_history_panel.canvas.set_canvas_size(300, 400)
 
         # callbacks for animation
         self.animation_panel.animation_settings.play.config(command=self.callback_play_animation)
@@ -501,51 +420,27 @@ class ApertureTool(WidgetPanel):
         self.animation_panel.animation_settings.stop.config(command=self.callback_stop_animation)
         self.animation_panel.save.config(command=self.callback_save_animation)
 
-        menubar = tkinter.Menu()
-
-        filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open", command=self.select_file)
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.exit)
-
-        # create more pulldown menus
-        popups_menu = tkinter.Menu(menubar, tearoff=0)
-        popups_menu.add_command(label="Main Controls", command=self.main_controls_popup)
-        popups_menu.add_command(label="Phase History", command=self.ph_popup)
-        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
-        popups_menu.add_command(label="Animation", command=self.animation_fast_slow_popup)
-
-        menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Popups", menu=popups_menu)
-
-        primary.config(menu=menubar)
-
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-
         # configure our panels
-        self.frequency_vs_degree_panel.hide_tools()
-        self.frequency_vs_degree_panel.hide_shapes()
-        self.frequency_vs_degree_panel.hide_select_index()
+        self.phase_history_panel.hide_tools()
+        self.phase_history_panel.hide_shapes()
+        self.phase_history_panel.hide_select_index()
+        self.phase_history_panel.hide_remap_combo()
 
-        self.frequency_vs_degree_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
-        self.frequency_vs_degree_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
+        self.phase_history_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_finalized)
+        self.phase_history_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
 
         self.filtered_panel.hide_tools()
         self.filtered_panel.hide_shapes()
         self.filtered_panel.hide_select_index()
+        self.filtered_panel.hide_remap_combo()
 
         self.image_info_panel.phd_options.uniform_weighting.config(command=self.callback_update_weighting)
         self.image_info_panel.phd_options.apply_deskew.config(command=self.callback_update_apply_deskew)
         self.image_info_panel.phd_options.deskew_fast_slow.slow.config(command=self.callback_update_deskew_direction)
         self.image_info_panel.phd_options.deskew_fast_slow.fast.config(command=self.callback_update_deskew_direction)
 
-        self.filtered_panel.canvas.set_canvas_size(600, 400)
-
-        self.frequency_vs_degree_panel.canvas.disable_mouse_zoom()
+        self.phase_history_panel.canvas.disable_mouse_zoom()
         self.filtered_panel.canvas.disable_mouse_zoom()
-
-        self.metaicon.hide_on_close()
 
     def callback_update_deskew_direction(self):
         if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
@@ -576,8 +471,192 @@ class ApertureTool(WidgetPanel):
         self.update_fft_image()
         self.update_filtered_image()
 
+    # TODO: update variables, some don't exist in the current form.
+    def callback_save_animation(self):
+        self.update_animation_params()
+        filename = asksaveasfilename(
+            initialdir=os.path.expanduser("~"), title="Select file",
+            filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
+
+        extension = filename[-4:]
+        if extension.lower() != ".gif":
+            filename = filename + ".gif"
+        frame_sequence = []
+        direction_forward_or_back = "forward"
+        if self.animation_panel.mode_panel.reverse.is_selected():
+            direction_forward_or_back = "back"
+        self.animation_panel.animation_settings.stop.config(state="normal")
+
+        self.animation_panel.animation_settings.disable_all_widgets()
+        self.animation_panel.animation_settings.stop.config(state="normal")
+        if direction_forward_or_back == "forward":
+            self.app_variables.animation.current_position = -1
+        else:
+            self.app_variables.animation.current_position = self.app_variables.animation.n_frames
+        for i in range(self.app_variables.animation.n_frames):
+            filtered_image = self.get_filtered_image()
+            frame_sequence.append(filtered_image)
+            self.update_animation_params()
+            self.step_animation(direction_forward_or_back)
+            self.phase_history_panel.update()
+        fps = float(self.animation_panel.animation_settings.frame_rate.get())
+        frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
+        self.animation_panel.animation_settings.enable_all_widgets()
+
+    def callback_step_forward(self):
+        self.step_animation("forward")
+
+    def callback_step_back(self):
+        self.step_animation("back")
+
+    def callback_stop_animation(self):
+        self.app_variables.animation.stop_pressed = True
+
+    def callback_play_animation(self):
+        self.update_animation_params()
+
+        direction_forward_or_back = "forward"
+        if self.animation_panel.mode_panel.reverse.is_selected():
+            direction_forward_or_back = "back"
+        time_between_frames = 1 / float(self.animation_panel.animation_settings.frame_rate.get())
+        self.animation_panel.animation_settings.stop.config(state="normal")
+
+        def play_animation():
+            self.animation_panel.animation_settings.disable_all_widgets()
+            self.animation_panel.animation_settings.stop.config(state="normal")
+            if direction_forward_or_back == "forward":
+                self.app_variables.animation.current_position = -1
+            else:
+                self.app_variables.animation.current_position = self.app_variables.animation.n_frames
+            for i in range(self.app_variables.animation.n_frames):
+                self.update_animation_params()
+                if self.app_variables.animation.stop_pressed:
+                    self.animation_panel.animation_settings.enable_all_widgets()
+                    break
+                tic = time.time()
+                self.step_animation(direction_forward_or_back)
+                self.phase_history_panel.update()
+                toc = time.time()
+                if (toc - tic) < time_between_frames:
+                    time.sleep(time_between_frames - (toc - tic))
+
+        self.app_variables.animation.stop_pressed = False
+        if self.animation_panel.animation_settings.cycle_continuously.is_selected():
+            while not self.app_variables.animation.stop_pressed:
+                play_animation()
+        else:
+            play_animation()
+        self.app_variables.animation.stop_pressed = False
+        self.animation_panel.animation_settings.enable_all_widgets()
+
+    # noinspection PyUnusedLocal
+    def handle_selection_finalized(self, event):
+        """
+        This handles the change in selection in the phase history panel.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.update_phase_history_selection()
+        self.update_filtered_image()
+
+    # noinspection PyUnusedLocal
+    def handle_selection_change(self, event):
+        """
+        This handles the change in selection in the phase history panel.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if self._skip_update:
+            return
+
+        if self._update_on_changed:
+            self.update_phase_history_selection()
+            self.update_filtered_image()
+
     def exit(self):
         self.quit()
+
+    # various methods used in the callbacks
+    def make_blank(self):
+        junk_data = numpy.zeros((100, 100), dtype='uint8')
+        self.phase_history_panel.set_image_reader(NumpyImageReader(junk_data))
+        self.filtered_panel.set_image_reader(NumpyImageReader(junk_data))
+
+    def handle_main_selection_update(self):
+        """
+        Handle that the selected region has changed. This is expected to be called
+        by the RegionSelector.
+        """
+
+        if self._can_use_tool:
+            self.update_fft_image()
+
+    def handle_reader_update(self):
+        """
+        Handle that the reader and/or index has been updated. This is expected to
+        be called by the region selector.
+        """
+        self._can_use_tool = True
+        if self.app_variables.image_reader is None:
+            self._can_use_tool = False
+            self.image_info_panel.file_label.set_text('')
+            self.app_variables.aperture_filter = None
+            self.make_blank()
+            return  # nothing to be done
+
+        file_name = self.app_variables.image_reader.file_name
+        if file_name is None:
+            file_name = ''
+        self.image_info_panel.file_label.set_text(file_name)
+
+        the_sicd = self.app_variables.image_reader.get_sicd()
+
+        # handle the case of no deskew:
+        if the_sicd.Grid.Row.DeltaKCOAPoly is None or the_sicd.Grid.Col.DeltaKCOAPoly is None:
+            self._can_use_tool = False
+            showinfo('DeltaKCOAPolys not populated', message='At least one of the DeltaKCOAPolys is unpopulated. There is nothing to do.')
+            self.app_variables.aperture_filter = None
+            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
+            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
+            self.image_info_panel.phd_options.apply_deskew.config(state="disabled")
+            self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
+            return
+
+        self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="normal")
+        self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="normal")
+        self.image_info_panel.phd_options.apply_deskew.config(state="normal")
+        self.image_info_panel.phd_options.apply_deskew.value.set(True)
+
+        row_delta_kcoa = the_sicd.Grid.Row.DeltaKCOAPoly.get_array()
+        if row_delta_kcoa.size == 1 and row_delta_kcoa[0, 0] == 0:
+            the_dimension = 1
+            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(1)
+        else:
+            the_dimension = 0
+            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(0)
+
+        if the_sicd.Grid.Row.WgtFunct is None or the_sicd.Grid.Col.WgtFunct is None:
+            deweighting = False
+            self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
+            self.image_info_panel.phd_options.uniform_weighting.value.set(False)
+        else:
+            deweighting = True
+            self.image_info_panel.phd_options.uniform_weighting.config(state="normal")
+            self.image_info_panel.phd_options.uniform_weighting.value.set(True)
+
+        self.app_variables.aperture_filter = ApertureFilter(
+            self.app_variables.image_reader.base_reader,
+            dimension=the_dimension,
+            apply_deskew=True,
+            apply_deweighting=deweighting)
+
+        self.update_fft_image()
 
     def update_animation_params(self):
         self.app_variables.animation.n_frames = int(self.animation_panel.animation_settings.number_of_frames.get())
@@ -589,12 +668,6 @@ class ApertureTool(WidgetPanel):
             float(self.animation_panel.resolution_settings.min_res.get()) * 0.01
         self.app_variables.animation.max_aperture_percent = \
             float(self.animation_panel.resolution_settings.max_res.get()) * 0.01
-
-    def callback_step_forward(self):
-        self.step_animation("forward")
-
-    def callback_step_back(self):
-        self.step_animation("back")
 
     def step_animation(self, direction_forward_or_back):
         """
@@ -610,7 +683,7 @@ class ApertureTool(WidgetPanel):
         """
 
         self.update_animation_params()
-        fft_canvas_bounds = self.frequency_vs_degree_panel.canvas.image_coords_to_canvas_coords(
+        fft_canvas_bounds = self.phase_history_panel.canvas.image_coords_to_canvas_coords(
             self.get_fft_image_bounds())
         full_canvas_x_aperture = fft_canvas_bounds[2] - fft_canvas_bounds[0]
         full_canvas_y_aperture = fft_canvas_bounds[3] - fft_canvas_bounds[1]
@@ -672,58 +745,13 @@ class ApertureTool(WidgetPanel):
             frame_num = self.app_variables.animation.current_position
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
-        self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_canvas_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid, new_rect)
+        self.phase_history_panel.canvas.modify_existing_shape_using_canvas_coords(
+            self.phase_history_panel.canvas.variables.select_rect.uid, new_rect)
         self.update_filtered_image()
         self.update_phase_history_selection()
 
-    def callback_stop_animation(self):
-        self.app_variables.animation.stop_pressed = True
-        self.animation_panel.animation_settings.unpress_all_buttons()
-
-    def callback_play_animation(self):
-        self.update_animation_params()
-
-        direction_forward_or_back = "forward"
-        if self.animation_panel.mode_panel.reverse.is_selected():
-            direction_forward_or_back = "back"
-        time_between_frames = 1 / float(self.animation_panel.animation_settings.frame_rate.get())
-        self.animation_panel.animation_settings.stop.config(state="normal")
-
-        def play_animation():
-            self.animation_panel.animation_settings.disable_all_widgets()
-            self.animation_panel.animation_settings.stop.config(state="normal")
-            if direction_forward_or_back == "forward":
-                self.app_variables.animation.current_position = -1
-            else:
-                self.app_variables.animation.current_position = self.app_variables.animation.n_frames
-            for i in range(self.app_variables.animation.n_frames):
-                self.update_animation_params()
-                if self.app_variables.animation.stop_pressed:
-                    self.animation_panel.animation_settings.enable_all_widgets()
-                    break
-                tic = time.time()
-                self.step_animation(direction_forward_or_back)
-                self.frequency_vs_degree_panel.update()
-                toc = time.time()
-                if (toc - tic) < time_between_frames:
-                    time.sleep(time_between_frames - (toc - tic))
-
-        self.app_variables.animation.stop_pressed = False
-        if self.animation_panel.animation_settings.cycle_continuously.is_selected():
-            while not self.app_variables.animation.stop_pressed:
-                play_animation()
-        else:
-            play_animation()
-        self.app_variables.animation.stop_pressed = False
-        self.animation_panel.animation_settings.enable_all_widgets()
-        self.animation_panel.unpress_all_buttons()
-
     def animation_fast_slow_popup(self):
         self.animation_popup_panel.deiconify()
-
-    def metaviewer_popup(self):
-        self.metaviewer_popup_panel.deiconify()
 
     def main_controls_popup(self):
         self.image_info_popup_panel.deiconify()
@@ -731,113 +759,69 @@ class ApertureTool(WidgetPanel):
     def ph_popup(self):
         self.ph_popup_panel.deiconify()
 
-    def metaicon_popup(self):
-        self.metaicon_popup_panel.deiconify()
-
-    def handle_selection_change(self, event):
-        self.update_phase_history_selection()
-        self.update_filtered_image()
-
+    # updating the various image data
     def update_fft_image(self):
         """
         This changes the underlying phase history data from the new aperture_filter object.
         """
 
-        if self.app_variables.aperture_filter is not None:
-            fft_complex_data = self.app_variables.aperture_filter.normalized_phase_history
-            self.app_variables.fft_complex_data = fft_complex_data
-
-            # self.app_variables.fft_display_data = remap.density(fft_complex_data)
-            fft_display_data = numpy.abs(fft_complex_data)
-            fft_display_data = fft_display_data - fft_display_data.min()
-            fft_display_data = fft_display_data / fft_display_data.max() * 255
-            self.app_variables.fft_display_data = fft_display_data
-            if not self.app_variables.aperture_filter.flip_x_axis:
-                self.app_variables.fft_display_data = numpy.fliplr(self.app_variables.fft_display_data)
-            fft_reader = NumpyImageReader(self.app_variables.fft_display_data)
-            self.frequency_vs_degree_panel.set_image_reader(fft_reader)
-            # self.frequency_vs_degree_panel.update_everything()
-
-    def select_file(self):
-        sicd_fname = self.image_info_panel.file_selector.select_file_command()
-        if sicd_fname == '':
-            # no file was selected
+        if self.app_variables.aperture_filter is None or \
+                self.app_variables.aperture_filter.normalized_phase_history is None:
+            self.make_blank()
             return
-        self.app_variables.sicd_reader_object = ComplexImageReader(sicd_fname)
 
-        dim = 1
-        if self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly:
-            if self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly.Coefs == [[0]]:
-                dim = 0
+        # set the phase history image data
+        temp_phase_history = numpy.abs(self.app_variables.aperture_filter.normalized_phase_history)
+        min_phase_history = numpy.min(temp_phase_history)
+        max_phase_history = numpy.max(temp_phase_history)
+        display_phase_history = numpy.empty(temp_phase_history.shape, dtype='uint8')
+        display_phase_history[:] = 255*(temp_phase_history - min_phase_history)/(max_phase_history - min_phase_history)
 
-        self.app_variables.aperture_filter = \
-            ApertureFilter(self.app_variables.sicd_reader_object.base_reader,
-                           dimension=dim,
-                           apply_deskew=True,
-                           apply_deweighting=True)
-        self.image_info_panel.phd_options.uniform_weighting.value.set(True)
-        self.image_info_panel.phd_options.apply_deskew.value.set(True)
-        if dim == 0:
-            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(0)
-        else:
-            self.image_info_panel.phd_options.deskew_fast_slow.set_selection(1)
+        if not self.app_variables.aperture_filter.flip_x_axis:
+            display_phase_history = numpy.fliplr(display_phase_history)
+        fft_reader = NumpyImageReader(display_phase_history)
 
-        # handle the case of no deskew:
-        if not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.DeltaKCOAPoly and \
-                not self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.DeltaKCOAPoly:
-            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
-            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
-            self.image_info_panel.phd_options.apply_deskew.config(state="disabled")
-            self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
+        self._skip_update = True # begin short circuiting a stupid canvas update
+        self.phase_history_panel.set_image_reader(fft_reader)
 
-        # TODO: Check for default deweight value in Grid.Col/Row.WgtType
+        # set up the selection rectangle properties
+        select_rect_id = self.phase_history_panel.canvas.variables.select_rect.uid
+        rect_bounds = self.get_fft_image_bounds()
+        vector_object = self.phase_history_panel.canvas.get_vector_object(select_rect_id)
+        vector_object.image_drag_limits = rect_bounds
+        self.phase_history_panel.canvas.modify_existing_shape_using_image_coords(select_rect_id, rect_bounds)
+        self.phase_history_panel.canvas.show_shape(select_rect_id)
+        # set the phase_history_panel.canvas tool to edit
+        self.phase_history_panel.canvas.set_current_tool_to_edit_shape(select_rect_id)
+        self._skip_update = False  # short circuiting a stupid canvas update
 
-        # TODO: handle index, and generalize what sicd_reader_object could be...
-        self.metaicon.create_from_reader(self.app_variables.sicd_reader_object.base_reader, index=0)
+        # update the information about the phase history area selection
+        the_shape = self.app_variables.aperture_filter.normalized_phase_history.shape
+        self.image_info_panel.chip_size_panel.nx.set_text(the_shape[1])
+        self.image_info_panel.chip_size_panel.ny.set_text(the_shape[0])
 
-        popup = tkinter.Toplevel(self.primary)
-        selected_region_popup = SelectedRegionPanel(popup, self.app_variables)
-        selected_region_popup.image_panel.set_image_reader(self.app_variables.sicd_reader_object)
-        popup.geometry("1000x1000")
-        popup.after(200, selected_region_popup.image_panel.update_everything)
-
-        self.primary.wait_window(popup)
-
-        selected_region_complex_data = self.app_variables.aperture_filter.normalized_phase_history
-
-        self.update_fft_image()
-
-        # TODO: move this into update_fft_image...
-        self.frequency_vs_degree_panel.canvas.set_current_tool_to_edit_shape()
-        self.frequency_vs_degree_panel.canvas.variables.current_shape_id = \
-            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid
-        self.frequency_vs_degree_panel.canvas.modify_existing_shape_using_image_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid, self.get_fft_image_bounds())
-        vector_object = self.frequency_vs_degree_panel.canvas.get_vector_object(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid)
-        vector_object.image_drag_limits = self.get_fft_image_bounds()
-        self.frequency_vs_degree_panel.canvas.show_shape(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid)
-
-        filtered_numpy_reader = NumpyImageReader(self.get_filtered_image())
-        self.filtered_panel.set_image_reader(filtered_numpy_reader)
-
-        self.image_info_panel.chip_size_panel.nx.set_text(numpy.shape(selected_region_complex_data)[1])
-        self.image_info_panel.chip_size_panel.ny.set_text(numpy.shape(selected_region_complex_data)[0])
-
+        # update the filtered images and other phase history information
+        self.update_filtered_image()
         self.update_phase_history_selection()
 
-        self.metaviewer.populate_from_reader(self.app_variables.sicd_reader_object.base_reader)
-
     def get_fft_image_bounds(self):
-        # type: (...) -> (int, int, int, int)
-        meta = self.app_variables.sicd_reader_object.base_reader.sicd_meta
+        # type: () -> (int, int, int, int)
+        """
+        Fetch the bounds for the real phase data from the phase history image.
+        This is based on the SICD.Grid ImpRespBW and SS parameters.
 
-        row_ratio = meta.Grid.Row.ImpRespBW * meta.Grid.Row.SS
-        col_ratio = meta.Grid.Col.ImpRespBW * meta.Grid.Col.SS
+        Returns
+        -------
+        Tuple
+        """
 
-        full_n_rows = self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny
-        full_n_cols = self.frequency_vs_degree_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx
+        meta = self.app_variables.image_reader.get_sicd()
+
+        row_ratio = meta.Grid.Row.ImpRespBW*meta.Grid.Row.SS
+        col_ratio = meta.Grid.Col.ImpRespBW*meta.Grid.Col.SS
+
+        full_n_rows = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny
+        full_n_cols = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx
 
         full_im_y_start = int(full_n_rows * (1 - row_ratio) / 2)
         full_im_y_end = full_n_rows - full_im_y_start
@@ -852,86 +836,72 @@ class ApertureTool(WidgetPanel):
         This updates the reconstructed image, from the selected filtered image area.
         """
 
-        if self.get_filtered_image() is not None:
-            self.filtered_panel.set_image_reader(NumpyImageReader(self.get_filtered_image()))
+        filter_image = self.get_filtered_image()
+        if filter_image is None:
+            full_n_rows = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny
+            full_n_cols = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx
+            filter_image = numpy.zeros((full_n_rows, full_n_cols), dtype='uint8')
+        self.filtered_panel.set_image_reader(NumpyImageReader(filter_image))
 
     def get_filtered_image(self):
+        """
+        Fetches the actual underlying reconstructed image
+        Returns
+        -------
+
+        """
         if self.app_variables.aperture_filter is None:
-            return
+            return None
 
-        select_rect_id = self.frequency_vs_degree_panel.canvas.variables.select_rect.uid
-        full_image_rect = self.frequency_vs_degree_panel.canvas.get_shape_image_coords(select_rect_id)
+        # fetch the remap function
+        remap_function = self.app_variables.image_reader.remap_function
+        if remap_function is None:
+            remap_function = remap.density
 
-        if full_image_rect is not None:
-            y1 = int(full_image_rect[0])
-            x1 = int(full_image_rect[1])
-            y2 = int(full_image_rect[2])
-            x2 = int(full_image_rect[3])
+        # fetch the data
+        select_rect_id = self.phase_history_panel.canvas.variables.select_rect.uid
+        full_image_rect = self.phase_history_panel.canvas.get_shape_image_coords(select_rect_id)
+        if full_image_rect is None:
+            return None
 
-            y_ul = min(y1, y2)
-            y_lr = max(y1, y2)
-            x_ul = min(x1, x2)
-            x_lr = max(x1, x2)
-
-            filtered_complex_image = self.app_variables.aperture_filter[y_ul:y_lr, x_ul:x_lr]
-            filtered_display_image = remap.density(filtered_complex_image)
-            return filtered_display_image
-
-    # TODO: update variables, some don't exist in the current form.
-    def callback_save_animation(self):
-        self.update_animation_params()
-        filename = asksaveasfilename(
-            initialdir=os.path.expanduser("~"), title="Select file",
-            filetypes=(("animated gif", "*.gif"), ("all files", "*.*")))
-
-        extension = filename[-4:]
-        if extension.lower() != ".gif":
-            filename = filename + ".gif"
-        frame_sequence = []
-        direction_forward_or_back = "forward"
-        if self.animation_panel.mode_panel.reverse.is_selected():
-            direction_forward_or_back = "back"
-        self.animation_panel.animation_settings.stop.config(state="normal")
-
-        self.animation_panel.animation_settings.disable_all_widgets()
-        self.animation_panel.animation_settings.stop.config(state="normal")
-        if direction_forward_or_back == "forward":
-            self.app_variables.animation.current_position = -1
-        else:
-            self.app_variables.animation.current_position = self.app_variables.animation.n_frames
-        for i in range(self.app_variables.animation.n_frames):
-            filtered_image = self.get_filtered_image()
-            frame_sequence.append(filtered_image)
-            self.update_animation_params()
-            self.step_animation(direction_forward_or_back)
-            self.frequency_vs_degree_panel.update()
-        fps = float(self.animation_panel.animation_settings.frame_rate.get())
-        frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
-        self.animation_panel.animation_settings.enable_all_widgets()
+        y_min = int(min(full_image_rect[0::2]))
+        y_max = int(max(full_image_rect[0::2]))
+        x_min = int(min(full_image_rect[1::2]))
+        x_max = int(max(full_image_rect[1::2]))
+        if y_min == y_max or x_min == x_max:
+            return None
+        return remap_function(self.app_variables.aperture_filter[y_min:y_max, x_min:x_max])
 
     def update_phase_history_selection(self):
         """
-        This updates the information in the various popups from the selected phase history information.
+        This updates the information in the various popups from the selected phase
+        history information.
         """
 
+        if self.app_variables.image_reader is None or \
+                self.app_variables.image_reader.base_reader is None:
+            return
+
+        the_sicd = self.app_variables.image_reader.get_sicd()
+
         image_bounds = self.get_fft_image_bounds()
-        current_bounds = self.frequency_vs_degree_panel.canvas.shape_image_coords_to_canvas_coords(
-            self.frequency_vs_degree_panel.canvas.variables.select_rect.uid)
-        x_min = min(current_bounds[1], current_bounds[3])
-        x_max = max(current_bounds[1], current_bounds[3])
-        y_min = min(current_bounds[0], current_bounds[2])
-        y_max = max(current_bounds[0], current_bounds[2])
+        current_bounds = self.phase_history_panel.canvas.shape_image_coords_to_canvas_coords(
+            self.phase_history_panel.canvas.variables.select_rect.uid)
+        x_min = min(current_bounds[1::2])
+        x_max = max(current_bounds[1::2])
+        y_min = min(current_bounds[0::2])
+        y_max = max(current_bounds[0::2])
 
         x_full_image_range = image_bounds[3] - image_bounds[1]
         y_full_image_range = image_bounds[2] - image_bounds[0]
 
-        start_cross = (x_min - image_bounds[1]) / x_full_image_range * 100
-        stop_cross = (x_max - image_bounds[1]) / x_full_image_range * 100
-        fraction_cross = (x_max - x_min) / x_full_image_range * 100
+        start_cross = 100*(x_min - image_bounds[1])/float(x_full_image_range)
+        stop_cross = 100*(x_max - image_bounds[1])/float(x_full_image_range)
+        fraction_cross = 100*(x_max - x_min)/float(x_full_image_range)
 
-        start_range = (y_min - image_bounds[0]) / y_full_image_range * 100
-        stop_range = (y_max - image_bounds[0]) / y_full_image_range * 100
-        fraction_range = (y_max - y_min) / y_full_image_range * 100
+        start_range = 100*(y_min - image_bounds[0])/float(y_full_image_range)
+        stop_range = 100*(y_max - image_bounds[0])/float(y_full_image_range)
+        fraction_range = 100*(y_max - y_min)/float(y_full_image_range)
 
         self.phase_history.start_percent_cross.set_text("{:0.4f}".format(start_cross))
         self.phase_history.stop_percent_cross.set_text("{:0.4f}".format(stop_cross))
@@ -943,54 +913,52 @@ class ApertureTool(WidgetPanel):
         # handle units
         self.phase_history.resolution_range_units.set_text("meters")
         self.phase_history.resolution_cross_units.set_text("meters")
-        range_resolution = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.ImpRespWid / \
-                           (fraction_range / 100.0)
-        cross_resolution = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.ImpRespWid / \
-                           (fraction_cross / 100.0)
+        range_resolution = the_sicd.Grid.Row.ImpRespWid/(0.01*fraction_range)
+        cross_resolution = the_sicd.Grid.Col.ImpRespWid/(0.01*fraction_cross)
 
         tmp_range_resolution = range_resolution
         tmp_cross_resolution = cross_resolution
 
         if self.phase_history.english_units_checkbox.is_selected():
-            tmp_range_resolution = range_resolution / scipy_constants.foot
-            tmp_cross_resolution = cross_resolution / scipy_constants.foot
+            tmp_range_resolution = range_resolution/foot
+            tmp_cross_resolution = cross_resolution/foot
             if tmp_range_resolution < 1:
-                tmp_range_resolution = range_resolution / scipy_constants.inch
+                tmp_range_resolution = range_resolution/inch
                 self.phase_history.resolution_range_units.set_text("inches")
             else:
                 self.phase_history.resolution_range_units.set_text("feet")
             if tmp_cross_resolution < 1:
-                tmp_cross_resolution = cross_resolution / scipy_constants.inch
+                tmp_cross_resolution = cross_resolution/inch
                 self.phase_history.resolution_cross_units.set_text("inches")
             else:
                 self.phase_history.resolution_cross_units.set_text("feet")
         else:
             if range_resolution < 1:
-                tmp_range_resolution = range_resolution * 100
+                tmp_range_resolution = range_resolution*100
                 self.phase_history.resolution_range_units.set_text("cm")
             if cross_resolution < 1:
-                tmp_cross_resolution = cross_resolution * 100
+                tmp_cross_resolution = cross_resolution*100
                 self.phase_history.resolution_cross_units.set_text("cm")
 
         self.phase_history.resolution_range.set_text("{:0.2f}".format(tmp_range_resolution))
         self.phase_history.resolution_cross.set_text("{:0.2f}".format(tmp_cross_resolution))
 
-        cross_sample_spacing = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Col.SS
-        range_sample_spacing = self.app_variables.sicd_reader_object.base_reader.sicd_meta.Grid.Row.SS
+        cross_sample_spacing = the_sicd.Grid.Col.SS
+        range_sample_spacing = the_sicd.Grid.Row.SS
 
         tmp_cross_ss = cross_sample_spacing
         tmp_range_ss = range_sample_spacing
 
         if self.phase_history.english_units_checkbox.is_selected():
-            tmp_cross_ss = cross_sample_spacing / scipy_constants.foot
-            tmp_range_ss = range_sample_spacing / scipy_constants.foot
+            tmp_cross_ss = cross_sample_spacing / foot
+            tmp_range_ss = range_sample_spacing / foot
             if tmp_cross_ss < 1:
-                tmp_cross_ss = cross_sample_spacing / scipy_constants.inch
+                tmp_cross_ss = cross_sample_spacing / inch
                 self.phase_history.sample_spacing_cross_units.set_text("inches")
             else:
                 self.phase_history.sample_spacing_cross_units.set_text("feet")
             if tmp_range_ss < 1:
-                tmp_range_ss = range_sample_spacing / scipy_constants.inch
+                tmp_range_ss = range_sample_spacing / inch
                 self.phase_history.sample_spacing_range_units.set_text("inches")
             else:
                 self.phase_history.sample_spacing_range_units.set_text("feet")
@@ -1006,45 +974,331 @@ class ApertureTool(WidgetPanel):
         self.phase_history.sample_spacing_range.set_text("{:0.2f}".format(tmp_range_ss))
 
         # only update if we have twist angle and graze angles
-        if self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.TwistAng and \
-                self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.GrazeAng:
-
-            cross_ground_resolution = cross_resolution / numpy.cos(
-                numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.TwistAng))
-            range_ground_resolution = range_resolution / numpy.cos(
-                numpy.deg2rad(self.app_variables.sicd_reader_object.base_reader.sicd_meta.SCPCOA.GrazeAng))
+        if the_sicd.SCPCOA.TwistAng and the_sicd.SCPCOA.GrazeAng:
+            cross_ground_resolution = cross_resolution/numpy.cos(numpy.deg2rad(the_sicd.SCPCOA.TwistAng))
+            range_ground_resolution = range_resolution/numpy.cos(numpy.deg2rad(the_sicd.SCPCOA.GrazeAng))
 
             tmp_cross_ground_res = cross_ground_resolution
             tmp_range_ground_res = range_ground_resolution
 
             if self.phase_history.english_units_checkbox.is_selected():
-                tmp_cross_ground_res = cross_ground_resolution / scipy_constants.foot
-                tmp_range_ground_res = range_ground_resolution / scipy_constants.foot
+                tmp_cross_ground_res = cross_ground_resolution/foot
+                tmp_range_ground_res = range_ground_resolution/foot
                 if tmp_cross_ground_res < 1:
-                    tmp_cross_ground_res = cross_ground_resolution / scipy_constants.inch
+                    tmp_cross_ground_res = cross_ground_resolution/inch
                     self.phase_history.ground_resolution_cross_units.set_text("inches")
                 else:
                     self.phase_history.ground_resolution_cross_units.set_text("feet")
                 if tmp_range_ground_res < 1:
-                    tmp_range_ground_res = range_ground_resolution / scipy_constants.inch
+                    tmp_range_ground_res = range_ground_resolution / inch
                     self.phase_history.ground_resolution_range_units.set_text("inches")
                 else:
                     self.phase_history.ground_resolution_range_units.set_text("feet")
             else:
                 if cross_ground_resolution < 1:
-                    tmp_cross_ground_res = cross_ground_resolution * 100
+                    tmp_cross_ground_res = cross_ground_resolution*100
                     self.phase_history.ground_resolution_cross_units.set_text("cm")
                 if range_ground_resolution < 1:
-                    tmp_range_ground_res = range_ground_resolution * 100
+                    tmp_range_ground_res = range_ground_resolution*100
                     self.phase_history.ground_resolution_range_units.set_text("cm")
 
             self.phase_history.ground_resolution_cross.set_text("{:0.2f}".format(tmp_cross_ground_res))
             self.phase_history.ground_resolution_range.set_text("{:0.2f}".format(tmp_range_ground_res))
 
 
-if __name__ == '__main__':
+###########
+# The main app
+
+class AppVariables(object):
+    """
+    App variables for the aperture tool.
+    """
+
+    browse_directory = StringDescriptor(
+        'browse_directory', default_value=os.path.expanduser('~'),
+        docstring='The directory for browsing for file selection.')  # type: str
+    image_reader = TypedDescriptor(
+        'image_reader', ComplexImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexImageReader
+    aperture_filter = TypedDescriptor(
+        'aperture_filter', ApertureFilter,
+        docstring='The aperture filter calculator.')  # type: ApertureFilter
+    animation = TypedDescriptor(
+        'animation', AnimationProperties,
+        docstring='The animation configuration.')  # type: AnimationProperties
+    minimum_selection_size = IntegerDescriptor(
+        'minimum_selection_size', default_value=50,
+        docstring='The minimum size to activate the aperture tool.')  # type: int
+    maximum_selection_size = IntegerDescriptor(
+        'maximum_selection_size', default_value=2500,
+        docstring='The maximum size to activate the aperture tool.')  # type: int
+
+    def __init__(self):
+        self.selected_region = None     # type: Union[None, Tuple]
+        self.animation = AnimationProperties()
+
+
+class RegionSelection(WidgetPanel):
+    """
+    The widget for selecting the Area of Interest for the aperture tool.
+    """
+
+    _widget_list = ("instructions", "image_panel")
+    instructions = widget_descriptors.LabelDescriptor(
+        "instructions",
+        default_text='First, open a complex type image file.\n'
+                     'Then, selecting a region (use the select tool) '
+                     'will open the aperture tool for that region.',
+        docstring='The basic instructions.')   # type: basic_widgets.Label
+    image_panel = widget_descriptors.ImagePanelDescriptor(
+        "image_panel", docstring='The image panel.')  # type: ImagePanel
+    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
+    metaviewer = widget_descriptors.PanelDescriptor("metaviewer", Metaviewer)  # type: Metaviewer
+
+    def __init__(self, parent):
+        """
+
+        Parameters
+        ----------
+        parent : tkinter.Tk|tkinter.TopLevel
+        """
+
+        # set the parent frame
+        primary_frame = basic_widgets.Frame(parent)
+        WidgetPanel.__init__(self, primary_frame)
+
+        self.variables = AppVariables()
+
+        self.init_w_vertical_layout()
+        # adjust packing so the image panel takes all the space
+        self.instructions.master.pack(side='top', expand=tkinter.NO)
+        self.image_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
+        # jazz up the instruction a little
+        self.instructions.config(font=('Arial', '12'), anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.CENTER, padding=5)
+        # hide some extraneous image panel elements
+        self.image_panel.hide_tools('shape_drawing')
+        self.image_panel.hide_shapes()
+
+        # set up the metaicon and metaviewer popups
+        self.metaicon_popup_panel = tkinter.Toplevel(parent)
+        self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon_popup_panel.withdraw()
+        # setup the metaviewer
+        self.metaviewer_popup_panel = tkinter.Toplevel(parent)
+        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
+        self.metaviewer_popup_panel.withdraw()
+        # setup the aperture tool
+        self.aperture_popup_panel = tkinter.Toplevel(parent)
+        self.aperture_tool = ApertureTool(self.aperture_popup_panel, self.variables)
+        self.aperture_popup_panel.withdraw()
+
+        # define menus
+        menubar = tkinter.Menu()
+        # file menu
+        filemenu = tkinter.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Open Image", command=self.callback_select_files)
+        filemenu.add_command(label="Open Directory", command=self.callback_select_directory)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.exit)
+        # menus for informational popups
+        popups_menu = tkinter.Menu(menubar, tearoff=0)
+        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # ensure menus cascade
+        menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="Popups", menu=popups_menu)
+
+        # handle packing
+        parent.config(menu=menubar)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
+        # define the callbacks
+        self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
+        self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+    # callbacks
+    def exit(self):
+        self.quit()
+
+    def metaviewer_popup(self):
+        """
+        Show the metaviewer
+        """
+
+        self.metaviewer_popup_panel.deiconify()
+
+    def metaicon_popup(self):
+        """
+        Show the metaicon
+        """
+
+        self.metaicon_popup_panel.deiconify()
+
+    def aperture_tool_popup(self):
+        """
+        Show the aperture tool
+        """
+
+        self.aperture_popup_panel.deiconify()
+
+    # noinspection PyUnusedLocal
+    def handle_selection_change(self, event):
+        """
+        Handle a change in the selection area.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if self.variables.image_reader is None:
+            # this shouldn't ever happen?
+            return
+
+        self.aperture_tool_popup()
+        # update the aperture filter
+        selection_image_coords = self.image_panel.canvas.get_shape_image_coords(
+            self.image_panel.canvas.variables.select_rect.uid)
+
+        if selection_image_coords is None:
+            self.variables.aperture_filter.set_sub_image_bounds(None, None)
+            self.aperture_tool.handle_main_selection_update()
+            return
+
+        min_size = min(self.variables.minimum_selection_size,
+                       self.variables.image_reader.full_image_ny,
+                       self.variables.image_reader.full_image_nx)
+        max_size = self.variables.maximum_selection_size
+
+        y1 = int(min(selection_image_coords[0], selection_image_coords[2]))
+        x1 = int(min(selection_image_coords[1], selection_image_coords[3]))
+        y2 = int(max(selection_image_coords[0], selection_image_coords[2]))
+        x2 = int(max(selection_image_coords[1], selection_image_coords[3]))
+        if x2-x1 < min_size or y2-y1 < min_size:
+            showinfo('Minimum size selection not met.',
+                     message='The selection is not as large as the specified minimum '
+                             '({} pixels on an edge).'.format(min_size))
+            return
+        elif x2-x1 > max_size or y2-y1 > max_size:
+            showinfo('Maximum size selection not met.',
+                     message='The selection is not as large as the specified maximum '
+                             '({} pixels on an edge).'.format(max_size))
+            return
+
+        if self.variables.aperture_filter is not None:
+            self.variables.aperture_filter.set_sub_image_bounds((y1, y2), (x1, x2))
+            self.aperture_tool.handle_main_selection_update()
+
+    # noinspection PyUnusedLocal
+    def handle_remap_change(self, event):
+        """
+        Handle that the remap for the image canvas has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if self.variables.image_reader is not None:
+            self.aperture_tool.update_filtered_image()
+
+    #noinspection PyUnusedLocal
+    def handle_image_index_changed(self, event):
+        """
+        Handle that the image index has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.populate_metaicon()
+        self.aperture_tool.handle_reader_update()
+
+    def callback_select_files(self):
+        fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
+        if fnames is None or fnames in ['', ()]:
+            return
+        # update the default directory for browsing
+        self.variables.browse_directory = os.path.split(fnames[0])[0]
+
+        if len(fnames) == 1:
+            the_reader = ComplexImageReader(fnames[0])
+        else:
+            the_reader = ComplexImageReader(fnames)
+        self.update_reader(the_reader)
+
+    def callback_select_directory(self):
+        dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
+        if dirname is None or dirname in [(), '']:
+            return
+        # update the default directory for browsing
+        self.variables.browse_directory = os.path.split(dirname)[0]
+        the_reader = ComplexImageReader(dirname)
+        self.update_reader(the_reader)
+
+    # methods used in callbacks
+    def update_reader(self, the_reader):
+        """
+        Update the reader.
+
+        Parameters
+        ----------
+        the_reader : ImageReader
+        """
+
+        # change the tool to view
+        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.set_current_tool_to_view()
+        # update the reader
+        self.variables.image_reader = the_reader
+        self.image_panel.set_image_reader(the_reader)
+        # refresh appropriate GUI elements
+        self.populate_metaicon()
+        self.populate_metaviewer()
+        self.aperture_tool.handle_reader_update()
+
+    def populate_metaicon(self):
+        """
+        Populate the metaicon.
+        """
+
+        if self.image_panel.canvas.variables.canvas_image_object is None or \
+                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            self.metaicon.make_empty()
+
+        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+
+        assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
+        self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
+
+    def populate_metaviewer(self):
+        """
+        Populate the metaviewer.
+        """
+
+        if self.image_panel.canvas.variables.canvas_image_object is None or \
+                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            self.metaviewer.empty_entries()
+
+        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+
+        assert isinstance(image_reader, ComplexImageReader)
+        self.metaviewer.populate_from_reader(image_reader.base_reader)
+
+
+def main():
     root = tkinter.Tk()
-    app = ApertureTool(root)
-    root.geometry("1200x600")
+
+    the_style = ttk.Style()
+    the_style.theme_use('clam')
+
+    app = RegionSelection(root)
+    root.geometry("800x600")
+
     root.mainloop()
 
+
+if __name__ == '__main__':
+    main()

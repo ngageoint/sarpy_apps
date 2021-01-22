@@ -880,9 +880,6 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.image_panel.canvas.redraw_all_shapes()
         # TODO: redraw all shapes on the context_panel?
 
-        # enable appropriate GUI elements
-        self.context_panel.buttons.enable_all_buttons()
-
 
 def main():
     root = tkinter.Tk()

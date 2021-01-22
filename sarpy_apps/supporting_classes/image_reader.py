@@ -96,6 +96,10 @@ class ComplexImageReader(ImageReader):
         return True
 
     @property
+    def remap_function(self):
+        return self._remap_function
+
+    @property
     def image_count(self):
         return 0 if self._chippers is None else len(self._chippers)
 
@@ -127,6 +131,19 @@ class ComplexImageReader(ImageReader):
         else:
             logging.error('Got unexpected value for remap {}'.format(remap_type))
             self._remap_function = remap.density
+
+    def get_sicd(self):
+        """
+        Gets the relevant SICD structure.
+
+        Returns
+        -------
+        None|SICDType
+        """
+
+        if self._index is None:
+            return None
+        return self.base_reader.get_sicds_as_tuple()[self._index]
 
 
 class QuadPolImageReader(ImageReader):
@@ -220,6 +237,10 @@ class QuadPolImageReader(ImageReader):
     @property
     def remapable(self):
         return True
+
+    @property
+    def remap_function(self):
+        return self._remap_function
 
     @property
     def image_count(self):
@@ -399,6 +420,10 @@ class DerivedImageReader(ImageReader):
     @property
     def remapable(self):
         return False
+
+    @property
+    def remap_function(self):
+        return None
 
     @property
     def image_count(self):

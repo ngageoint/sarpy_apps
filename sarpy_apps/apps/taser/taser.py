@@ -29,7 +29,7 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 class AppVariables(object):
     browse_directory = StringDescriptor(
         'browse_directory', default_value=os.path.expanduser('~'),
-        docstring='The directory for browsing for file selection.')  # type: [str]
+        docstring='The directory for browsing for file selection.')  # type: str
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
