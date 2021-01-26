@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module provides a general viewer tool.
+This module provides a general SAR image viewer tool.
 """
 
 __classification__ = "UNCLASSIFIED"
@@ -36,9 +36,9 @@ class AppVariables(object):
         'image_reader', ImageReader, docstring='')  # type: ImageReader
 
 
-class Taser(WidgetPanel):
-    _widget_list = ("taser_image_panel", "pyplot_panel")
-    taser_image_panel = widget_descriptors.ImagePanelDescriptor("taser_image_panel")   # type: ImagePanel
+class ImageViewer(WidgetPanel):
+    _widget_list = ("image_panel", "pyplot_panel")
+    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
     pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
 
     def __init__(self, primary):
@@ -78,15 +78,15 @@ class Taser(WidgetPanel):
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
-        self.taser_image_panel.hide_tools('shape_drawing')
-        self.taser_image_panel.hide_shapes()
+        self.image_panel.hide_tools('shape_drawing')
+        self.image_panel.hide_shapes()
 
         # bind canvas events for proper functionality
         # this makes for bad performance on a larger image - do not activate
-        # self.taser_image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
-        self.taser_image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
-        self.taser_image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        self.taser_image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+        # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
+        self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
+        self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
     def exit(self):
         self.quit()
@@ -110,9 +110,9 @@ class Taser(WidgetPanel):
         if self.variables.image_reader is None:
             return
 
-        full_image_width = self.taser_image_panel.canvas.variables.state.canvas_width
-        fill_image_height = self.taser_image_panel.canvas.variables.state.canvas_height
-        self.taser_image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
+        full_image_width = self.image_panel.canvas.variables.state.canvas_width
+        fill_image_height = self.image_panel.canvas.variables.state.canvas_height
+        self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
         self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal
@@ -149,11 +149,11 @@ class Taser(WidgetPanel):
         """
 
         # change the tool to view
-        self.taser_image_panel.canvas.set_current_tool_to_view()
-        self.taser_image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.set_current_tool_to_view()
         # update the reader
         self.variables.image_reader = the_reader
-        self.taser_image_panel.set_image_reader(the_reader)
+        self.image_panel.set_image_reader(the_reader)
         # refresh appropriate GUI elements
         self.pyplot_panel.make_blank()
         self.populate_metaicon()
@@ -191,16 +191,16 @@ class Taser(WidgetPanel):
             bottom = min(coords[0::2])
             return left, right, top, bottom
 
-        threshold = self.taser_image_panel.canvas.variables.config.select_size_threshold
+        threshold = self.image_panel.canvas.variables.config.select_size_threshold
 
-        select_id = self.taser_image_panel.canvas.variables.select_rect.uid
-        rect_coords = self.taser_image_panel.canvas.get_shape_image_coords(select_id)
+        select_id = self.image_panel.canvas.variables.select_rect.uid
+        rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
         extent = get_extent(rect_coords)
 
         if abs(extent[1] - extent[0]) < threshold or abs(extent[2] - extent[3]) < threshold:
             self.pyplot_panel.make_blank()
         else:
-            image_data = self.taser_image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id)
+            image_data = self.image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id)
             if image_data is not None:
                 self.pyplot_panel.update_image(image_data, extent=extent)
             else:
@@ -211,25 +211,25 @@ class Taser(WidgetPanel):
         Populate the metaicon.
         """
 
-        if self.taser_image_panel.canvas.variables.canvas_image_object is None or \
-                self.taser_image_panel.canvas.variables.canvas_image_object.image_reader is None:
+        if self.image_panel.canvas.variables.canvas_image_object is None or \
+                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
             self.metaicon.make_empty()
 
-        image_reader = self.taser_image_panel.canvas.variables.canvas_image_object.image_reader
+        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
 
         assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
-        self.metaicon.create_from_reader(image_reader.base_reader, index=self.taser_image_panel.canvas.get_image_index())
+        self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
 
     def populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.taser_image_panel.canvas.variables.canvas_image_object is None or \
-                self.taser_image_panel.canvas.variables.canvas_image_object.image_reader is None:
+        if self.image_panel.canvas.variables.canvas_image_object is None or \
+                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
             self.metaviewer.empty_entries()
 
-        image_reader = self.taser_image_panel.canvas.variables.canvas_image_object.image_reader
+        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
 
         assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
         self.metaviewer.populate_from_reader(image_reader.base_reader)
@@ -241,7 +241,7 @@ def main():
     the_style = ttk.Style()
     the_style.theme_use('clam')
 
-    app = Taser(root)
+    app = ImageViewer(root)
     root.mainloop()
 
 
