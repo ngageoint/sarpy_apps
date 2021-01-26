@@ -899,8 +899,7 @@ class AnnotationTool(WidgetPanel):
             self.variables.unsaved_changed = False
             return
 
-        if self.variables.unsaved_changed:
-            self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
+        self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
         self.variables.unsaved_changed = False
 
     # event listeners
@@ -1012,21 +1011,12 @@ class AnnotationTool(WidgetPanel):
         # the selection rectangle
         rect_id = self.context_panel.image_panel.canvas.variables.select_rect.uid
 
-        # print('image_rectangle', image_rectangle, 'decimation', decimation, 'y_side', y_side, 'x_side', x_side)
-        # print('anchor', self.context_panel.image_panel.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
-        #     self.context_panel.image_panel.canvas.variables.shape_drawing.anchor_point_xy),
-        #       'tmp_anchor', self.context_panel.image_panel.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
-        #         self.context_panel.image_panel.canvas.variables.shape_drawing.tmp_anchor_point_xy))
 
         if y_side >= 0.9*full_y and x_side >= 0.9*full_x:
             self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(rect_id, (0, 0, 0, 0))
         else:
             self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(rect_id, image_rectangle)
             self.context_panel.image_panel.canvas.show_shape(rect_id)  # just in case we got caught in a bad state
-
-        # # TODO: we may have to reset drawing state?
-        # if self.context_panel.image_panel.canvas.current_tool == ToolConstants.SELECT:
-        #     self.context_panel.image_panel.canvas.variables.shape_drawing.set_inactive()
 
     def _shape_create_on_annotate(self, event):
         """
