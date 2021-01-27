@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-This module provides a tool for creating annotation for a SAR image.
+This module provides a tool for creating a general annotation for a SAR image.
 """
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 
-import logging
 import os
 from shutil import copyfile
 import time
 from collections import OrderedDict
-from typing import Union, Dict, List
+from typing import Dict, List
 
 import tkinter
 from tkinter import ttk
@@ -1531,11 +1530,11 @@ class AnnotationTool(WidgetPanel):
             pass  # do nothing on tool reset/initialization
         elif y_side < size_threshold or x_side < size_threshold:
             # this is too small, reset back to here
-            self._sync_annotate_zoom_to_context_selection(None)
+            self.sync_annotate_zoom_to_context_selection(None)
         else:
             self.annotate_panel.image_panel.canvas.zoom_to_full_image_selection(image_rect)
-            # NB: this triggers a call to the _sync_annotate_zoom_to_context_selection()
-            # THis in turns will adjust the context selection box to account for differences
+            # NB: this triggers a call to the sync_annotate_zoom_to_context_selection()
+            # This in turns will adjust the context selection box to account for differences
             # in aspect ratio of the selection rectangle and annotate canvas.
             #
             # That adjust will lead to this function being called again. We avoid
@@ -1596,7 +1595,7 @@ class AnnotationTool(WidgetPanel):
                 self._add_shape_to_feature(self.variables.current_feature_id, event.x)
                 return
 
-        the_id = self._create_feature_from_shape(event.x)  # NB: handles various tracking updates
+        the_id = self._create_feature_from_shape(event.x)
         self.variables.current_annotate_canvas_id = event.x
         # TODO: update the treeview? Maybe set the selection?
 
