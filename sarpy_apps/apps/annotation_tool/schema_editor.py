@@ -418,7 +418,14 @@ class SchemaEditor(WidgetPanel):
         WidgetPanel.__init__(self, self.primary)
         self.init_w_rows()
 
-        # setup the GUI callbacks
+        # setup the appearance of labels
+        self.version_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
+        self.version_date_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
+        self.classification_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
+        self.confidence_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
+        self.geometries_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
+
+        # setup the GUI callbacks and appearance of labels
         self.version_entry.config(state='disabled', validate='focusout', validatecommand=self._version_entry_validate)
         self.version_date_entry.config(state='disabled')
         self.classification_entry.config(state='disabled', validate='focusout', validatecommand=self._classification_validate)
@@ -666,7 +673,7 @@ def main():
     root = tkinter.Tk()
 
     the_style = ttk.Style()
-    the_style.theme_use('clam')
+    the_style.theme_use('classic')
 
     # noinspection PyUnusedLocal
     app = SchemaEditor(root)

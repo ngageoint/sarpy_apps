@@ -12,7 +12,7 @@ import os
 from shutil import copyfile
 import time
 from collections import OrderedDict
-from typing import Union, Dict
+from typing import Union, Dict, List
 
 import tkinter
 from tkinter import ttk
@@ -27,67 +27,29 @@ from sarpy_apps.supporting_classes import file_filters
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets.image_canvas import ToolConstants
+from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 
-from sarpy.compliance import string_types
+from sarpy.compliance import string_types, integer_types
 from sarpy.annotation.schema_processing import LabelSchema
 from sarpy.annotation.annotate import FileAnnotationCollection, Annotation, AnnotationMetadata
-from sarpy.geometry.geometry_elements import Polygon
+from sarpy.geometry.geometry_elements import Geometry, GeometryCollection, \
+    Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
 
 
 ##############
 # Context Panel Definition
 
-class DashboardButtonPanel(WidgetPanel):
-    """
-    Button panel for context dashboard
-    """
-
-    _widget_list = ("pan", "select", "move_rect")
-
-    pan = widget_descriptors.ButtonDescriptor("pan")  # type: basic_widgets.Button
-    select = widget_descriptors.ButtonDescriptor("select")  # type: basic_widgets.Button
-    move_rect = widget_descriptors.ButtonDescriptor("move_rect")  # type: basic_widgets.Button
-
-    def __init__(self, master):
-        WidgetPanel.__init__(self, master)
-        self.init_w_horizontal_layout()
-
-
-class ContextMasterDash(WidgetPanel):
-    """
-    Context dashboard
-    """
-    _widget_list = ("buttons",)
-    buttons = widget_descriptors.PanelDescriptor("buttons", DashboardButtonPanel)  # type: DashboardButtonPanel
-
-    def __init__(self, master):
-        WidgetPanel.__init__(self, master)
-        self.init_w_basic_widget_list(3, [1, 1, 2])
-
-
-class ContextButtons(WidgetPanel):
-    """
-    Button panel for context panel.
-    """
-
-    _widget_list = ("select_area", "edit_selection")
-    select_area = widget_descriptors.ButtonDescriptor("select_area")  # type: basic_widgets.Button
-    edit_selection = widget_descriptors.ButtonDescriptor("edit_selection")  # type: basic_widgets.Button
-
-    def __init__(self, master):
-        WidgetPanel.__init__(self, master)
-        self.init_w_horizontal_layout()
-
-
 class ContextImagePanel(WidgetPanel):
     """
     Context panel.
     """
-    _widget_list = ("buttons", "image_panel")
-    buttons = widget_descriptors.PanelDescriptor("buttons", ContextButtons)  # type: ContextButtons
+    _widget_list = ("context_label", "image_panel")
+    context_label = widget_descriptors.LabelDescriptor(
+        "context_label",
+        default_text='Some useful text describing things...',
+        docstring='Useful instruction area for context panel.')  # type: basic_widgets.Label
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
 
     def __init__(self, master):
@@ -99,12 +61,13 @@ class ContextImagePanel(WidgetPanel):
 # Annotation Panel Definition
 
 class AnnotationButtons(WidgetPanel):
-    _widget_list = ("draw_polygon", "edit_polygon", "select_closest", "delete", "annotate")
-    draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon")  # type: basic_widgets.Button
-    edit_polygon = widget_descriptors.ButtonDescriptor("edit_polygon")  # type: basic_widgets.Button
-    select_closest = widget_descriptors.ButtonDescriptor("select_closest")  # type: basic_widgets.Button
-    delete = widget_descriptors.ButtonDescriptor("delete")  # type: basic_widgets.Button
-    annotate = widget_descriptors.ButtonDescriptor("annotate")  # type: basic_widgets.Button
+    _widget_list = ("delete_shape", "delete_annotation", "annotate")
+    delete_shape = widget_descriptors.ButtonDescriptor(
+        "delete", default_text='delete shape')  # type: basic_widgets.Button
+    delete_annotation = widget_descriptors.ButtonDescriptor(
+        "delete_annotation", default_text='delete annotation')  # type: basic_widgets.Button
+    annotate = widget_descriptors.ButtonDescriptor(
+        "annotate", default_text="annotation")  # type: basic_widgets.Button
 
     def __init__(self, master):
         WidgetPanel.__init__(self, master)
@@ -157,6 +120,7 @@ class AnnotationPopup(WidgetPanel):
         master
             The app master.
         main_app_variables : AppVariables
+            The application variables.
         """
 
         self.label_schema = main_app_variables.label_schema
@@ -167,6 +131,7 @@ class AnnotationPopup(WidgetPanel):
         WidgetPanel.__init__(self, self.primary_frame)
 
         self.init_w_rows()
+        # TODO: configure label appearance?
 
         self.set_text("Annotate")
 
@@ -182,13 +147,14 @@ class AnnotationPopup(WidgetPanel):
 
         # get the current annotation
         current_id = self.main_app_variables.current_feature_id
+        print('current_id', current_id, 'annotations', self.main_app_variables.file_annotation_collection.annotations)
         self.annotation = self.main_app_variables.file_annotation_collection.annotations[current_id]
 
         # populate existing fields if editing an existing geometry
-        if self.annotation.properties:
+        if self.annotation.properties is not None:
             object_type = self.annotation.properties.elements[0].label_id
             comment = self.annotation.properties.elements[0].comment
-            confidence = self.annotation.properties.elements[0].confidence
+            confidence = self.annotation.properties.elements[0].confidence  # TODO: None?
 
             self.object_type.set_text(object_type)
             self.object_type.configure(state="disabled")
@@ -203,6 +169,7 @@ class AnnotationPopup(WidgetPanel):
         current_value = self.object_type.get()
         value = select_schema_entry(self.label_schema, start_id=current_value)
         self.object_type.set_text(value)
+        print('value', value, 'value type', type(value), 'set value', self.object_type.get())
 
     def callback_reset(self):
         self.object_type.configure(state="normal")
@@ -213,22 +180,21 @@ class AnnotationPopup(WidgetPanel):
             showinfo("Select Object Type", message="Select the object type")
             return
 
-        if self.confidence.get() not in self.main_app_variables.label_schema.confidence_values:
-            result = askyesno("Confidence Selection?", message="The confidence selected in not one of the permitted values. Continue?")
-            if not (result is True):
-                return
-
         annotation_metadata = AnnotationMetadata(comment=self.comment.get(),
                                                  label_id=self.object_type.get(),
                                                  confidence=self.confidence.get())
         self.annotation.add_annotation_metadata(annotation_metadata)
-        # save the annotation file automatically now?
-        self.main_app_variables.file_annotation_collection.to_file(self.main_app_variables.annotation_file_name)
+        self.main_app_variables.unsaved_changed = True
         self.master.destroy()
 
     def setup_confidence_selections(self):
-        self.confidence.update_combobox_values(self.main_app_variables.label_schema.confidence_values)
-
+        confidence_values = self.label_schema.confidence_values
+        if confidence_values is None or len(confidence_values) < 1:
+            self.confidence.set('')
+            self.confidence.config(state='disabled')
+        else:
+            self.confidence.update_combobox_values(confidence_values)
+            self.confidence.config(state='readonly')
 
 #########
 # Main Annotation Tool
@@ -249,45 +215,57 @@ class AppVariables(object):
     annotation_file_name = StringDescriptor(
         'annotation_file_name',
         docstring='The path for the annotation results file.')  # type: str
-    new_annotation = BooleanDescriptor(
-        'new_annotation', default_value=False,
-        docstring='The state variable for whether a new annotation has been '
-                  'created.')  # type: bool
+    add_shape_to_current_annotation = BooleanDescriptor(
+        'add_shape_to_current_annotation', default_value=False,
+        docstring='We a new shape is created, do we add it to the current annotation, '
+                  'or create a new annotation?')  # type: bool
 
     def __init__(self):
-        self._feature_id_dict = OrderedDict()
-        self._annotate_id_dict = OrderedDict()
-        self._context_id_dict = OrderedDict()
+        self._feature_dict = OrderedDict()
+        self._annotate_to_feature = OrderedDict()
+        self._annotate_to_context = OrderedDict()
+        self._context_to_annotate = OrderedDict()
         self._current_annotate_canvas_id = None
         self._current_feature_id = ''
 
+    # do these variables need to be unveiled?
     @property
-    def feature_id_dict(self):
+    def feature_dict(self):
         # type: () -> Dict[str, Dict]
         """
-        dict: The dictionary of feature_id to corresponding canvas ids.
+        dict: The dictionary of feature_id to corresponding items on annotate canvas.
         """
 
-        return self._feature_id_dict
+        return self._feature_dict
 
     @property
-    def annotate_id_dict(self):
-        # type: () -> Dict[str, str]
+    def annotate_to_feature(self):
+        # type: () -> Dict[int, str]
         """
         dict: The dictionary of annotate canvas id to feature_id.
         """
 
-        return self._annotate_id_dict
+        return self._annotate_to_feature
 
     @property
-    def context_id_dict(self):
-        # type: () -> Dict[str, str]
+    def annotate_to_context(self):
+        # type: () -> Dict[int, int]
         """
-        dict: The dictionary of context canvas id to feature_id.
+        dict: The dictionary of annotate canvas id to context canvas id.
         """
 
-        return self._context_id_dict
+        return self._annotate_to_context
 
+    @property
+    def context_to_annotate(self):
+        # type: () -> Dict[int, int]
+        """
+        dict: The dictionary of context canvas id to annotate feature id.
+        """
+
+        return self._context_to_annotate
+
+    # good properties
     @property
     def current_annotate_canvas_id(self):
         """
@@ -303,7 +281,7 @@ class AppVariables(object):
             self._current_feature_id = None
         else:
             self._current_annotate_canvas_id = value
-            self._current_feature_id = self._annotate_id_dict.get(value, None)
+            self._current_feature_id = self._annotate_to_feature.get(value, None)
 
     @property
     def current_feature_id(self):
@@ -313,132 +291,86 @@ class AppVariables(object):
 
         return self._current_feature_id
 
-    @staticmethod
-    def _add_canvas_dict(feature_id, canvas_id, canvas_dict):
+    def set_current_feature_id(self, feature_id):
         """
-        Add the entries to the appropriate canvas id dictionary.
-
-        Parameters
-        ----------
-        feature_id : str
-        canvas_id : None|str|List[str]
-        canvas_dict : dict
-
-        Returns
-        -------
-        None
+        Sets the current feature id.
         """
 
-        # populate annotate_id_dict
-        if canvas_id is None:
-            pass
-        elif isinstance(canvas_id, (tuple, list)):
-            for entry in canvas_id:
-                canvas_dict[entry] = feature_id
-        else:
-            if not isinstance(canvas_id, string_types):
-                logging.warning(
-                    'For feature_id {}, got unexpected canvas id type {}. '
-                    'This may results in unexpected errors.'.format(feature_id, type(canvas_id)))
-            canvas_dict[canvas_id] = feature_id
-
-    @staticmethod
-    def _delete_canvas_dict(canvas_id, canvas_dict):
-        """
-        Delete the entries from the appropriate canvas id dictionary.
-
-        Parameters
-        ----------
-        canvas_id : None|str|List[str]
-        canvas_dict : dict
-
-        Returns
-        -------
-        None
-        """
-
-        # populate annotate_id_dict
-        if canvas_id is None:
-            pass
-        elif isinstance(canvas_id, (tuple, list)):
-            for entry in canvas_id:
-                if entry in canvas_dict:
-                    del canvas_dict[entry]
-        else:
-            if canvas_id in canvas_dict:
-                del canvas_dict[canvas_id]
-
-    def _update_canvas_dict(self, feature_id, old_canvas_id, new_canvas_id, canvas_dict):
-        """
-        Update the provided canvas dict.
-
-        Parameters
-        ----------
-        feature_id : str
-        old_canvas_id : None|str|List[str]
-        new_canvas_id : None|str|List[str]
-        canvas_dict : dict
-
-        Returns
-        -------
-        None
-        """
-
-        self._delete_canvas_dict(old_canvas_id, canvas_dict)
-        self._add_canvas_dict(feature_id, new_canvas_id, canvas_dict)
-
-    def add_feature_tracking(self, feature_id, annotate_id, context_id=None):
-        """
-        Add tracking for new feature.
-
-        Parameters
-        ----------
-        feature_id : str
-        annotate_id : str|List[str]
-        context_id : None|str|List[str]
-
-        Returns
-        -------
-        None
-        """
-
-        if feature_id in self._feature_id_dict:
-            logging.error('The feature_id {} is already being tracked.'.format(feature_id))
+        if (feature_id is None) or (feature_id not in self._feature_dict):
+            self._current_feature_id = None
+            self._current_annotate_canvas_id = None
             return
 
-        # populate the feature_id_dict
-        self._feature_id_dict[feature_id] = OrderedDict([('annotate_id', annotate_id), ('context_id', context_id)])
+        self._current_feature_id = feature_id
+        if self._current_annotate_canvas_id is None:
+            return
+        if self._current_annotate_canvas_id not in self.get_annotate_shapes_for_feature(feature_id):
+            self._current_annotate_canvas_id = None
 
-        # populate annotate_id_dict
-        self._add_canvas_dict(feature_id, annotate_id, self._annotate_id_dict)
-        # populate context_id_dict
-        self._add_canvas_dict(feature_id, context_id, self._context_id_dict)
-
-    def update_feature_tracking(self, feature_id, annotate_id=None, context_id=None):
+    # fetch tracking information
+    def get_annotate_shapes_for_feature(self, feature_id):
         """
-        Update the feature tracking.
+        Gets the annotation shape ids associated with the given feature id.
 
         Parameters
         ----------
         feature_id : str
-        annotate_id : None|str|List[str]
-        context_id : None|str|List[str]
 
         Returns
         -------
-        None
+        None|List[int]
         """
 
-        if feature_id not in self._feature_id_dict:
-            pass
+        if feature_id not in self._feature_dict:
+            return None
+        return self._feature_dict[feature_id]['annotate_id']
 
-        the_entry = self._feature_id_dict[feature_id]
-        # update the annotate_id tracking
-        if annotate_id is not None and annotate_id != the_entry['annotate_id']:
-            self._update_canvas_dict(feature_id, the_entry['annotate_id'], annotate_id, self._annotate_id_dict)
-        # update the context_id tracking
-        if context_id is not None and context_id != the_entry['context_id']:
-            self._update_canvas_dict(feature_id, the_entry['context_id'], context_id, self._context_id_dict)
+    def get_color_for_feature(self, feature_id):
+        """
+        Gets the color associated with the given feature id.
+
+        Parameters
+        ----------
+        feature_id : str
+
+        Returns
+        -------
+        None|str
+        """
+
+        if feature_id not in self._feature_dict:
+            return None
+        return self._feature_dict[feature_id]['color']
+
+    def get_context_for_annotate(self, annotate_id):
+        """
+        Gets the context shape id associated with the given annotate_id.
+
+        Parameters
+        ----------
+        annotate_id : int
+
+        Returns
+        -------
+        None|int
+        """
+
+        return self._context_to_annotate.get(annotate_id, None)
+
+    def get_feature_for_annotate(self, annotate_id):
+        """
+        Gets the feature id associated with the given annotate id.
+
+        Parameters
+        ----------
+        annotate_id : int
+
+        Returns
+        -------
+        None|str
+        """
+
+        return self._annotate_to_feature.get(annotate_id, None)
 
     def reinitialize_features(self):
         """
@@ -450,10 +382,281 @@ class AppVariables(object):
         None
         """
 
-        self._feature_id_dict = OrderedDict()
-        self._annotate_id_dict = OrderedDict()
-        self._context_id_dict = OrderedDict()
+        self._feature_dict = OrderedDict()
+        self._annotate_to_feature = OrderedDict()
+        self._annotate_to_context = OrderedDict()
+        self._context_to_annotate = OrderedDict()
         self._current_annotate_canvas_id = None
+        self._current_feature_id = ''
+
+    def set_annotate_context_tracking(self, annotate_id, context_id):
+        """
+        Associate tracking between the annotate canvas shape and context canvas
+        shape given by the respective ids.
+
+        Parameters
+        ----------
+        annotate_id : int
+        context_id : int
+        """
+
+        if not (isinstance(annotate_id, integer_types) and isinstance(context_id, integer_types)):
+            raise TypeError('Both annotate_id and context_id must be of integer type.')
+
+        current_context_partner = self._annotate_to_context.get(annotate_id, None)
+        current_annotate_partner = self._context_to_annotate.get(context_id, None)
+
+        if current_annotate_partner is None and current_context_partner is None:
+            # this is new tracking
+            self._annotate_to_context[annotate_id] = context_id
+            self._context_to_annotate[context_id] = annotate_id
+            return
+        if current_annotate_partner == annotate_id and current_context_partner == context_id:
+            # this is already the tracking
+            return
+
+        # otherwise, we're in some kind of bad state.
+        raise ValueError(
+            'annotate id {} is currently associated with context id {}, and '
+            'context id {} is currently associated with annotate id {}'.format(
+                annotate_id, current_context_partner, context_id, current_annotate_partner))
+
+    def set_feature_tracking(self, feature_id, annotate_id, color):
+        """
+        Initialize feature tracking between the given feature id, the given annotate
+        ids, and store the given color.
+
+        Parameters
+        ----------
+        feature_id : str
+        annotate_id : int|List[int]
+        color : None|str
+        """
+
+        self._initialize_feature_tracking(feature_id, color)
+        self.append_shape_to_feature_tracking(feature_id, annotate_id)
+
+    def append_shape_to_feature_tracking(self, feature_id, annotate_id, the_color=None):
+        """
+        Add a new shape or shapes to the given feature.
+
+        Parameters
+        ----------
+        feature_id : str
+        annotate_id : int|List[int]
+        the_color : None|str
+        """
+
+        if feature_id not in self._feature_dict:
+            raise KeyError('We are not tracking feature id {}'.format(feature_id))
+
+        the_dict = self._feature_dict[feature_id]
+        the_annotate_ids = the_dict['annotate_id']
+        if the_color is not None:
+            the_dict['color'] = the_color
+
+        if isinstance(annotate_id, integer_types):
+            self._initialize_annotate_feature_tracking(annotate_id, feature_id)
+            the_annotate_ids.append(annotate_id)
+        elif isinstance(annotate_id, (list, tuple)):
+            for entry in annotate_id:
+                self._initialize_annotate_feature_tracking(entry, feature_id)
+                the_annotate_ids.append(entry)
+        else:
+            raise TypeError('Got unhandled annotate_id type {}'.format(type(annotate_id)))
+
+    def merge_features(self, *args):
+        """
+        Merge the collection of features into the initial feature. The color and
+        annotation from the initial feature will be maintained.
+
+        Note that this does not actually change the colors of the rendered shapes,
+        nor modify the actual annotation list.
+
+        Parameters
+        ----------
+        args
+            A collection of feature ids. The color of the first will be used. Note
+            that this does not actually change any of the colors of the shapes on
+            the canvases.
+        """
+
+        if len(args) == 1 and isinstance(args[0], (list, tuple)):
+            args = args[0]
+        if len(args) <= 1:
+            raise ValueError('More than one feature id must be supplied for merging.')
+        for entry in args:
+            if entry not in self._feature_dict:
+                raise KeyError('Got untracked feature id {}'.format(entry))
+
+        primary_id = args[0]
+        primary_dict = self.feature_dict[primary_id]
+        primary_annotate_list = primary_dict['annotate_id']
+        for feat_id in args[1:]:
+            the_dict = self._feature_dict[feat_id]
+            for annotate_id in the_dict['annotate_id']:
+                # re-associate the annotate shape with the new feature
+                self._annotate_to_feature[annotate_id] = primary_id
+                primary_annotate_list.append(annotate_id)
+            # delete feat_id from tracking
+            del self._feature_dict[feat_id]
+
+    def remove_annotation_from_feature(self, annotation_id):
+        """
+        Remove the association of this shape with any feature.
+
+        Parameters
+        ----------
+        annotation_id : int
+
+        Returns
+        -------
+        None|int
+            The number of remaining shapes associated with the feature. This is
+            None if the shape is not associated with any feature.
+        """
+
+        feature_id = self._annotate_to_feature.get(annotation_id, None)
+        if feature_id is None:
+            return None
+
+        the_list = self._feature_dict[feature_id]['annotate_id']
+        if annotation_id in the_list:
+            the_list.remove(annotation_id)
+        self._annotate_to_feature[annotation_id] = None
+        return len(the_list)
+
+    def delete_feature_from_tracking(self, feature_id):
+        """
+        Remove the given feature from tracking. The associated annotate shape
+        elements which should be deleted will be returned.
+
+        Parameters
+        ----------
+        feature_id : str
+
+        Returns
+        -------
+        List[int]
+            The list of annotate shape ids for deletion.
+        """
+
+        if feature_id not in self._feature_dict:
+            return  # nothing to be done
+
+        the_dict = self._feature_dict[feature_id]
+        the_annotate_ids = the_dict['annotate_id']
+
+        delete_shapes = []
+
+        # for any shape not reassigned, set assignment to None
+        for entry in the_annotate_ids:
+            if entry not in self._annotate_to_feature:
+                continue  # we've already actually deleted the shape
+            associated_feat = self._annotate_to_feature[entry]
+            if associated_feat is None:
+                # this is marked for deletion, but deletion didn't happen
+                delete_shapes.append(entry)
+            elif associated_feat != feature_id:
+                # reassigned to a different feature, do nothing
+                continue
+            else:
+                # assign this tracking to None, to mark for deletion
+                self._annotate_to_feature[entry] = None
+                delete_shapes.append(entry)
+        # remove the feature from tracking
+        del self._feature_dict[feature_id]
+        return delete_shapes
+
+    def mark_context_for_deletion(self, context_id):
+        """
+        Indicate that the given context shape has been deleted from the canvas.
+
+        Parameters
+        ----------
+        context_id : int
+        """
+
+        if context_id not in self._context_to_annotate:
+            return  # it wasn't being tracked
+
+        self._context_to_annotate[context_id] = None
+
+    def delete_annotation_from_tracking(self, annotation_id):
+        """
+        Remove the annotation id from tracking. This requires that the shape has
+        been removed from any associated feature, and the associated context shape
+        has been marked for deletion.
+
+        Parameters
+        ----------
+        annotation_id : int
+        """
+
+        if annotation_id not in self._annotate_to_feature:
+            return
+
+        # verify that association with None as feature.
+        feat_id = self._annotate_to_feature[annotation_id]
+        if feat_id is not None:
+            raise ValueError(
+                "We can't delete annotation id {}, because it is still associated "
+                "with feature {}".format(annotation_id, feat_id))
+
+        if annotation_id in self._annotate_to_context:
+            # verify that the context shape associated is already deleted.
+            cont_id = self._annotate_to_context[annotation_id]
+            if cont_id in self._context_to_annotate:
+                if self._context_to_annotate[cont_id] is not None:
+                    raise ValueError(
+                        "We can't delete annotation id {}, because it is still associated "
+                        "with context id {}".format(annotation_id, cont_id))
+            del self._context_to_annotate[cont_id]
+        # actually remove the tracking entries
+        del self._annotate_to_context[annotation_id]
+        del self._annotate_to_feature[annotation_id]
+
+    # helper methods
+    def _initialize_annotate_feature_tracking(self, annotate_id, feature_id):
+        """
+        Helper function for associating tracking of the feature id for the given
+        annotate id.
+
+        Parameters
+        ----------
+        annotate_id : int
+        feature_id : str
+        """
+
+        if not (isinstance(annotate_id, integer_types) and isinstance(feature_id, string_types)):
+            raise TypeError('annotate_id must be of integer type, and feature_id must be of string type.')
+
+        current_feature_partner = self._annotate_to_feature.get(annotate_id, None)
+        if current_feature_partner is None:
+            # new tracking
+            self._annotate_to_feature[annotate_id] = feature_id
+        if current_feature_partner == feature_id:
+            # already the current tracking
+            return
+        # otherwise, we are in a bad state
+        raise ValueError(
+            'annotate id {} is currently associated with feature id {}, '
+            'not feature id {}'.format(annotate_id, current_feature_partner, feature_id))
+
+    def _initialize_feature_tracking(self, feature_id, color):
+        """
+        Helper function to initialize feature tracking.
+
+        Parameters
+        ----------
+        feature_id : str
+        color : None|str
+        """
+
+        if feature_id in self._feature_dict:
+            raise KeyError('We are already tracking feature id {}'.format(feature_id))
+
+        self._feature_dict[feature_id] = {'annotate_id': [], 'color': color}
 
 
 class AnnotationTool(WidgetPanel):
@@ -470,6 +673,7 @@ class AnnotationTool(WidgetPanel):
         self._image_browse_directory = os.path.expanduser('~')
         self.primary = basic_widgets.Frame(primary)
         # temporary state variables
+        self._modifying_shapes_on_annotate = False
         self._modifying_context_selection = False
         self._modifying_annotate_tool = False
 
@@ -492,8 +696,8 @@ class AnnotationTool(WidgetPanel):
 
         filemenu = tkinter.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Open Image", command=self.select_image_file)
+        filemenu.add_command(label="Open Existing Annotation", command=self.select_annotation_file)
         filemenu.add_command(label="Create New Annotation", command=self.create_new_annotation_file)
-        filemenu.add_command(label="Open Annotation", command=self.select_annotation_file)
         filemenu.add_separator()
         filemenu.add_command(label="Save Annotation File", command=self.save_annotation_file)
         filemenu.add_separator()
@@ -508,14 +712,13 @@ class AnnotationTool(WidgetPanel):
         menubar.add_cascade(label="Popups", menu=popups_menu)
 
         self.context_panel.pack(expand=True, fill=tkinter.BOTH)
-        self.context_panel.buttons.fill_y(False)
-        self.context_panel.buttons.do_not_expand()
-        self.context_panel.buttons.pack(side="bottom")
+        self.context_panel.context_label.master.pack(side='top', expand=tkinter.NO)
+        self.context_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
         self.context_panel.image_panel.canvas.set_canvas_size(400, 300)
 
         self.annotate_panel.buttons.fill_y(False)
         self.annotate_panel.buttons.do_not_expand()
-        self.annotate_panel.buttons.pack(side="bottom")
+        # self.annotate_panel.buttons.pack(side="bottom")
         self.annotate_panel.pack(expand=True, fill=tkinter.BOTH)
         self.annotate_panel.image_panel.canvas.set_canvas_size(400, 300)
 
@@ -535,43 +738,29 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.set_text('')
         self.annotate_panel.image_panel.set_text('The annotation area.')
         self.annotate_panel.image_panel.hide_tools('select')
-        self.annotate_panel.image_panel.hide_shapes(['point', 'line', 'arrow', 'text'])
+        self.annotate_panel.image_panel.hide_shapes(['arrow', 'text'])
         self.annotate_panel.image_panel.hide_remap_combo()
         self.annotate_panel.image_panel.hide_select_index()
         # disable tools and shapes until a file annotation is selected
         self.annotate_panel.image_panel.disable_tools()
         self.annotate_panel.image_panel.disable_shapes()
 
-        # TODO: these should all be defunct, and functionality replaced in listeners below
-        self.annotate_panel.image_panel.canvas.on_right_mouse_click(self.callback_annotate_handle_right_mouse_click)
-
-        self.annotate_panel.buttons.draw_polygon.config(command=self.callback_set_to_draw_polygon)
+        # set button callbacks
+        self.annotate_panel.buttons.delete_shape.config(command=self.callback_delete_shape)
+        self.annotate_panel.buttons.delete_annotation.config(command=self.callback_delete_feature)
         self.annotate_panel.buttons.annotate.config(command=self.callback_annotation_popup)
-        self.annotate_panel.buttons.edit_polygon.config(command=self.callback_set_to_edit_shape)
-        self.annotate_panel.buttons.delete.config(command=self.callback_delete_shape)
-        # END DEFUNCT
 
         # set up context panel event listeners
-        self.context_panel.image_panel.canvas.bind('<<SelectionFinalized>>', self._sync_context_selection_to_annotate_zoom)
-        self.context_panel.image_panel.canvas.bind('<<RemapChanged>>', self._sync_remap_change)
+        self.context_panel.image_panel.canvas.bind('<<SelectionFinalized>>', self.sync_context_selection_to_annotate_zoom)
+        self.context_panel.image_panel.canvas.bind('<<RemapChanged>>', self.sync_remap_change)
 
         # set up annotate panel listeners
-        self.annotate_panel.image_panel.canvas.bind('<<CurrentToolChanged>>', self._verify_setting_annotate_tool)
-        self.annotate_panel.image_panel.canvas.bind('<<ImageExtentChanged>>', self._sync_annotate_zoom_to_context_selection)
-        self.annotate_panel.image_panel.canvas.bind('<<ShapeCreate>>', self._shape_create_on_annotate)
-        self.annotate_panel.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self._shape_finalized_on_annotate)
-        self.annotate_panel.image_panel.canvas.bind('<<ShapeDelete>>', self._shape_delete_on_annotate)
-        self.annotate_panel.image_panel.canvas.bind('<<ShapeSelect>>', self._shape_selected_on_annotate)
-
-        # TODO: set up event listeners for the image panels
-        #   X - 1.) Change in selection on context should change view in annotate
-        #   X - 2.) Change in image extent on annotate should change selection in context
-        #       Make sure that 1.) and 2.) don't get stuck in a loop, since one will
-        #       trigger the other.
-        #   3.) Creation/editing of shape in annotate is synced to context. "<<ShapeCreate>>", "<<ShapeCoordsFinalized>>"
-        #   4.) Deletion of shape in annotate performs deletion of corresponding
-        #       shape in context and deletes or edits the annotation. "<<ShapeDelete>>"
-        #   5.) Selection of shape in annotate selects annotation. "<<ShapeSelect>>"
+        self.annotate_panel.image_panel.canvas.bind('<<CurrentToolChanged>>', self.verify_setting_annotate_tool)
+        self.annotate_panel.image_panel.canvas.bind('<<ImageExtentChanged>>', self.sync_annotate_zoom_to_context_selection)
+        self.annotate_panel.image_panel.canvas.bind('<<ShapeCreate>>', self.shape_create_on_annotate)
+        self.annotate_panel.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.shape_finalized_on_annotate)
+        self.annotate_panel.image_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_annotate)
+        self.annotate_panel.image_panel.canvas.bind('<<ShapeSelect>>', self.shape_selected_on_annotate)
 
     @property
     def image_file_name(self):
@@ -583,46 +772,333 @@ class AnnotationTool(WidgetPanel):
 
     # utility functions
     ####
-    def insert_feature(self, feature, annotate_canvas_id=None):
+    def _create_context_shape_from_annotate_shape(self, annotate_id):
         """
-        Insert a new feature into the tracking.
+        Create a context shape from an annotate shape, and initiate the tracking.
+
+        Parameters
+        ----------
+        annotate_id : int
+        """
+
+         # get the vector
+        vector_object = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+        if vector_object is None:
+            raise ValueError('No vector associate with shape id {}'.format(annotate_id))
+
+        if vector_object.type == ShapeTypeConstants.POINT:
+            context_id = self.context_panel.image_panel.canvas.create_new_point(
+                vector_object.image_coords, make_current=False, increment_color=False, color=vector_object.color)
+        elif vector_object.type == ShapeTypeConstants.LINE:
+            context_id = self.context_panel.image_panel.canvas.create_new_line(
+                vector_object.image_coords, make_current=False, increment_color=False, color=vector_object.color)
+        elif vector_object.type == ShapeTypeConstants.RECT:
+            context_id = self.context_panel.image_panel.canvas.create_new_rect(
+                vector_object.image_coords, make_current=False, increment_color=False, color=vector_object.color)
+        elif vector_object.type == ShapeTypeConstants.ELLIPSE:
+            context_id = self.context_panel.image_panel.canvas.create_new_ellipse(
+                vector_object.image_coords, make_current=False, increment_color=False, color=vector_object.color)
+        elif vector_object.type == ShapeTypeConstants.POLYGON:
+            context_id = self.context_panel.image_panel.canvas.create_new_polygon(
+                vector_object.image_coords, make_current=False, increment_color=False, color=vector_object.color)
+        elif vector_object.type == ShapeTypeConstants.ARROW:
+            context_id = self.context_panel.image_panel.canvas.create_new_arrow(
+                vector_object.image_coords, make_current=False, increment_color=False, color=vector_object.color)
+        else:
+            raise ValueError('Unsupported vector object type for copying {}'.format(ShapeTypeConstants.get_name(vector_object.type)))
+        # set up the association between the two shapes
+        self.variables.set_annotate_context_tracking(annotate_id, context_id)
+
+    def _sync_annotate_shape_to_context_shape(self, annotate_id):
+        """
+        Synchronize the annotate shape to the context shape. This assumes that
+        tracking is in place.
+
+        Parameters
+        ----------
+        annotate_id : int
+        """
+
+        # get the vector
+        vector_object = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+        if vector_object is None:
+            raise ValueError('No vector associate with shape id {}'.format(annotate_id))
+
+        # get the context shape id
+        cont_id = self.variables.get_context_for_annotate(annotate_id)
+        if cont_id is None:
+            raise ValueError('No context shape associate with annotate shape id {}'.format(annotate_id))
+
+        # update the context shape coordinates
+        self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(cont_id, vector_object.image_coords)
+
+    def _ensure_color_for_shapes(self, feature_id):
+        """
+        Ensure that all shapes associated with the given feature_id are rendered
+        with the correct color.
+
+        Parameters
+        ----------
+        feature_id : str
+        """
+
+        # get the correct color
+        the_color = self.variables.get_color_for_feature(feature_id)
+        if the_color is None:
+            return
+        for annotate_id in self.variables.get_annotate_shapes_for_feature(feature_id):
+            context_id = self.variables.get_context_for_annotate(annotate_id)
+            self.annotate_panel.image_panel.canvas.change_shape_color(annotate_id, the_color)
+            self.context_panel.image_panel.canvas.change_shape_color(context_id, the_color)
+
+    def _get_geometry_from_shape(self, shape_id):
+        """
+        Gets the geometry object for the given shape.
+
+        Parameters
+        ----------
+        shape_id : int
+            The annotation shape id.
+
+        Returns
+        -------
+        Point|Line|Polygon
+        """
+
+        geometry_object = self.annotate_panel.image_panel.canvas.get_geometry_for_shape(shape_id, coordinate_type='image')
+        if isinstance(geometry_object, LinearRing):
+            geometry_object = Polygon(coordinates=[geometry_object, ])  # use polygon for feature versus linear ring
+        return geometry_object
+
+    def _get_geometry_for_feature(self, feature_id):
+        """
+        Gets the geometry (possibly collection) for the feature.
+
+        Parameters
+        ----------
+        feature_id : str
+
+        Returns
+        -------
+        None|Geometry
+        """
+
+        annotate_ids = self.variables.get_annotate_shapes_for_feature(feature_id)
+        if annotate_ids is None:
+            return None
+        elif len(annotate_ids) == 1:
+            return self._get_geometry_from_shape(annotate_ids[0])
+        else:
+            return GeometryCollection(geometries=[self._get_geometry_from_shape(entry) for entry in annotate_ids])
+
+    def _create_shape_from_geometry(self, feature, the_geometry, the_color=None):
+        """
+        Helper function for creating shapes on the annotation and context canvases
+        from the given feature element.
 
         Parameters
         ----------
         feature : Annotation
-        annotate_canvas_id : None|str|List[str]
-            Rendered on annotate canvas if None.
+            The feature, only used here for logging a failure.
+        the_geometry : Point|LineString|Polygon
+        the_color : None|str
 
         Returns
         -------
-        None
+        annotate_id : int
+            The id of the element on the annotation canvas
+        the_color : str
+            The color of the shape.
         """
 
-        def insert_polygon(uid, annotate_id, the_geometry):
-            # type: (str, Union[None, str], Polygon) -> None
-            if annotate_id is None:
-                # create the shape on the annotation panel
-                # this will only render an outer ring
-                image_coords = the_geometry.outer_ring.coordinates.flatten()
-                annotate_id = self.annotate_panel.image_panel.canvas.create_new_polygon((0, 0, 0, 0))
-                # TODO: we may have to modify drawing state?
-                self.annotate_panel.image_panel.canvas.modify_existing_shape_using_image_coords(annotate_canvas_id, image_coords)
+        def insert_point():
+            # type: () -> (int, int, str)
+            image_coords = the_geometry.coordinates[:2].tolist()
+            # create the shape on the annotate panel
+            annotate_id = self.annotate_panel.image_panel.canvas.create_new_point((0, 0), **kwargs)
+            self.annotate_panel.image_panel.canvas.modify_existing_shape_using_image_coords(
+                annotate_id, image_coords)
+            # create the identical shape on the context panel
+            the_annotate_vector = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+            kwargs['color'] = the_annotate_vector.color
 
-                # TODO: shapes on the context_panel too...
-            self.variables.add_feature_tracking(uid, annotate_id, context_id=None)
+            context_canvas_id = self.context_panel.image_panel.canvas.create_new_point((0, 0), **kwargs)
+            self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(
+                context_canvas_id, image_coords)
+            return annotate_id, context_canvas_id, kwargs['color']
 
-        geometry = feature.geometry
-        if isinstance(geometry, Polygon):
-            insert_polygon(feature.uid, annotate_canvas_id, geometry)
+        def insert_line():
+            # type: () -> (int, int, str)
+            image_coords = the_geometry.coordinates[:, 2].tolist()
+            # create the shape on the annotate panel
+            annotate_id = self.annotate_panel.image_panel.canvas.create_new_line((0, 0, 0, 0), **kwargs)
+            self.annotate_panel.image_panel.canvas.modify_existing_shape_using_image_coords(
+                annotate_id, image_coords)
+            # create the identical shape on the context panel
+            the_annotate_vector = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+            kwargs['color'] = the_annotate_vector.color
+
+            context_canvas_id = self.context_panel.image_panel.canvas.create_new_line((0, 0), **kwargs)
+            self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(
+                context_canvas_id, image_coords)
+            return annotate_id, context_canvas_id, kwargs['color']
+
+        def insert_polygon():
+            # type: () -> (int, int, str)
+            # this will only render an outer ring
+            image_coords = the_geometry.outer_ring.coordinates[:, :2].flatten().tolist()
+            # create the shape on the annotate panel
+            annotate_id = self.annotate_panel.image_panel.canvas.create_new_polygon((0, 0, 0, 0), **kwargs)
+            self.annotate_panel.image_panel.canvas.modify_existing_shape_using_image_coords(annotate_id, image_coords)
+            # create the identical shape on the context panel
+            the_annotate_vector = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+            kwargs['color'] = the_annotate_vector.color
+
+            context_canvas_id = self.context_panel.image_panel.canvas.create_new_polygon((0, 0, 0, 0), **kwargs)
+            self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(context_canvas_id, image_coords)
+            return annotate_id, context_canvas_id, kwargs['color']
+
+        kwargs = {}
+        if the_color is not None:
+            kwargs = {'color': the_color}
+
+        self._modifying_shapes_on_annotate = True
+        if isinstance(the_geometry, Point):
+            annotate_shape_id, context_shape_id, shape_color = insert_point()
+        elif isinstance(the_geometry, LineString):
+            annotate_shape_id, context_shape_id, shape_color = insert_line()
+        elif isinstance(the_geometry, Polygon):
+            annotate_shape_id, context_shape_id, shape_color = insert_polygon()
         else:
             showinfo(
                 'Unhandled Geometry',
-                message='Annotation id {} has unsupported feature type {} which '
+                message='Annotation id {} has unsupported feature component of type {} which '
                         'will be omitted from display. Any save of the annotation '
-                        'will not contain this feature.'.format(feature.uid, type(geometry)))
-        # TODO: re-render treeview of the features?
+                        'will not contain this feature.'.format(feature.uid, type(the_geometry)))
+            self._modifying_shapes_on_annotate = False
+            return None, None
 
-    def initialize_geometry(self, annotation_file_name, annotation_collection):
+        self._modifying_shapes_on_annotate = False
+        # set up the tracking for the new shapes
+        self.variables.set_annotate_context_tracking(annotate_shape_id, context_shape_id)
+        self.variables.append_shape_to_feature_tracking(feature.uid, annotate_shape_id, the_color=shape_color)
+        return annotate_shape_id, shape_color
+
+    def _insert_feature_from_file(self, feature):
+        """
+        This is creating all shapes from the given geometry. This short-circuits
+        the event listeners, so must handle all tracking updates itself.
+
+        Parameters
+        ----------
+        feature : Annotation
+        """
+
+        def extract_base_geometry(the_element, base_collection):
+            # type: (Geometry, List) -> None
+            if the_element is None:
+                return
+            elif isinstance(the_element, GeometryCollection):
+                if the_element.geometries is None:
+                    return
+                for sub_element in the_element.geometries:
+                    extract_base_geometry(sub_element, base_collection)
+            elif isinstance(the_element, MultiPoint):
+                if the_element.points is None:
+                    return
+                base_collection.extend(the_element.points)
+            elif isinstance(the_element, MultiLineString):
+                if the_element.lines is None:
+                    return
+                base_collection.extend(the_element.lines)
+            elif isinstance(the_element, MultiPolygon):
+                if the_element.polygons is None:
+                    return
+                base_collection.extend(the_element.polygons)
+            else:
+                base_collection.append(the_element)
+
+        the_color = None
+        # initialize the feature tracking
+        self.variables.set_feature_tracking(feature.uid, [], None)
+        # extract a list of base geometry elements
+        base_geometries = []
+        extract_base_geometry(feature.geometry, base_geometries)
+        # create shapes for all the geometries
+        for geometry in base_geometries:
+            annotate_id, the_color = self._create_shape_from_geometry(
+                feature, geometry, the_color=the_color)
+
+    def _create_feature_from_shape(self, annotate_id):
+        """
+        Create a blank annotation from an annotation shape.
+
+        Parameters
+        ----------
+        annotate_id : int
+
+        Returns
+        -------
+        str
+            The id of the newly created annotation feature object.
+        """
+
+        # NB: this assumes that the context shape has already been synced from
+        # the event listener method
+
+        geometry_object = self._get_geometry_from_shape(annotate_id)
+        annotation = Annotation(geometry=geometry_object)
+        self.variables.file_annotation_collection.add_annotation(annotation)
+        self.variables.unsaved_changed = True
+
+        vector_object = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+        self.variables.set_feature_tracking(annotation.uid, annotate_id, color=vector_object.color)
+        # TODO: update the treeview?
+        return annotation.uid
+
+    def _update_feature_geometry(self, feature_id):
+        """
+        Updates the entry in the file annotation list, because the geometry has
+        somehow changed.
+
+        Parameters
+        ----------
+        feature_id : str
+        """
+
+        geometry = self._get_geometry_for_feature(feature_id)
+        self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
+        # TODO: update the treeview?
+        self.variables.unsaved_changed = True
+
+    def _add_shape_to_feature(self, feature_id, annotate_id):
+        """
+        Add the annotation shape to the given feature. This assumes it's not
+        otherwise being tracked as part of another feature.
+
+        Parameters
+        ----------
+        feature_id : str
+        annotate_id : int
+        """
+
+        # NB: this assumes that the context shape has already been synced from
+        # the event listener method
+
+        # verify feature color is set
+        the_color = self.variables.get_color_for_feature(feature_id)
+        if the_color is None:
+            vector_object = self.annotate_panel.image_panel.canvas.get_vector_object(annotate_id)
+            the_color = vector_object.color
+        # update feature tracking
+        self.variables.append_shape_to_feature_tracking(feature_id, annotate_id, the_color=the_color)
+        # ensure all shapes for this feature are colored correctly
+        self._ensure_color_for_shapes(feature_id)
+        # update the entry of our annotation object
+        self._update_feature_geometry(feature_id)
+        self.variables.unsaved_changed = True
+
+    def _initialize_geometry(self, annotation_file_name, annotation_collection):
         """
         Initialize the geometry elements from the annotation.
 
@@ -640,10 +1116,13 @@ class AnnotationTool(WidgetPanel):
         self.variables.annotation_file_name = annotation_file_name
         self.variables.label_schema = annotation_collection.label_schema
         self.variables.file_annotation_collection = annotation_collection
+        self.variables.current_annotate_canvas_id = None # TODO: any other state variables to update?
 
         # dump all the old shapes
+        self._modifying_shapes_on_annotate = True
         self.annotate_panel.image_panel.canvas.reinitialize_shapes()
         self.context_panel.image_panel.canvas.reinitialize_shapes()
+        self._modifying_shapes_on_annotate = False
 
         # reinitialize dictionary relating canvas shapes and annotation shapes
         self.variables.reinitialize_features()
@@ -651,11 +1130,42 @@ class AnnotationTool(WidgetPanel):
         # populate all the shapes
         if annotation_collection.annotations is not None:
             for feature in annotation_collection.annotations.features:
-                self.insert_feature(feature)
+                self._insert_feature_from_file(feature)
 
-        # redraw all the shapes on the annotation panel
-        self.annotate_panel.image_panel.canvas.redraw_all_shapes()
-        # TODO: redraw all shapes on the context_panel
+    def _initialize_annotation_file(self, annotation_fname, annotation_collection):
+        """
+        The final initialization steps for the annotation file.
+
+        Parameters
+        ----------
+        annotation_fname : str
+        annotation_collection : FileAnnotationCollection
+        """
+
+        self._initialize_geometry(annotation_fname, annotation_collection)
+        self.annotate_panel.image_panel.enable_tools()
+        self.annotate_panel.image_panel.enable_shapes()
+        self.variables.unsaved_changed = False
+
+    def _delete_feature(self, feature_id):
+        """
+        Removes the given feature.
+
+        Parameters
+        ----------
+        feature_id : str
+        """
+
+        if self.variables.current_feature_id == feature_id:
+            self.variables.set_current_feature_id(None)
+
+        # remove feature from tracking, and get list of shapes to delete
+        annotate_ids = self.variables.delete_feature_from_tracking(feature_id)
+        # delete the shapes - this will also deleting the corresponding context
+        # shapes and remove from tracking
+        for entry in annotate_ids:
+            self.annotate_panel.image_panel.canvas.delete_shape(entry)
+        # TODO: update treeview!
 
     # helper functions for callbacks
     #####
@@ -777,21 +1287,6 @@ class AnnotationTool(WidgetPanel):
         self.metaviewer.populate_from_reader(image_reader.base_reader)
         self.context_panel.image_panel.enable_tools()
 
-    def _initialize_annotation_file(self, annotation_fname, annotation_collection):
-        """
-        The final initialization steps for the annotation file.
-
-        Parameters
-        ----------
-        annotation_fname : str
-        annotation_collection : FileAnnotationCollection
-        """
-
-        self.initialize_geometry(annotation_fname, annotation_collection)
-        self.annotate_panel.image_panel.enable_tools()
-        self.annotate_panel.image_panel.enable_shapes()
-        self.variables.unsaved_changed = False
-
     def create_new_annotation_file(self):
         # TODO: verify functionality
         if not self._verify_image_selected():
@@ -902,10 +1397,69 @@ class AnnotationTool(WidgetPanel):
         self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
         self.variables.unsaved_changed = False
 
+    def callback_delete_shape(self):
+        """
+        Remove the given shape from the current annotation.
+        """
+
+        if not self._verify_file_annotation_selected(popup=True):
+            return # nothing to be done
+
+        shape_id = self.variables.current_annotate_canvas_id
+        feature_id = self.variables.current_feature_id
+        if shape_id is None:
+            showinfo('No shape is selected', message="No shape is selected.")
+            return
+
+        # remove the shape from the given feature tracking
+        remaining_shapes = self.variables.remove_annotation_from_feature(shape_id)
+        # delete the shape -
+        #   this will also deleting the corresponding context and reset the current id
+        self.annotate_panel.image_panel.canvas.delete_shape(shape_id)
+        if remaining_shapes is None or remaining_shapes > 0:
+            return  # nothing more to be done
+        else:
+            # we may not want an orphaned feature
+            response = askyesno('Annotation with empty geometry',
+                                message='The shape just deleted is the only geometry '
+                                        'associated feature {}. Delete the feature?'.format(feature_id))
+            if response is True:
+                self._delete_feature(feature_id)
+            else:
+                self.variables.set_current_feature_id(feature_id)
+
+    def callback_delete_feature(self):
+        """
+        Deletes the currently selected feature.
+        """
+
+        if not self._verify_file_annotation_selected(popup=True):
+            return # nothing to be done
+
+        feature_id = self.variables.current_feature_id
+        if feature_id is None:
+            showinfo('No feature is selected', message="No feature is selected to delete.")
+            return
+        self._delete_feature(feature_id)
+
+    def callback_annotation_popup(self):
+        """
+        Open an annotation popup window.
+        """
+
+        self._verify_file_annotation_selected()
+
+        if self.variables.current_feature_id is None:
+            showinfo('No feature is selected', message="Please select the feature to view.")
+            return
+
+        popup = tkinter.Toplevel(self.master)
+        AnnotationPopup(popup, self.variables)
+
     # event listeners
     #####
     # noinspection PyUnusedLocal
-    def _sync_remap_change(self, event):
+    def sync_remap_change(self, event):
         """
         Sync changing the remap value from the context panel to the
         annotate panel.
@@ -918,7 +1472,7 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.image_panel.canvas.update_current_image()
 
     # noinspection PyUnusedLocal
-    def _verify_setting_annotate_tool(self, event):
+    def verify_setting_annotate_tool(self, event):
         """
         Verify annotate_panel tool setting is sensible.
 
@@ -946,10 +1500,8 @@ class AnnotationTool(WidgetPanel):
             self._modifying_annotate_tool = False
             return
 
-        # TODO: what dependencies on annotation state here?
-
     # noinspection PyUnusedLocal
-    def _sync_context_selection_to_annotate_zoom(self, event):
+    def sync_context_selection_to_annotate_zoom(self, event):
         """
         Sync the selection on the context panel to the annotate panel.
 
@@ -992,7 +1544,7 @@ class AnnotationTool(WidgetPanel):
         self._modifying_context_selection = False
 
     # noinspection PyUnusedLocal
-    def _sync_annotate_zoom_to_context_selection(self, event):
+    def sync_annotate_zoom_to_context_selection(self, event):
         """
         Sync the zoom on the annotation panel to the selection on the context panel.
 
@@ -1018,7 +1570,7 @@ class AnnotationTool(WidgetPanel):
             self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(rect_id, image_rectangle)
             self.context_panel.image_panel.canvas.show_shape(rect_id)  # just in case we got caught in a bad state
 
-    def _shape_create_on_annotate(self, event):
+    def shape_create_on_annotate(self, event):
         """
         Handles the event that a shape has been created on the annotate panel.
 
@@ -1029,12 +1581,26 @@ class AnnotationTool(WidgetPanel):
             the shape type (int) enum value.
         """
 
-        # we may need a temporary state variable to avoid unnecessary recursion
+        if self._modifying_shapes_on_annotate:
+            return  # nothing required, and avoid recursive loop
 
-        # TODO: what to do here?
-        pass
+        # sync over to the context panel
+        self._create_context_shape_from_annotate_shape(event.x)
 
-    def _shape_finalized_on_annotate(self, event):
+        # if the current_feature is set, ask whether to add, or create new?
+        if self.variables.current_feature_id is not None:
+            response = askyesno('Add shape to current annotation?',
+                                message='Should we add this newly created shape to the '
+                                        'current annotation (Yes), or create a new annotation (No)?')
+            if response is True:
+                self._add_shape_to_feature(self.variables.current_feature_id, event.x)
+                return
+
+        the_id = self._create_feature_from_shape(event.x)  # NB: handles various tracking updates
+        self.variables.current_annotate_canvas_id = event.x
+        # TODO: update the treeview? Maybe set the selection?
+
+    def shape_finalized_on_annotate(self, event):
         """
         Handles the event that a shapes coordinates have been (possibly temporarily)
         finalized (i.e. certainly not dragged).
@@ -1046,12 +1612,15 @@ class AnnotationTool(WidgetPanel):
             the shape type (int) enum value.
         """
 
-        # we may need a temporary state variable to avoid unnecessary recursion
+        # TODO: this should not need to be short-circuited?
 
-        # TODO: what to do here?
-        pass
+        # sync the given shape over to the context panel
+        self._sync_annotate_shape_to_context_shape(event.x)
+        # extract the appropriate feature, and sync changes to the list
+        feature_id = self.variables.get_feature_for_annotate(event.x)
+        self._update_feature_geometry(feature_id)
 
-    def _shape_delete_on_annotate(self, event):
+    def shape_delete_on_annotate(self, event):
         """
         Handles the event that a shape has been deleted from the annotate panel.
 
@@ -1062,12 +1631,24 @@ class AnnotationTool(WidgetPanel):
             the shape type (int) enum value.
         """
 
-        # we may need a temporary state variable to avoid unnecessary recursion
+        if self.variables.current_annotate_canvas_id == event.x:
+            self.variables.current_annotate_canvas_id = None
 
-        # TODO: what to do here?
-        pass
+        if self._modifying_shapes_on_annotate:
+            return
 
-    def _shape_selected_on_annotate(self, event):
+        # NB: any feature association must have already been handled, or we will
+        # get a fatal error here
+
+        # handle any context association
+        context_id = self.variables.get_context_for_annotate(event.x)
+        if context_id is not None:
+            self.context_panel.image_panel.canvas.delete_shape(context_id)
+            self.variables.mark_context_for_deletion(context_id)
+        # remove this shape from tracking completely
+        self.variables.delete_annotation_from_tracking(event.x)
+
+    def shape_selected_on_annotate(self, event):
         """
         Handles the event that a shape has been selected on the annotate panel.
 
@@ -1078,113 +1659,15 @@ class AnnotationTool(WidgetPanel):
             the shape type (int) enum value.
         """
 
-        # we may need a temporary state variable to avoid unnecessary recursion
-
-        # TODO: what to do here?
-        pass
-
-    # DEFUNCT context callbacks
-    def callback_annotate_handle_right_mouse_click(self, event):
-        # TODO: this is definitely stupid
-        self.annotate_panel.image_panel.canvas.callback_handle_right_mouse_click(event)
-
-        # if self.annotate_panel.image_panel.canvas.current_tool == ToolConstants.EDIT_SHAPE:
-        #     # craft the polygon
-        #     current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
-        #     image_coords = self.annotate_panel.image_panel.canvas.get_shape_image_coords(current_canvas_shape_id)
-        #     geometry_coords = numpy.asarray([x for x in zip(image_coords[0::2], image_coords[1::2])])
-        #     polygon = Polygon(coordinates=[geometry_coords, ])
-        #     # create the annotation and add to the list
-        #     annotation = Annotation(geometry=polygon)
-        #     self.variables.file_annotation_collection.add_annotation(annotation)
-        #     # handle the feature tracking
-        #     self.insert_feature(annotation, annotate_canvas_id=current_canvas_shape_id)
-
-    def callback_set_to_draw_polygon(self):
-        # TODO: this should replaced with a listening function for resetting shape
-        self._verify_file_annotation_selected()
-        self.annotate_panel.image_panel.canvas.variables.current_shape_id = None
-        self.annotate_panel.image_panel.canvas.set_current_tool_to_draw_polygon()
-
-    def callback_set_to_edit_shape(self):
-        # TODO: this should replaced with a listening function for resetting shape
-        self._verify_file_annotation_selected()
-        self.annotate_panel.image_panel.canvas.set_current_tool_to_edit_shape()
-
-    def callback_delete_shape(self):
-        # TODO: verify this functionality...
-        self._verify_file_annotation_selected()
-        current_geom_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
-        if current_geom_id is None or \
-                current_geom_id in self.annotate_panel.image_panel.canvas.get_tool_shape_ids():
-            showinfo('No Shape Selected', message='No shape is currently selected.')
-            return
-
-        # find the associated feature
-        feature_id = self.variables.current_feature_id
-        if feature_id == '':
-            # no associated feature, so just delete from canvas
-            self.annotate_panel.image_panel.canvas.delete_shape(current_geom_id)
-        else:
-            # find all shapes on both canvases and delete
-            entries = self.variables.feature_id_dict.get(feature_id, None)
-            if entries is None:
-                showinfo(
-                    'Bad State',
-                    message='The selected feature id and feature_id_dict are out of sync. '
-                            'This is an unexpected failure.')
-                return
-
-            annotate_entry = entries.get('annotate_id', None)
-            if annotate_entry is None or annotate_entry == '':
-                pass
-            elif isinstance(annotate_entry, string_types):
-                if annotate_entry != current_geom_id:
-                    showinfo(
-                        'Shape ID mismatch',
-                        message='The selected shape and selected feature id are unexpectedly '
-                                'out of sync. Proceeding to the best of our ability.')
-                self.annotate_panel.image_panel.canvas.delete_shape(annotate_entry)
-            elif isinstance(annotate_entry, (tuple, list)):
-                for entry in annotate_entry:
-                    self.annotate_panel.image_panel.canvas.delete_shape(entry)
-            else:
-                raise TypeError('Unhandled type {}'.format(type(annotate_entry)))
-
-            context_entry = entries.get('context_id', None)
-            if context_entry is None or context_entry == '':
-                pass
-            elif isinstance(context_entry, string_types):
-                self.context_panel.image_panel.canvas.delete_shape(context_entry)
-            elif isinstance(context_entry, (tuple, list)):
-                for entry in context_entry:
-                    self.context_panel.image_panel.canvas.delete_shape(entry)
-            else:
-                raise TypeError('Unhandled type {}'.format(type(context_entry)))
-
-            # now, delete the feature
-            del self.variables.file_annotation_collection.annotations[feature_id]
-            # TODO: sync any display of the feature list?
-
-    def callback_annotation_popup(self):
-        # TODO: what is the correct workflow here?
-        self._verify_file_annotation_selected()
-
-        current_canvas_shape_id = self.annotate_panel.image_panel.canvas.variables.current_shape_id
-        if current_canvas_shape_id is None:
-            showinfo('No shape selected', message='Please draw/select a shape feature first.')
-            return
-
-        popup = tkinter.Toplevel(self.master)
-        self.variables.current_annotate_canvas_id = current_canvas_shape_id
-        AnnotationPopup(popup, self.variables)
+        self.variables.current_annotate_canvas_id = event.x
+        # TODO: update the treeview!
 
 
 def main():
     root = tkinter.Tk()
 
     the_style = ttk.Style()
-    the_style.theme_use('clam')
+    the_style.theme_use('classic')
 
     # noinspection PyUnusedLocal
     app = AnnotationTool(root)
