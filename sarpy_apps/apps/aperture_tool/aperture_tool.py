@@ -31,10 +31,10 @@ from tk_builder.widgets import widget_descriptors, basic_widgets
 import sarpy.visualization.remap as remap
 from sarpy.processing.aperture_filter import ApertureFilter
 
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
+from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 
 # TODO: review the RadioButtonPanel situation?
 
@@ -1043,8 +1043,8 @@ class RegionSelection(WidgetPanel):
     _widget_list = ("instructions", "image_panel")
     instructions = widget_descriptors.LabelDescriptor(
         "instructions",
-        default_text='First, open a complex type image file.\n'
-                     'Then, selecting a region (use the select tool) '
+        default_text='First, open a complex type image file using the File Menu.\n'
+                     'Then, selecting a region, using the select tool, which '
                      'will open the aperture tool for that region.',
         docstring='The basic instructions.')   # type: basic_widgets.Label
     image_panel = widget_descriptors.ImagePanelDescriptor(
@@ -1076,11 +1076,11 @@ class RegionSelection(WidgetPanel):
         self.image_panel.hide_tools('shape_drawing')
         self.image_panel.hide_shapes()
 
-        # set up the metaicon and metaviewer popups
+        # set up the metaicon popup
         self.metaicon_popup_panel = tkinter.Toplevel(parent)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
         self.metaicon_popup_panel.withdraw()
-        # setup the metaviewer
+        # setup the metaviewer popup
         self.metaviewer_popup_panel = tkinter.Toplevel(parent)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
         self.metaviewer_popup_panel.withdraw()
@@ -1289,10 +1289,10 @@ def main():
     root = tkinter.Tk()
 
     the_style = ttk.Style()
-    the_style.theme_use('clam')
+    the_style.theme_use('classic')
 
     app = RegionSelection(root)
-    root.geometry("800x600")
+    root.geometry("1000x800")
 
     root.mainloop()
 

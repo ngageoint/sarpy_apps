@@ -1,3 +1,11 @@
+"""
+The metaicon widget.
+"""
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 from typing import Tuple, List
 from tkinter import font
 import tkinter
@@ -7,36 +15,34 @@ import numpy
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.general.base import BaseReader
 from sarpy.io.general.utils import string_types
-from sarpy.io.product.sidd import SIDDReader
-from sarpy.io.phase_history.cphd import CPHDReader
 
 from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_reader import NumpyImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+
+class Colors:
+    layover = color_converter.rgb_to_hex((1, 0.65, 0))
+    shadow = color_converter.rgb_to_hex((0, 0.65, 1))
+    multipath = color_converter.rgb_to_hex((1, 0, 0))
+    north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
+    flight_direction = color_converter.rgb_to_hex((1, 1, 0))
+
+class ArrowWidths:
+    layover_width = 2
+    shadow_width = 2
+    multipath_width = 2
+    north_width = 2
 
 
 class MetaIcon(ImagePanel):
-
-    class Colors:
-        layover = color_converter.rgb_to_hex((1, 0.65, 0))
-        shadow = color_converter.rgb_to_hex((0, 0.65, 1))
-        multipath = color_converter.rgb_to_hex((1, 0, 0))
-        north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
-        flight_direction = color_converter.rgb_to_hex((1, 1, 0))
-
-    class ArrowWidths:
-        layover_width = 2
-        shadow_width = 2
-        multipath_width = 2
-        north_width = 2
+    """
+    The metaicon widget.
+    """
 
     def __init__(self, parent):
         super(MetaIcon, self).__init__(parent)
-        self.parent = parent
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
@@ -154,13 +160,13 @@ class MetaIcon(ImagePanel):
             fill="white", anchor="nw", font=self.font)
         self.canvas.create_new_text(
             line_positions[6], text=self.data_container.get_angle_line('layover'),
-            fill=self.Colors.layover, anchor="nw", font=self.font)
+            fill=Colors.layover, anchor="nw", font=self.font)
         self.canvas.create_new_text(
             line_positions[7], text=self.data_container.get_angle_line('shadow'),
-            fill=self.Colors.shadow, anchor="nw", font=self.font)
+            fill=Colors.shadow, anchor="nw", font=self.font)
         self.canvas.create_new_text(
             line_positions[8], text=self.data_container.get_angle_line('multipath'),
-            fill=self.Colors.multipath, anchor="nw", font=self.font)
+            fill=Colors.multipath, anchor="nw", font=self.font)
 
         self.draw_layover_arrow()
         self.draw_shadow_arrow()
@@ -189,13 +195,12 @@ class MetaIcon(ImagePanel):
         if not isinstance(reader, BaseReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
-        # TODO: re-implement support for cphd and sidd metadata
         if reader.reader_type == 'SICD':
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
-        elif isinstance(reader, CPHDReader):
+        elif reader.reader_type == 'CPHD':
             data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta, index)
-        elif isinstance(reader, SIDDReader):
+        elif reader.reader_type == 'SIDD':
             data_container = MetaIconDataContainer.from_sidd(reader.sidd_meta[index])
         else:
             raise TypeError('Got unhandled type {}'.format(type(reader)))
@@ -369,9 +374,10 @@ class MetaIcon(ImagePanel):
         None
         """
 
-        self.canvas.create_new_arrow(self.layover_arrow_coords,
-                                     fill=self.Colors.layover,
-                                     width=self.ArrowWidths.layover_width)
+        self.canvas.create_new_arrow(
+            self.layover_arrow_coords,
+            fill=Colors.layover,
+            width=ArrowWidths.layover_width)
 
     def draw_shadow_arrow(self):
         """
@@ -383,8 +389,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(self.shadow_arrow_coords,
-                                     fill=self.Colors.shadow,
-                                     width=self.ArrowWidths.shadow_width)
+                                     fill=Colors.shadow,
+                                     width=ArrowWidths.shadow_width)
 
     def draw_multipath_arrow(self):
         """
@@ -396,8 +402,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(self.multipath_arrow_coords,
-                                     fill=self.Colors.multipath,
-                                     width=self.ArrowWidths.multipath_width)
+                                     fill=Colors.multipath,
+                                     width=ArrowWidths.multipath_width)
 
     def draw_north_arrow(self):
         """
@@ -409,8 +415,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(self.north_arrow_coords,
-                                     fill=self.Colors.north,
-                                     width=self.ArrowWidths.north_width)
+                                     fill=Colors.north,
+                                     width=ArrowWidths.north_width)
         # label the north arrow
         x_start = self.north_arrow_coords[0]
         x_end = self.north_arrow_coords[2]
@@ -419,7 +425,7 @@ class MetaIcon(ImagePanel):
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
         self.canvas.create_new_text((text_pos[0], text_pos[1]),
                                 text="N",
-                                fill=self.Colors.north,
+                                fill=Colors.north,
                                 font=self.font)
 
     def draw_direction_arrow(self):
@@ -438,16 +444,16 @@ class MetaIcon(ImagePanel):
             self.canvas.create_new_arrow((flight_direction_arrow_start[0],
                                           flight_direction_arrow_start[1],
                                           flight_direction_arrow_end[0],
-                                          flight_direction_arrow_end[1]), fill=self.Colors.flight_direction, width=3)
+                                          flight_direction_arrow_end[1]), fill=Colors.flight_direction, width=3)
         else:
             self.canvas.create_new_arrow((flight_direction_arrow_end[0],
                                           flight_direction_arrow_end[1],
                                           flight_direction_arrow_start[0],
-                                          flight_direction_arrow_start[1]), fill=self.Colors.flight_direction, width=3)
+                                          flight_direction_arrow_start[1]), fill=Colors.flight_direction, width=3)
         self.canvas.create_new_text((flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
                                  flight_direction_arrow_start[1]),
                                 text="R",
-                                fill=self.Colors.flight_direction,
+                                fill=Colors.flight_direction,
                                 font=self.font)
 
     def _adjust_arrow_aspect_ratio(self, arrow_length, arrow_angle_radians):

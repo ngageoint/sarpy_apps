@@ -239,7 +239,7 @@ def main():
     root = tkinter.Tk()
 
     the_style = ttk.Style()
-    the_style.theme_use('clam')
+    the_style.theme_use('classic')
 
     app = ImageViewer(root)
     root.mainloop()
