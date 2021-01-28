@@ -72,7 +72,7 @@ class SchemaViewer(basic_widgets.Treeview):
         self.parent = master
         if geometry_size is not None:
             self.parent.geometry(geometry_size)
-        self.pack(expand=True, fill='both')
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         try:
             self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
         except AttributeError:
@@ -228,9 +228,14 @@ def select_schema_entry(label_schema, start_id=None):
 # Widget for creating/editing a label schema, and associated elements
 
 class _LabelEntryPanel(WidgetPanel):
+    """
+    Tool for editing a label schema entry. This supports creating a new schema entry
+    or modifying a current entry, and modifies the schema in place.
+    """
+
     _widget_list = (
         ('header_message', ),
-        ('id_label', 'id_entry', 'name_label', 'name_entry', 'parent_label', 'parent_entry'),
+        ('id_label', 'id_entry', 'name_label', 'name_entry', 'parent_label', 'parent_button'),
         ('cancel_button', 'okay_button'))
     header_message = LabelDescriptor(
         'header_message', default_text='', docstring='The header message.')# type: basic_widgets.Label
@@ -246,8 +251,8 @@ class _LabelEntryPanel(WidgetPanel):
 
     parent_label = LabelDescriptor(
         'parent_label', default_text='Parent ID:', docstring='The parent label')  # type: basic_widgets.Label
-    parent_entry = EntryDescriptor(
-        'parent_entry', default_text='', docstring='The parent value')  # type: basic_widgets.Entry
+    parent_button = ButtonDescriptor(
+        'parent_button', default_text='<Choose>', docstring='The parent value')  # type: basic_widgets.Button
 
     cancel_button = ButtonDescriptor(
         'cancel_button', default_text='Cancel', docstring='The cancel button')  # type: basic_widgets.Button
@@ -255,16 +260,23 @@ class _LabelEntryPanel(WidgetPanel):
         'okay_button', default_text='Okay', docstring='The okay button')  # type: basic_widgets.Button
 
     def __init__(self, parent):
+        """
+
+        Parameters
+        ----------
+        parent : tkinter.Toplevel
+        """
+
         WidgetPanel.__init__(self, parent)
         self.init_w_rows()
 
 
-class _LabelEntryWidget(object):
+class LabelEntryWidget(object):
     """
     The widget element that actually performs the label schema entry edit. This
     edits the provided label schema in place.
 
-    This object creates a pop-up. So it creates a tkinter.TopLevel which maintains
+    This object creates a pop-up. So it creates a tkinter.Toplevel which maintains
     it's own mainloop(), and the TopLevel gets destroyed by this object.
     """
 
@@ -279,52 +291,72 @@ class _LabelEntryWidget(object):
             The entry to edit. A new entry will be created, if `None`.
         """
 
+        self.root = tkinter.Toplevel()
+        self.entry_widget = _LabelEntryPanel(self.root)
+
         if not isinstance(label_schema, LabelSchema):
             raise TypeError('label_schema must be a label_schema type.')
         self.label_schema = label_schema
         if edit_id is not None and edit_id not in label_schema.labels:
             raise KeyError('edit_id is not a label label id.')
+        self._edit_id = edit_id
 
-        self.edit_id = edit_id
-
-        self.root = tkinter.Toplevel()
-        self.entry_widget = _LabelEntryPanel(self.root)
-        self.entry_widget.parent_entry.config(validate='focusin', validatecommand=self.parent_callback)
-        if self.edit_id is not None:
+        if self._edit_id is not None:
+            self.entry_widget.id_entry.config(state='disabled')
+            self.entry_widget.id_entry.set_text(self._edit_id)
             self.entry_widget.header_message.set_text(
                 'The <ID> is immutable, and <Name> is for simple interpretation.')
-            the_name = self.label_schema.labels[edit_id]
-            parent_id = self.label_schema.get_parent(edit_id)
-            self.entry_widget.id_entry.config(state='disabled')
-            self.entry_widget.id_entry.set_text(self.edit_id)
-            self.entry_widget.name_entry.set_text(the_name)
-            self.entry_widget.parent_entry.set_text(parent_id)
+            self._parent_id = self.label_schema.get_parent(self._edit_id)
+            self.entry_widget.name_entry.set_text(self.label_schema.labels[self._edit_id])
         else:
             id_suggestion = self.label_schema.suggested_next_id
             str_id_suggestion = '<SET>' if id_suggestion is None else str(id_suggestion)
+            self.entry_widget.id_entry.set_text(str_id_suggestion)
             self.entry_widget.header_message.set_text(
                 '<ID> is immutable once finalized, and <Name> is for simple interpretation.')
-            self.entry_widget.id_entry.set_text(str_id_suggestion)
+            self._parent_id = None
             self.entry_widget.name_entry.set_text('<SET>')
-            self.entry_widget.parent_entry.set_text('')
+        self._set_parent_text()
+        self.entry_widget.parent_button.config(command=self.parent_callback)
         self.entry_widget.cancel_button.config(command=self.cancel_callback)
         self.entry_widget.okay_button.config(command=self.okay_callback)
         self.root.mainloop()
 
+    def _set_parent_text(self):
+        """
+        Sets the text on the parent selection button.
+        """
+
+        if self._parent_id is None:
+            self.entry_widget.parent_button.set_text('<Choose>')
+        else:
+            self.entry_widget.parent_button.set_text(self.label_schema.labels[self._parent_id])
+
     def parent_callback(self):
-        current_value = self.entry_widget.parent_entry.get()
-        value = select_schema_entry(self.label_schema, start_id=current_value)
-        self.entry_widget.parent_entry.set_text(value)
+        """
+        Edit or populate the parent id.
+        """
+
+        self._parent_id = select_schema_entry(self.label_schema, start_id=self._parent_id)
+        self._set_parent_text()
 
     def cancel_callback(self):
+        """
+        Cancel the editing.
+        """
+
         self.root.quit()
 
     def okay_callback(self):
+        """
+        Finalize the entry editing and submission.
+        """
+
         the_id = self.entry_widget.id_entry.get()
         the_name = self.entry_widget.name_entry.get()
-        the_parent = self.entry_widget.parent_entry.get()
+        the_parent = '' if self._parent_id is None else self._parent_id
 
-        if self.edit_id is None:
+        if self._edit_id is None:
             # if this is a new entry, then verify that both id and name are set
             if the_id == '<SET>' or the_name == '<SET>':
                 showinfo('Entries Not Initialized', message='Both `ID` and `Name` must be set.')
@@ -346,10 +378,6 @@ class _LabelEntryWidget(object):
     def destroy(self):
         """
         Destroys the widget elements.
-
-        Returns
-        -------
-        None
         """
 
         # noinspection PyBroadException
@@ -551,9 +579,9 @@ class SchemaEditor(WidgetPanel):
             return
         else:
             self._unsaved_edits = True
-            popup = _LabelEntryWidget(self.label_schema, edit_id=selected)
-            self._populate_treeview_schema()
+            popup = LabelEntryWidget(self.label_schema, edit_id=selected)
             popup.destroy()
+            self._populate_treeview_schema()
 
     def new_entry(self):
         """
@@ -569,9 +597,9 @@ class SchemaEditor(WidgetPanel):
             return
 
         self._unsaved_edits = True
-        popup = _LabelEntryWidget(self.label_schema, edit_id=None)
-        self._populate_treeview_schema()
+        popup = LabelEntryWidget(self.label_schema, edit_id=None)
         popup.destroy()
+        self._populate_treeview_schema()
 
     def new_schema(self):
         """

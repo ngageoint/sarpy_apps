@@ -11,7 +11,7 @@ import os
 from shutil import copyfile
 import time
 from collections import OrderedDict
-from typing import Dict, List
+from typing import Dict, List, Tuple, Any
 
 import tkinter
 from tkinter import ttk
@@ -32,13 +32,157 @@ from tk_builder.panels.image_panel import ImagePanel
 
 from sarpy.compliance import string_types, integer_types
 from sarpy.annotation.schema_processing import LabelSchema
-from sarpy.annotation.annotate import FileAnnotationCollection, Annotation, AnnotationMetadata
+from sarpy.annotation.annotate import FileAnnotationCollection, Annotation, \
+    AnnotationMetadata, AnnotationMetadataList
 from sarpy.geometry.geometry_elements import Geometry, GeometryCollection, \
     Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
 
 
 ##############
-# Context Panel Definition
+# Labeling Panel and Popup Widget
+
+class LabelingPanel(WidgetPanel):
+    _widget_list = (
+        ("object_type_label", "choose_type"),
+        ("comment_label", "comment"),
+        ("confidence_label", "confidence"),
+        ("cancel", "submit"))
+    object_type_label = widget_descriptors.LabelDescriptor(
+        "object_type_label", default_text='Type:')  # type: basic_widgets.Label
+    choose_type = widget_descriptors.ButtonDescriptor(
+        "choose_type", default_text='Choose')  # type: basic_widgets.Button
+
+    comment_label = widget_descriptors.LabelDescriptor(
+        "comment_label", default_text='Comment:')  # type: basic_widgets.Label
+    comment = widget_descriptors.EntryDescriptor(
+        "comment", default_text='')  # type: basic_widgets.Entry
+
+    confidence_label = widget_descriptors.LabelDescriptor(
+        "confidence_label", default_text='Confidence:')  # type: basic_widgets.Label
+    confidence = widget_descriptors.ComboboxDescriptor(
+        "confidence", default_text='')  # type: basic_widgets.Combobox
+
+    cancel = widget_descriptors.ButtonDescriptor(
+        "cancel", default_text='Cancel')  # type: basic_widgets.Button
+    submit = widget_descriptors.ButtonDescriptor(
+        "submit", default_text='Submit')  # type: basic_widgets.Button
+
+    def __init__(self, master):
+        """
+
+        Parameters
+        ----------
+        master : tkinter.Toplevel
+            The app master.
+        """
+
+        WidgetPanel.__init__(self, master)
+        self.init_w_rows()
+
+
+class LabelingPopup(object):
+    """
+    This is a widget for performing the labeling portion of the annotation.
+
+    This starts it's own tkinter.Toplevel, which maintains it's own mainloop.
+    This allows it to freeze execution of the calling application.
+    """
+
+    def __init__(self, main_app_variables):
+        """
+
+        Parameters
+        ----------
+        main_app_variables : AppVariables
+        """
+
+        self._object_type_id = None
+        self.main_app_variables = main_app_variables
+        self.label_schema = main_app_variables.label_schema
+
+        self.root = tkinter.Toplevel()
+        self.widget = LabelingPanel(self.root)
+
+        self.widget.set_text("Annotate")
+
+        # set up base types for initial dropdown menu
+        self.setup_confidence_selections()
+
+        # get the current annotation
+        current_id = self.main_app_variables.current_feature_id
+        self.annotation = self.main_app_variables.file_annotation_collection.annotations[current_id]
+
+        # populate existing fields if editing an existing geometry
+        annotation_metadata_list = self.annotation.properties
+        # verify that we can operate on this thing
+        assert (annotation_metadata_list is None or
+                isinstance(annotation_metadata_list, AnnotationMetadataList))
+        if annotation_metadata_list is not None and len(annotation_metadata_list) > 0:
+            annotate_metadata = annotation_metadata_list[0]
+            self._object_type_id = annotate_metadata.label_id
+            self.widget.choose_type.set_text(self.label_schema.labels[self._object_type_id])
+            self.widget.comment.set_text(annotate_metadata.comment)
+            self.widget.confidence.set(annotate_metadata.confidence)
+        else:
+            self._object_type_id = None
+            self.widget.choose_type.set_text("****")
+            self.widget.comment.set_text("")
+            self.widget.confidence.set("")
+
+        # label appearance
+        self.widget.object_type_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.widget.comment_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.widget.confidence_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+
+        # set up callbacks
+        self.widget.choose_type.config(command=self.select_object_type)
+        self.widget.cancel.config(command=self.callback_cancel)
+        self.widget.submit.config(command=self.callback_submit)
+        self.root.mainloop()
+
+    def select_object_type(self):
+        current_value = self._object_type_id
+        value = select_schema_entry(self.label_schema, start_id=current_value)
+        self._object_type_id = value
+        self.widget.choose_type.set_text(self.label_schema.labels[value])
+
+    def callback_cancel(self):
+        self.root.quit()
+
+    def callback_submit(self):
+        if self._object_type_id is None:
+            showinfo("Select Object Type", message="Select the object type")
+            return
+
+        annotation_metadata = AnnotationMetadata(
+            comment=self.widget.comment.get(),
+            label_id=self._object_type_id,
+            confidence=self.widget.confidence.get())
+        self.annotation.add_annotation_metadata(annotation_metadata)
+        self.main_app_variables.unsaved_changed = True
+        self.root.quit()
+
+    def setup_confidence_selections(self):
+        confidence_values = self.label_schema.confidence_values
+        if confidence_values is None or len(confidence_values) < 1:
+            self.widget.confidence.set('')
+            self.widget.confidence.config(state='disabled')
+        else:
+            self.widget.confidence.update_combobox_values(confidence_values)
+            self.widget.confidence.config(state='readonly')
+
+    def destroy(self):
+        try:
+            self.root.destroy()
+        except:
+            pass
+
+    def __del__(self):
+        self.destroy()
+
+
+#########
+# Main Annotation Window elements
 
 class ContextImagePanel(WidgetPanel):
     """
@@ -56,13 +200,10 @@ class ContextImagePanel(WidgetPanel):
         self.init_w_vertical_layout()
 
 
-#############
-# Annotation Panel Definition
-
 class AnnotationButtons(WidgetPanel):
     _widget_list = ("delete_shape", "delete_annotation", "annotate")
     delete_shape = widget_descriptors.ButtonDescriptor(
-        "delete", default_text='delete shape')  # type: basic_widgets.Button
+        "delete_shape", default_text='delete shape')  # type: basic_widgets.Button
     delete_annotation = widget_descriptors.ButtonDescriptor(
         "delete_annotation", default_text='delete annotation')  # type: basic_widgets.Button
     annotate = widget_descriptors.ButtonDescriptor(
@@ -83,120 +224,6 @@ class AnnotateImagePanel(WidgetPanel):
         WidgetPanel.__init__(self, master)
         self.init_w_vertical_layout()
 
-
-##############
-# Annotation Popup
-
-class AnnotationPopup(WidgetPanel):
-    _widget_list = (
-        ("object_type_label", "object_type"),
-        ("comment_label", "comment"),
-        ("confidence_label", "confidence"),
-        ("reset", "submit"))
-    object_type = widget_descriptors.EntryDescriptor(
-        "object_type", default_text='')  # type: basic_widgets.Entry
-    reset = widget_descriptors.ButtonDescriptor(
-        "reset", default_text='Reset')  # type: basic_widgets.Button
-    submit = widget_descriptors.ButtonDescriptor(
-        "submit", default_text='Submit')  # type: basic_widgets.Button
-    comment = widget_descriptors.EntryDescriptor(
-        "comment", default_text='')  # type: basic_widgets.Entry
-    confidence = widget_descriptors.ComboboxDescriptor(
-        "confidence", default_text='')  # type: basic_widgets.Combobox
-
-    object_type_label = widget_descriptors.LabelDescriptor(
-        "object_type_label", default_text='Object Type:')  # type: basic_widgets.Label
-    comment_label = widget_descriptors.LabelDescriptor(
-        "comment_label", default_text='Comment:')  # type: basic_widgets.Label
-    confidence_label = widget_descriptors.LabelDescriptor(
-        "confidence_label", default_text='Confidence:')  # type: basic_widgets.Label
-
-    def __init__(self, master, main_app_variables):
-        """
-
-        Parameters
-        ----------
-        master
-            The app master.
-        main_app_variables : AppVariables
-            The application variables.
-        """
-
-        self.label_schema = main_app_variables.label_schema
-        self.main_app_variables = main_app_variables
-
-        self.master = master
-        self.primary_frame = basic_widgets.Frame(master)
-        WidgetPanel.__init__(self, self.primary_frame)
-
-        self.init_w_rows()
-        # TODO: configure label appearance?
-
-        self.set_text("Annotate")
-
-        # set up base types for initial dropdown menu
-        self.setup_confidence_selections()
-
-        self.primary_frame.pack()
-
-        # set up callbacks
-        self.object_type.config(validate='focusin', validatecommand=self.select_object_type)
-        self.reset.config(command=self.callback_reset)
-        self.submit.config(command=self.callback_submit)
-
-        # get the current annotation
-        current_id = self.main_app_variables.current_feature_id
-        print('current_id', current_id, 'annotations', self.main_app_variables.file_annotation_collection.annotations)
-        self.annotation = self.main_app_variables.file_annotation_collection.annotations[current_id]
-
-        # populate existing fields if editing an existing geometry
-        if self.annotation.properties is not None:
-            object_type = self.annotation.properties.elements[0].label_id
-            comment = self.annotation.properties.elements[0].comment
-            confidence = self.annotation.properties.elements[0].confidence  # TODO: None?
-
-            self.object_type.set_text(object_type)
-            self.object_type.configure(state="disabled")
-            self.comment.set_text(comment)
-            self.confidence.set(confidence)
-        else:
-            self.object_type.set_text("")
-            self.comment.set_text("")
-            self.confidence.set("")
-
-    def select_object_type(self):
-        current_value = self.object_type.get()
-        value = select_schema_entry(self.label_schema, start_id=current_value)
-        self.object_type.set_text(value)
-        print('value', value, 'value type', type(value), 'set value', self.object_type.get())
-
-    def callback_reset(self):
-        self.object_type.configure(state="normal")
-
-    def callback_submit(self):
-        # TODO: review this
-        if self.object_type.get() == '':
-            showinfo("Select Object Type", message="Select the object type")
-            return
-
-        annotation_metadata = AnnotationMetadata(comment=self.comment.get(),
-                                                 label_id=self.object_type.get(),
-                                                 confidence=self.confidence.get())
-        self.annotation.add_annotation_metadata(annotation_metadata)
-        self.main_app_variables.unsaved_changed = True
-        self.master.destroy()
-
-    def setup_confidence_selections(self):
-        confidence_values = self.label_schema.confidence_values
-        if confidence_values is None or len(confidence_values) < 1:
-            self.confidence.set('')
-            self.confidence.config(state='disabled')
-        else:
-            self.confidence.update_combobox_values(confidence_values)
-            self.confidence.config(state='readonly')
-
-#########
-# Main Annotation Tool
 
 class AppVariables(object):
     """
@@ -354,7 +381,7 @@ class AppVariables(object):
         None|int
         """
 
-        return self._context_to_annotate.get(annotate_id, None)
+        return self._annotate_to_context.get(annotate_id, None)
 
     def get_feature_for_annotate(self, annotate_id):
         """
@@ -386,7 +413,7 @@ class AppVariables(object):
         self._annotate_to_context = OrderedDict()
         self._context_to_annotate = OrderedDict()
         self._current_annotate_canvas_id = None
-        self._current_feature_id = ''
+        self._current_feature_id = None
 
     def set_annotate_context_tracking(self, annotate_id, context_id):
         """
@@ -634,6 +661,7 @@ class AppVariables(object):
         if current_feature_partner is None:
             # new tracking
             self._annotate_to_feature[annotate_id] = feature_id
+            return
         if current_feature_partner == feature_id:
             # already the current tracking
             return
@@ -668,6 +696,13 @@ class AnnotationTool(WidgetPanel):
         docstring='The detail panel for crafting annotations.')  # type: AnnotateImagePanel
 
     def __init__(self, primary):
+        """
+
+        Parameters
+        ----------
+        primary : tkinter.Tk|tkinter.Toplevel
+        """
+
         self._schema_browse_directory = os.path.expanduser('~')
         self._image_browse_directory = os.path.expanduser('~')
         self.primary = basic_widgets.Frame(primary)
@@ -685,10 +720,12 @@ class AnnotationTool(WidgetPanel):
 
         self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon.hide_on_close()
         self.metaicon_popup_panel.withdraw()
 
         self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
+        self.metaviewer.hide_on_close()
         self.metaviewer_popup_panel.withdraw()
 
         menubar = tkinter.Menu()
@@ -710,7 +747,7 @@ class AnnotationTool(WidgetPanel):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Popups", menu=popups_menu)
 
-        self.context_panel.pack(expand=True, fill=tkinter.BOTH)
+        self.context_panel.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.context_panel.context_label.master.pack(side='top', expand=tkinter.NO)
         self.context_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
         self.context_panel.image_panel.canvas.set_canvas_size(400, 300)
@@ -718,7 +755,7 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.buttons.fill_y(False)
         self.annotate_panel.buttons.do_not_expand()
         # self.annotate_panel.buttons.pack(side="bottom")
-        self.annotate_panel.pack(expand=True, fill=tkinter.BOTH)
+        self.annotate_panel.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.annotate_panel.image_panel.canvas.set_canvas_size(400, 300)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -727,6 +764,7 @@ class AnnotationTool(WidgetPanel):
 
         # hide unwanted elements on the panel toolbars
         self.context_panel.set_text('')
+        self.context_panel.context_label.set_text('Select an image file using the File menu.')
         self.context_panel.image_panel.set_text('The contextual area.')
         self.context_panel.image_panel.hide_tools('shape_drawing')
         self.context_panel.image_panel.hide_shapes()
@@ -911,7 +949,7 @@ class AnnotationTool(WidgetPanel):
         """
 
         def insert_point():
-            # type: () -> (int, int, str)
+            # type: () -> Tuple[int, int, str]
             image_coords = the_geometry.coordinates[:2].tolist()
             # create the shape on the annotate panel
             annotate_id = self.annotate_panel.image_panel.canvas.create_new_point((0, 0), **kwargs)
@@ -927,7 +965,7 @@ class AnnotationTool(WidgetPanel):
             return annotate_id, context_canvas_id, kwargs['color']
 
         def insert_line():
-            # type: () -> (int, int, str)
+            # type: () -> Tuple[int, int, str]
             image_coords = the_geometry.coordinates[:, 2].tolist()
             # create the shape on the annotate panel
             annotate_id = self.annotate_panel.image_panel.canvas.create_new_line((0, 0, 0, 0), **kwargs)
@@ -943,7 +981,8 @@ class AnnotationTool(WidgetPanel):
             return annotate_id, context_canvas_id, kwargs['color']
 
         def insert_polygon():
-            # type: () -> (int, int, str)
+            # type: () -> Tuple[int, int, str]
+
             # this will only render an outer ring
             image_coords = the_geometry.outer_ring.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
@@ -957,7 +996,7 @@ class AnnotationTool(WidgetPanel):
             self.context_panel.image_panel.canvas.modify_existing_shape_using_image_coords(context_canvas_id, image_coords)
             return annotate_id, context_canvas_id, kwargs['color']
 
-        kwargs = {}
+        kwargs = {'make_current': False}  # type: Dict[str, Any]
         if the_color is not None:
             kwargs = {'color': the_color}
 
@@ -1066,6 +1105,8 @@ class AnnotationTool(WidgetPanel):
         """
 
         geometry = self._get_geometry_for_feature(feature_id)
+
+        annotation = self.variables.file_annotation_collection.annotations[feature_id]
         self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
         # TODO: update the treeview?
         self.variables.unsaved_changed = True
@@ -1145,6 +1186,7 @@ class AnnotationTool(WidgetPanel):
         self.annotate_panel.image_panel.enable_tools()
         self.annotate_panel.image_panel.enable_shapes()
         self.variables.unsaved_changed = False
+        self.context_panel.context_label.set_text('Create annotations on the annotation panel.')
 
     def _delete_feature(self, feature_id):
         """
@@ -1280,6 +1322,7 @@ class AnnotationTool(WidgetPanel):
                              'Aborting'.format(image_reader.file_name, image_reader.image_count))
             return
 
+        self.context_panel.context_label.set_text('Create or select an annotation file using the File menu.')
         self.context_panel.image_panel.set_image_reader(image_reader)
         self.annotate_panel.image_panel.set_image_reader(image_reader)
         self.metaicon.create_from_reader(image_reader.base_reader, index=0)
@@ -1452,8 +1495,8 @@ class AnnotationTool(WidgetPanel):
             showinfo('No feature is selected', message="Please select the feature to view.")
             return
 
-        popup = tkinter.Toplevel(self.master)
-        AnnotationPopup(popup, self.variables)
+        popup = LabelingPopup(self.variables)
+        popup.destroy()
 
     # event listeners
     #####
