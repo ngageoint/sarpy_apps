@@ -140,7 +140,7 @@ class WakeTool(WidgetPanel):
         self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
         self.image_panel.canvas.variables.state.line_width = self.variables.line_width
-        self.image_panel.pack(expand=True, fill=tkinter.BOTH)
+        self.image_panel.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         # hide unnecessary tools
         self.image_panel.hide_tools(['shape_drawing', 'select'])
         self.image_panel.hide_shapes()
@@ -152,10 +152,12 @@ class WakeTool(WidgetPanel):
         # set up the metaicon popup
         self.metaicon_popup_panel = tkinter.Toplevel(primary)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon.hide_on_close()
         self.metaicon_popup_panel.withdraw()
         # setup the metaviewer popup
         self.metaviewer_popup_panel = tkinter.Toplevel(primary)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
+        self.metaviewer.hide_on_close()
         self.metaviewer_popup_panel.withdraw()
 
         # define menus

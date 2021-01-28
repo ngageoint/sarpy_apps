@@ -223,8 +223,8 @@ class RcsTool(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
         self.init_w_basic_widget_list(2, [2, 1])
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.controls.pack(fill=tkinter.X, expand=False)
-        self.rcs_table.pack(fill=tkinter.X, expand=True)
+        self.controls.pack(fill=tkinter.X, expand=tkinter.NO)
+        self.rcs_table.pack(fill=tkinter.X, expand=tkinter.NO)
 
         menubar = tkinter.Menu()
         filemenu = tkinter.Menu(menubar, tearoff=0)
@@ -244,7 +244,7 @@ class RcsTool(WidgetPanel):
         self.controls.plot_buttons.plot.config(command=self.plot_popups)
 
         self.image_panel.canvas.on_left_mouse_release(self.handle_canvas_left_mouse_release)
-        self.image_panel.pack(expand=True, fill=tkinter.BOTH)
+        self.image_panel.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.rcs_table.buttons.edit.config(command=self.edit_rcs_table)
 
         self.rcs_table.table.on_left_mouse_click(self.handle_table_selection)

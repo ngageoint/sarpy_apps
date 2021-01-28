@@ -296,6 +296,7 @@ class PhaseHistoryPanel(WidgetPanel):
     english_units_checkbox = widget_descriptors.CheckButtonDescriptor("english_units_checkbox")  # type: basic_widgets.CheckButton
 
     def __init__(self, parent):
+        self.parent = parent
         WidgetPanel.__init__(self, parent)
         self.config(borderwidth=2)
 
@@ -312,10 +313,10 @@ class PhaseHistoryPanel(WidgetPanel):
         self.full_aperture_button.set_text("Full Aperture")
         self.english_units_checkbox.set_text("English Units")
 
-        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def close_window(self):
-        self.master.withdraw()
+        self.parent.withdraw()
 
 
 ###########
@@ -372,7 +373,7 @@ class ApertureTool(WidgetPanel):
 
         Parameters
         ----------
-        primary : tkinter.Tk|tkinter.TopLevel
+        primary : tkinter.Tk|tkinter.Toplevel
         app_variables : AppVariables
         """
 
@@ -438,6 +439,10 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel.phd_options.apply_deskew.config(command=self.callback_update_apply_deskew)
         self.image_info_panel.phd_options.deskew_fast_slow.slow.config(command=self.callback_update_deskew_direction)
         self.image_info_panel.phd_options.deskew_fast_slow.fast.config(command=self.callback_update_deskew_direction)
+        self.primary.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def close_window(self):
+        self.primary.withdraw()
 
     def callback_update_deskew_direction(self):
         if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
@@ -1057,12 +1062,13 @@ class RegionSelection(WidgetPanel):
 
         Parameters
         ----------
-        parent : tkinter.Tk|tkinter.TopLevel
+        parent : tkinter.Tk|tkinter.Toplevel
         """
 
         # set the parent frame
         primary_frame = basic_widgets.Frame(parent)
         WidgetPanel.__init__(self, primary_frame)
+        self.winfo_toplevel().title("Region Selection")  # TODO: is this right?
 
         self.variables = AppVariables()
 
@@ -1079,10 +1085,12 @@ class RegionSelection(WidgetPanel):
         # set up the metaicon popup
         self.metaicon_popup_panel = tkinter.Toplevel(parent)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon.hide_on_close()
         self.metaicon_popup_panel.withdraw()
         # setup the metaviewer popup
         self.metaviewer_popup_panel = tkinter.Toplevel(parent)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
+        self.metaviewer.hide_on_close()
         self.metaviewer_popup_panel.withdraw()
         # setup the aperture tool
         self.aperture_popup_panel = tkinter.Toplevel(parent)

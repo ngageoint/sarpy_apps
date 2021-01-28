@@ -5,6 +5,7 @@ A viewer for the meta-data associated with the file readers.
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
+import tkinter
 
 from tk_builder.widgets import basic_widgets
 
@@ -33,14 +34,20 @@ class Metaviewer(basic_widgets.Treeview):
 
         Parameters
         ----------
-        master : tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
             The GUI element which is the parent or master of this node.
         """
 
         super(Metaviewer, self).__init__(master)
         self.parent = master
         self.parent.geometry("800x600")
-        self.pack(expand=True, fill='both')
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
+
+    def hide_on_close(self):
+        """
+        Sets the condition so that the close button does not destroy the tool.
+        """
+
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def empty_entries(self):

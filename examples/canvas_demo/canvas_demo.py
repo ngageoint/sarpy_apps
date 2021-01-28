@@ -90,10 +90,10 @@ class CanvasDemo(WidgetPanel):
         self.variables = AppVariables()
 
         self.init_w_horizontal_layout()
-        primary_frame.pack(fill=tkinter.BOTH, expand=1)
-        self.button_panel.pack(fill=tkinter.X, expand=False)
-        self.pyplot_panel.pack(expand=True)
-        self.canvas_demo_image_panel.pack(expand=True)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.button_panel.pack(fill=tkinter.X, expand=tkinter.NO)
+        self.pyplot_panel.pack(expand=tkinter.YES)
+        self.canvas_demo_image_panel.pack(expand=tkinter.YES)
 
         # define panels widget_wrappers in primary frame
         self.button_panel.set_spacing_between_buttons(0)

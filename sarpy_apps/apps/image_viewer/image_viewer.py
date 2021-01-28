@@ -47,14 +47,17 @@ class ImageViewer(WidgetPanel):
         self.variables = AppVariables()
 
         self.init_w_horizontal_layout()
+        self.set_title()
 
         # define our meta icon and metaviewer popups
         self.metaicon_popup_panel = tkinter.Toplevel(self.master)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
+        self.metaicon.hide_on_close()
         self.metaicon_popup_panel.withdraw()
 
         self.metaviewer_popup_panel = tkinter.Toplevel(self.master)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
+        self.metaviewer.hide_on_close()
         self.metaviewer_popup_panel.withdraw()
 
         # define menus
@@ -87,6 +90,20 @@ class ImageViewer(WidgetPanel):
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "Image Viewer"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "Image Viewer, Multiple Files"
+        else:
+            the_title = "Image Viewer for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
 
     def exit(self):
         self.quit()
@@ -154,6 +171,7 @@ class ImageViewer(WidgetPanel):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        self.set_title()
         # refresh appropriate GUI elements
         self.pyplot_panel.make_blank()
         self.populate_metaicon()
