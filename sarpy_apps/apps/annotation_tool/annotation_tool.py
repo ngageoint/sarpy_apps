@@ -54,8 +54,8 @@ class LabelingPanel(WidgetPanel):
 
     comment_label = widget_descriptors.LabelDescriptor(
         "comment_label", default_text='Comment:')  # type: basic_widgets.Label
-    comment = widget_descriptors.EntryDescriptor(
-        "comment", default_text='')  # type: basic_widgets.Entry
+    comment = widget_descriptors.TypedDescriptor(
+        "comment", tkinter.Text)  # type: tkinter.Text
 
     confidence_label = widget_descriptors.LabelDescriptor(
         "confidence_label", default_text='Confidence:')  # type: basic_widgets.Label
@@ -77,7 +77,24 @@ class LabelingPanel(WidgetPanel):
         """
 
         WidgetPanel.__init__(self, master)
-        self.init_w_rows()
+        # manually instantiate the elements
+        self.object_type_label = basic_widgets.Label(master, text='Type:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.choose_type = basic_widgets.Button(master, text='Choose')
+        self.comment_label = basic_widgets.Label(master, text='Comment:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.comment = tkinter.Text(master)
+        self.confidence_label = basic_widgets.Label(master, text='Confidence:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.confidence = basic_widgets.Combobox(master, text='')
+        self.cancel = basic_widgets.Button(master, text='Cancel')
+        self.submit = basic_widgets.Button(master, text='Submit')
+        # manually set the positioning
+        self.object_type_label.grid(row=0, column=0, sticky='NESW')
+        self.choose_type.grid(row=0, column=1, sticky='NESW')
+        self.comment_label.grid(row=1, column=0, sticky='NESW')
+        self.comment.grid(row=1, column=1, rowspan=3, sticky='NESW')
+        self.confidence_label.grid(row=4, column=0, sticky='NESW')
+        self.confidence.grid(row=4, column=1, sticky='NESW')
+        self.cancel.grid(row=5, column=0, sticky='NESW')
+        self.submit.grid(row=5, column=1, sticky='NESW')
 
 
 class LabelingPopup(object):
@@ -121,12 +138,12 @@ class LabelingPopup(object):
             annotate_metadata = annotation_metadata_list[0]
             self._object_type_id = annotate_metadata.label_id
             self.widget.choose_type.set_text(self.label_schema.labels[self._object_type_id])
-            self.widget.comment.set_text(annotate_metadata.comment)
+            self.widget.comment.insert(tkinter.INSERT, annotate_metadata.comment)
             self.widget.confidence.set(annotate_metadata.confidence)
         else:
             self._object_type_id = None
             self.widget.choose_type.set_text("****")
-            self.widget.comment.set_text("")
+            self.widget.comment.insert(tkinter.INSERT, "")
             self.widget.confidence.set("")
 
         # label appearance
@@ -154,8 +171,9 @@ class LabelingPopup(object):
             showinfo("Select Object Type", message="Select the object type")
             return
 
+        the_comment = self.widget.comment.get('1.0', 'end-1c')
         annotation_metadata = AnnotationMetadata(
-            comment=self.widget.comment.get(),
+            comment=the_comment,
             label_id=self._object_type_id,
             confidence=self.widget.confidence.get())
         self.annotation.add_annotation_metadata(annotation_metadata)
