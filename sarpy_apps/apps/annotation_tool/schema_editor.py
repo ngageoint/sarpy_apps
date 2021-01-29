@@ -57,7 +57,7 @@ class SchemaViewer(basic_widgets.Treeview):
     For the purpose of viewing the schema definition.
     """
 
-    def __init__(self, master, geometry_size=None):
+    def __init__(self, master, geometry_size=None, **kwargs):
         """
 
         Parameters
@@ -66,9 +66,11 @@ class SchemaViewer(basic_widgets.Treeview):
             The GUI element which is the parent or master of this node.
         geometry_size : None|str
             The optional geometry size for the parent.
+        kwargs
+            The keyword argument collection
         """
 
-        super(SchemaViewer, self).__init__(master, columns=('Name', ))
+        super(SchemaViewer, self).__init__(master, **kwargs)
         self.parent = master
         if geometry_size is not None:
             self.parent.geometry(geometry_size)
@@ -77,9 +79,18 @@ class SchemaViewer(basic_widgets.Treeview):
             self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
         except AttributeError:
             pass
+        # instantiate the treeview
+        self.treeview = basic_widgets.Treeview(self, columns=('Name', ))
         # define the column headings
-        self.heading('#0', text='Name')
-        self.heading('#1', text='ID')
+        self.treeview.heading('#0', text='Name')
+        self.treeview.heading('#1', text='ID')
+        # instantiate the scroll bar and bind commands
+        self.scroll_bar = basic_widgets.Scrollbar(
+            self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
+        self.treeview.configure(xscrollcommand=self.scroll_bar.set)
+        # pack these components into the frame
+        self.treeview.pack(side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
+        self.scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
 
     def empty_entries(self):
         """
@@ -90,7 +101,7 @@ class SchemaViewer(basic_widgets.Treeview):
         None
         """
 
-        self.delete(*self.get_children())
+        self.treeview.delete(*self.treeview.get_children())
 
     def close_window(self):
         self.parent.withdraw()
@@ -109,7 +120,7 @@ class SchemaViewer(basic_widgets.Treeview):
         """
 
         def iterate(the_id, parent_id):
-            self.insert(parent_id, 'end', the_id, text=schema.labels[the_id], values=(the_id, ))
+            self.treeview.insert(parent_id, 'end', the_id, text=schema.labels[the_id], values=(the_id, ))
             for child_id in schema.subtypes.get(the_id, []):
                 iterate(child_id, the_id)
 
@@ -149,7 +160,7 @@ class _SchemaSelectionWidget(object):
         self.root.mainloop()
 
     def set_value(self):
-        self._selected_value = self.viewer.focus()
+        self._selected_value = self.viewer.treeview.focus()
         self.root.quit()
 
     @property
@@ -178,7 +189,7 @@ class _SchemaSelectionWidget(object):
 
         # noinspection PyBroadException
         try:
-            self.viewer.selection_set(selected_value)
+            self.viewer.treeview.selection_set(selected_value)
         except:
             pass
 
@@ -330,7 +341,10 @@ class LabelEntryWidget(object):
         if self._parent_id is None:
             self.entry_widget.parent_button.set_text('<Choose>')
         else:
-            self.entry_widget.parent_button.set_text(self.label_schema.labels[self._parent_id])
+            if self._parent_id == '':
+                self.entry_widget.parent_button.set_text('<top>')
+            else:
+                self.entry_widget.parent_button.set_text(self.label_schema.labels[self._parent_id])
 
     def parent_callback(self):
         """
@@ -406,7 +420,7 @@ class SchemaEditor(WidgetPanel):
         'version_entry', default_text='', docstring='The version value')  # type: basic_widgets.Entry
 
     version_date_label = LabelDescriptor(
-        'version_date_label', default_text='Version:', docstring='The version_date label')  # type: basic_widgets.Label
+        'version_date_label', default_text='Version Date:', docstring='The version_date label')  # type: basic_widgets.Label
     version_date_entry = EntryDescriptor(
         'version_date_entry', default_text='', docstring='The version_date value')  # type: basic_widgets.Entry
 
@@ -445,6 +459,14 @@ class SchemaEditor(WidgetPanel):
         self.primary = basic_widgets.Frame(root)
         WidgetPanel.__init__(self, self.primary)
         self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
+        # modify packing so that the treeview gets the extra space
+        self.version_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.version_date_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.classification_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.confidence_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.geometries_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.edit_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.treeview.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
 
         # setup the appearance of labels
         self.version_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
@@ -471,7 +493,7 @@ class SchemaEditor(WidgetPanel):
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
         menu.add_cascade(label="File", menu=filemenu)
-        self.primary.pack(fill=tkinter.BOTH)  #, expand=tkinter.YES)
+        self.primary.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         root.config(menu=menu)
 
     def set_file_name(self, file_name):
