@@ -400,6 +400,7 @@ class WakeTool(WidgetPanel):
         if self.variables.horizontal_line_id is None:
             self.variables.horizontal_line_id = self.image_panel.canvas.create_new_line(
                 horizontal_line_coords,
+                increment_color=False,
                 fill=self.variables.horizontal_line_color,
                 width=self.variables.horizontal_line_width)
         else:

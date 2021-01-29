@@ -145,27 +145,31 @@ class MetaIcon(ImagePanel):
         line_positions = self.line_positions
 
         self.canvas.create_new_text(
-            line_positions[0], text=self.data_container.iid_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_new_text(
-            line_positions[1], text=self.data_container.geo_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_new_text(
-            line_positions[2], text=self.data_container.res_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_new_text(
-            line_positions[3], text=self.data_container.cdp_line, fill="white", anchor="nw", font=self.font)
-        self.canvas.create_new_text(
-            line_positions[4], text=self.data_container.get_angle_line('azimuth'),
+            line_positions[0], increment_color=False, text=self.data_container.iid_line,
             fill="white", anchor="nw", font=self.font)
         self.canvas.create_new_text(
-            line_positions[5], text=self.data_container.get_angle_line('graze'),
+            line_positions[1], increment_color=False, text=self.data_container.geo_line,
             fill="white", anchor="nw", font=self.font)
         self.canvas.create_new_text(
-            line_positions[6], text=self.data_container.get_angle_line('layover'),
+            line_positions[2], increment_color=False, text=self.data_container.res_line,
+            fill="white", anchor="nw", font=self.font)
+        self.canvas.create_new_text(
+            line_positions[3], increment_color=False, text=self.data_container.cdp_line,
+            fill="white", anchor="nw", font=self.font)
+        self.canvas.create_new_text(
+            line_positions[4], increment_color=False, text=self.data_container.get_angle_line('azimuth'),
+            fill="white", anchor="nw", font=self.font)
+        self.canvas.create_new_text(
+            line_positions[5], increment_color=False, text=self.data_container.get_angle_line('graze'),
+            fill="white", anchor="nw", font=self.font)
+        self.canvas.create_new_text(
+            line_positions[6], increment_color=False, text=self.data_container.get_angle_line('layover'),
             fill=Colors.layover, anchor="nw", font=self.font)
         self.canvas.create_new_text(
-            line_positions[7], text=self.data_container.get_angle_line('shadow'),
+            line_positions[7], increment_color=False, text=self.data_container.get_angle_line('shadow'),
             fill=Colors.shadow, anchor="nw", font=self.font)
         self.canvas.create_new_text(
-            line_positions[8], text=self.data_container.get_angle_line('multipath'),
+            line_positions[8], increment_color=False, text=self.data_container.get_angle_line('multipath'),
             fill=Colors.multipath, anchor="nw", font=self.font)
 
         self.draw_layover_arrow()
@@ -376,8 +380,7 @@ class MetaIcon(ImagePanel):
 
         self.canvas.create_new_arrow(
             self.layover_arrow_coords,
-            fill=Colors.layover,
-            width=ArrowWidths.layover_width)
+            increment_color=False, fill=Colors.layover, width=ArrowWidths.layover_width)
 
     def draw_shadow_arrow(self):
         """
@@ -388,9 +391,9 @@ class MetaIcon(ImagePanel):
         None
         """
 
-        self.canvas.create_new_arrow(self.shadow_arrow_coords,
-                                     fill=Colors.shadow,
-                                     width=ArrowWidths.shadow_width)
+        self.canvas.create_new_arrow(
+            self.shadow_arrow_coords,
+            increment_color=False, fill=Colors.shadow, width=ArrowWidths.shadow_width)
 
     def draw_multipath_arrow(self):
         """
@@ -401,9 +404,9 @@ class MetaIcon(ImagePanel):
         None
         """
 
-        self.canvas.create_new_arrow(self.multipath_arrow_coords,
-                                     fill=Colors.multipath,
-                                     width=ArrowWidths.multipath_width)
+        self.canvas.create_new_arrow(
+            self.multipath_arrow_coords,
+            increment_color=False, fill=Colors.multipath, width=ArrowWidths.multipath_width)
 
     def draw_north_arrow(self):
         """
@@ -414,19 +417,18 @@ class MetaIcon(ImagePanel):
         None
         """
 
-        self.canvas.create_new_arrow(self.north_arrow_coords,
-                                     fill=Colors.north,
-                                     width=ArrowWidths.north_width)
+        self.canvas.create_new_arrow(
+            self.north_arrow_coords,
+            increment_color=False, fill=Colors.north, width=ArrowWidths.north_width)
         # label the north arrow
         x_start = self.north_arrow_coords[0]
         x_end = self.north_arrow_coords[2]
         y_start = self.north_arrow_coords[1]
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
-        self.canvas.create_new_text((text_pos[0], text_pos[1]),
-                                text="N",
-                                fill=Colors.north,
-                                font=self.font)
+        self.canvas.create_new_text(
+            (text_pos[0], text_pos[1]),
+            increment_color=False, text="N", fill=Colors.north, font=self.font)
 
     def draw_direction_arrow(self):
         """
@@ -441,20 +443,19 @@ class MetaIcon(ImagePanel):
             self.canvas.variables.state.canvas_width * 0.65, self.canvas.variables.state.canvas_height * 0.9)
         flight_direction_arrow_end = (self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
         if self.data_container.side_of_track == 'R':
-            self.canvas.create_new_arrow((flight_direction_arrow_start[0],
-                                          flight_direction_arrow_start[1],
-                                          flight_direction_arrow_end[0],
-                                          flight_direction_arrow_end[1]), fill=Colors.flight_direction, width=3)
+            self.canvas.create_new_arrow(
+                (flight_direction_arrow_start[0], flight_direction_arrow_start[1],
+                 flight_direction_arrow_end[0], flight_direction_arrow_end[1]),
+                increment_color=False, fill=Colors.flight_direction, width=3)
         else:
-            self.canvas.create_new_arrow((flight_direction_arrow_end[0],
-                                          flight_direction_arrow_end[1],
-                                          flight_direction_arrow_start[0],
-                                          flight_direction_arrow_start[1]), fill=Colors.flight_direction, width=3)
-        self.canvas.create_new_text((flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
-                                 flight_direction_arrow_start[1]),
-                                text="R",
-                                fill=Colors.flight_direction,
-                                font=self.font)
+            self.canvas.create_new_arrow(
+                (flight_direction_arrow_end[0], flight_direction_arrow_end[1],
+                 flight_direction_arrow_start[0], flight_direction_arrow_start[1]),
+                increment_color=False, fill=Colors.flight_direction, width=3)
+        self.canvas.create_new_text(
+            (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
+             flight_direction_arrow_start[1]),
+            increment_color=False, text="R", fill=Colors.flight_direction, font=self.font)
 
     def _adjust_arrow_aspect_ratio(self, arrow_length, arrow_angle_radians):
         """
