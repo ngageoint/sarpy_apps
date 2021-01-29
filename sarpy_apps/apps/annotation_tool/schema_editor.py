@@ -392,13 +392,13 @@ class LabelEntryWidget(object):
 
 class SchemaEditor(WidgetPanel):
     _widget_list = (
-        ('version_label', 'version_entry'),
-        ('version_date_label', 'version_date_entry'),
-        ('classification_label', 'classification_entry'),
-        ('confidence_label', 'confidence_entry'),
-        ('geometries_label', 'geometries_entry'),
-        ('edit_button', 'new_button'),
-        ('treeview', ))
+        'version_label', 'version_entry',
+        'version_date_label', 'version_date_entry',
+        'classification_label', 'classification_entry',
+        'confidence_label', 'confidence_entry',
+        'geometries_label', 'geometries_entry',
+        'edit_button', 'new_button',
+        'treeview')
 
     version_label = LabelDescriptor(
         'version_label', default_text='Version:', docstring='The version label')  # type: basic_widgets.Label
@@ -444,7 +444,7 @@ class SchemaEditor(WidgetPanel):
 
         self.primary = basic_widgets.Frame(root)
         WidgetPanel.__init__(self, self.primary)
-        self.init_w_rows()
+        self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
 
         # setup the appearance of labels
         self.version_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
