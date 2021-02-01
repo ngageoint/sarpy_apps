@@ -21,10 +21,9 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, DerivedImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, DerivedImageReader
+from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
 
 
 class AppVariables(object):
@@ -37,7 +36,7 @@ class AppVariables(object):
         'image_reader', ImageReader, docstring='')  # type: ImageReader
 
 
-class ImageViewer(WidgetPanel):
+class ImageViewer(WidgetPanel, WidgetWithMetadata):
     _widget_list = ("image_panel", "pyplot_panel")
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
     pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
@@ -45,21 +44,11 @@ class ImageViewer(WidgetPanel):
     def __init__(self, primary):
         primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
+        WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
         self.init_w_horizontal_layout()
         self.set_title()
-
-        # define our meta icon and metaviewer popups
-        self.metaicon_popup_panel = tkinter.Toplevel(self.master)
-        self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon.hide_on_close()
-        self.metaicon_popup_panel.withdraw()
-
-        self.metaviewer_popup_panel = tkinter.Toplevel(self.master)
-        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer.hide_on_close()
-        self.metaviewer_popup_panel.withdraw()
 
         # define menus
         menubar = tkinter.Menu()
@@ -109,12 +98,6 @@ class ImageViewer(WidgetPanel):
     def exit(self):
         self.quit()
 
-    def metaviewer_popup(self):
-        self.metaviewer_popup_panel.deiconify()
-
-    def metaicon_popup(self):
-        self.metaicon_popup_panel.deiconify()
-
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):
         """
@@ -155,7 +138,7 @@ class ImageViewer(WidgetPanel):
         event
         """
 
-        self.populate_metaicon()
+        self.my_populate_metaicon()
 
     def update_reader(self, the_reader):
         """
@@ -175,8 +158,8 @@ class ImageViewer(WidgetPanel):
         self.set_title()
         # refresh appropriate GUI elements
         self.pyplot_panel.make_blank()
-        self.populate_metaicon()
-        self.populate_metaviewer()
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
@@ -212,7 +195,7 @@ class ImageViewer(WidgetPanel):
             return
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
-        # TODO: handle non-complex data possibilities here
+        # TODO: handle non-complex data possibilities here?
         the_reader = ComplexImageReader(dirname)
         self.update_reader(the_reader)
 
@@ -239,38 +222,30 @@ class ImageViewer(WidgetPanel):
             else:
                 self.pyplot_panel.make_blank()
 
-    def populate_metaicon(self):
+    def my_populate_metaicon(self):
         """
         Populate the metaicon.
         """
 
         if self.image_panel.canvas.variables.canvas_image_object is None or \
                 self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            self.metaicon.make_empty()
-
-        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-        if isinstance(image_reader, ComplexImageReader):
-            self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
-        elif isinstance(image_reader, DerivedImageReader):
-            self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
+            image_reader = None
+            the_index = 0
         else:
-            raise TypeError('Got unhandled image reader type {}'.format(type(image_reader)))
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+            the_index = self.image_panel.canvas.get_image_index()
+        self.populate_metaicon(image_reader, the_index)
 
-    def populate_metaviewer(self):
+    def my_populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            self.metaviewer.empty_entries()
-
-        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-
-        if isinstance(image_reader, (ComplexImageReader, DerivedImageReader)):
-            self.metaviewer.populate_from_reader(image_reader.base_reader)
+        if self.image_panel.canvas.variables.canvas_image_object is None:
+            image_reader = None
         else:
-            raise TypeError('Got unhandled image reader type {}'.format(type(image_reader)))
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+        self.populate_metaviewer(image_reader)
 
 
 def main():

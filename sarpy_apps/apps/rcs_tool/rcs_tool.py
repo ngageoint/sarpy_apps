@@ -11,7 +11,9 @@ import os
 
 import numpy
 import tkinter
-from tkinter.filedialog import askopenfilename
+from tkinter import ttk
+from tkinter.filedialog import askopenfilenames, askdirectory
+from tkinter.messagebox import showinfo
 
 from tk_builder.widgets import widget_descriptors, basic_widgets
 from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
@@ -19,8 +21,9 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.pyplot_panel import PyplotPanel
 from tk_builder.widgets.image_canvas import ToolConstants
 
+from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes import file_filters
+from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
 
 
 ###########
@@ -207,7 +210,7 @@ class RcsTable(WidgetPanel):
         self.table.delete(str(shape_id))
 
 
-class RcsTool(WidgetPanel):
+class RcsTool(WidgetPanel, WidgetWithMetadata):
     _widget_list = ("controls",  "image_panel", "rcs_table",)
 
     controls = widget_descriptors.PanelDescriptor("controls", ControlsPanel)  # type: ControlsPanel
@@ -215,28 +218,48 @@ class RcsTool(WidgetPanel):
     rcs_table = widget_descriptors.PanelDescriptor("rcs_table", RcsTable, default_text="RCS Table")  # type: RcsTable
 
     def __init__(self, primary):
+        """
+
+        Parameters
+        ----------
+        primary : tkinter.Tk|tkinter.Toplevel
+        """
+
         # define variables
         self._browse_directory = os.path.expanduser('~')
         self.primary = primary
         primary_frame = basic_widgets.Frame(primary)
 
         WidgetPanel.__init__(self, primary_frame)
+        WidgetWithMetadata.__init__(self, primary)
+
         self.init_w_basic_widget_list(2, [2, 1])
+
+        # define menus
+        menubar = tkinter.Menu()
+        # file menu
+        filemenu = tkinter.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Open Image", command=self.callback_select_files)
+        filemenu.add_command(label="Open Directory", command=self.callback_select_directory)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.exit)
+        # menus for informational popups
+        popups_menu = tkinter.Menu(menubar, tearoff=0)
+        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # ensure menus cascade
+        menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="Popups", menu=popups_menu)
+
+        # handle packing
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        primary.config(menu=menubar)
         self.controls.pack(fill=tkinter.X, expand=tkinter.NO)
         self.rcs_table.pack(fill=tkinter.X, expand=tkinter.NO)
 
-        menubar = tkinter.Menu()
-        filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open", command=self.select_file)
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.exit)
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
-        menubar.add_cascade(label="File", menu=filemenu)
-
-        primary.config(menu=menubar)
-
-        # callbacks
+        # TODO: review callbacks
         self.controls.roi_controls.draw.config(command=self.set_tool)
         self.controls.roi_controls.edit.config(command=self.edit_shape)
         self.controls.roi_controls.delete.config(command=self.delete_shape)
@@ -251,6 +274,131 @@ class RcsTool(WidgetPanel):
         self.rcs_table.table.on_selection(self.handle_table_selection)
         self.image_panel.update_everything()
 
+    # utility functions
+    def exit(self):
+        self.quit()
+
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        if self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            file_name = None
+        else:
+            file_name = self.image_panel.canvas.variables.canvas_image_object.image_reader.file_name
+
+        if file_name is None:
+            the_title = "RCS Tool"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "RCS Tool, Multiple Files"
+        else:
+            the_title = "RCS Tool for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
+
+    def update_reader(self, the_reader):
+        """
+        Update the reader.
+
+        Parameters
+        ----------
+        the_reader : ImageReader
+        """
+
+        # change the tool to view
+        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.set_current_tool_to_view()
+        # update the reader
+        self.image_panel.set_image_reader(the_reader)
+        self.set_title()
+        # refresh appropriate GUI elements
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
+
+    def my_populate_metaicon(self):
+        """
+        Populate the metaicon.
+        """
+
+        if self.image_panel.canvas.variables.canvas_image_object is None or \
+                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            image_reader = None
+            the_index = 0
+        else:
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+            the_index = self.image_panel.canvas.get_image_index()
+        self.populate_metaicon(image_reader, the_index)
+
+    def my_populate_metaviewer(self):
+        """
+        Populate the metaviewer.
+        """
+
+        if self.image_panel.canvas.variables.canvas_image_object is None:
+            image_reader = None
+        else:
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+        self.populate_metaviewer(image_reader)
+
+    # callbacks
+    def callback_select_files(self):
+        fnames = askopenfilenames(initialdir=self._browse_directory, filetypes=common_use_collection)
+        if fnames is None or fnames in ['', ()]:
+            return
+        # update the default directory for browsing
+        self._browse_directory = os.path.split(fnames[0])[0]
+
+        the_reader = None
+        if len(fnames) > 1:
+            the_reader = ComplexImageReader(fnames)
+        if the_reader is None:
+            try:
+                the_reader = ComplexImageReader(fnames[0])
+            except IOError:
+                the_reader = None
+        if the_reader is None:
+            showinfo('Opener not found',
+                     message='File {} was not successfully opened as a SICD type '
+                             'or SIDD type file.'.format(fnames))
+            return
+        self.update_reader(the_reader)
+
+    def callback_select_directory(self):
+        dirname = askdirectory(initialdir=self._browse_directory, mustexist=True)
+        if dirname is None or dirname in [(), '']:
+            return
+        # update the default directory for browsing
+        self._browse_directory = os.path.split(dirname)[0]
+        the_reader = ComplexImageReader(dirname)
+        self.update_reader(the_reader)
+
+    #noinspection PyUnusedLocal
+    def handle_image_index_changed(self, event):
+        """
+        Handle that the image index has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.my_populate_metaicon()
+
+    def plot_popups(self):
+        popup = tkinter.Toplevel(self.primary)
+        plot_panel = RcsPlot(popup)
+        popup.geometry("1000x1000")
+        plot_panel.azimuth_plot.set_data(numpy.linspace(0, 100))
+        plot_panel.azimuth_plot.title = "Slow Time Response: "
+        plot_panel.azimuth_plot.y_label = "Relative RCS (dB)"
+        plot_panel.azimuth_plot.x_label = "Azimuth Angle (deg)"
+
+        plot_panel.range_plot.set_data(numpy.linspace(100, 50))
+        plot_panel.range_plot.title = "Fast Time Response: "
+        plot_panel.range_plot.y_label = "Relative RCS (dB)"
+        plot_panel.range_plot.x_label = "Frequency (GHz)"
+
+    # TODO: review this old stuff
     def handle_table_left_mouse_click(self, event):
         item = self.rcs_table.table.identify('item', event.x, event.y)
         if item != "":
@@ -291,56 +439,30 @@ class RcsTool(WidgetPanel):
         if self.image_panel.canvas.variables.current_shape_id is not None:
             self.rcs_table.table.selection_set(self.image_panel.canvas.variables.current_shape_id)
 
-    # commands for controls.plot_buttons
-    def plot_popups(self):
-        popup = tkinter.Toplevel(self.primary)
-        plot_panel = RcsPlot(popup)
-        popup.geometry("1000x1000")
-        plot_panel.azimuth_plot.set_data(numpy.linspace(0, 100))
-        plot_panel.azimuth_plot.title = "Slow Time Response: "
-        plot_panel.azimuth_plot.y_label = "Relative RCS (dB)"
-        plot_panel.azimuth_plot.x_label = "Azimuth Angle (deg)"
-
-        plot_panel.range_plot.set_data(numpy.linspace(100, 50))
-        plot_panel.range_plot.title = "Fast Time Response: "
-        plot_panel.range_plot.y_label = "Relative RCS (dB)"
-        plot_panel.range_plot.x_label = "Frequency (GHz)"
-
     def edit_rcs_table(self):
         current_item = self.rcs_table.table.focus()
         print(self.rcs_table.table.item(current_item))  # TODO: what is this for?
 
     def set_tool(self):
-        # TODO: make this defunct
-        if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.rectangle:
-            self.image_panel.canvas.set_current_tool_to_draw_rect()
-        elif self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
-            self.image_panel.canvas.set_current_tool_to_draw_polygon()
-        else:
-            self.image_panel.canvas.set_current_tool_to_draw_ellipse()
+        # # TODO: make this defunct
+        # if self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.rectangle:
+        #     self.image_panel.canvas.set_current_tool_to_draw_rect()
+        # elif self.controls.roi_controls.roi_radiobuttons.selection() == self.controls.roi_controls.roi_radiobuttons.polygon:
+        #     self.image_panel.canvas.set_current_tool_to_draw_polygon()
+        # else:
+        #     self.image_panel.canvas.set_current_tool_to_draw_ellipse()
+        return
 
     def edit_shape(self):
-        self.image_panel.canvas.set_current_tool_to_edit_shape()
+        # self.image_panel.canvas.set_current_tool_to_edit_shape()
+        return
 
     def delete_shape(self):
-        current_shape_id = self.image_panel.canvas.variables.current_shape_id
-        if current_shape_id in self.image_panel.canvas.get_non_tool_shape_ids():
-            self.image_panel.canvas.delete_shape(current_shape_id)
-            self.rcs_table.delete(current_shape_id)
-
-    def select_file(self):
-        fname = askopenfilename(initialdir=self._browse_directory, filetypes=file_filters.common_use_collection)
-        if fname is None or fname == '':
-            return
-        self._browse_directory = os.path.split(fname)[0]
-        # TODO: what all file types to support? Create a more common use way of dealing with this.
-        reader = ComplexImageReader(fname)
-
-        self.image_panel.set_image_reader(reader)
-        self.image_panel.update_everything()
-
-    def exit(self):
-        self.quit()
+        # current_shape_id = self.image_panel.canvas.variables.current_shape_id
+        # if current_shape_id in self.image_panel.canvas.get_non_tool_shape_ids():
+        #     self.image_panel.canvas.delete_shape(current_shape_id)
+        #     self.rcs_table.delete(current_shape_id)
+        return
 
 
 def main():
@@ -353,6 +475,10 @@ def main():
     """
 
     root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('classic')
+
     app = RcsTool(root)
     root.mainloop()
 

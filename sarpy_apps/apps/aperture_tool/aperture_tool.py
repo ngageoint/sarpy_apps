@@ -33,8 +33,7 @@ from sarpy.processing.aperture_filter import ApertureFilter
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
+from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
 
 # TODO: review the RadioButtonPanel situation?
 
@@ -1040,7 +1039,7 @@ class AppVariables(object):
         self.animation = AnimationProperties()
 
 
-class RegionSelection(WidgetPanel):
+class RegionSelection(WidgetPanel, WidgetWithMetadata):
     """
     The widget for selecting the Area of Interest for the aperture tool.
     """
@@ -1054,8 +1053,6 @@ class RegionSelection(WidgetPanel):
         docstring='The basic instructions.')   # type: basic_widgets.Label
     image_panel = widget_descriptors.ImagePanelDescriptor(
         "image_panel", docstring='The image panel.')  # type: ImagePanel
-    metaicon = widget_descriptors.PanelDescriptor("metaicon", MetaIcon)  # type: MetaIcon
-    metaviewer = widget_descriptors.PanelDescriptor("metaviewer", Metaviewer)  # type: Metaviewer
 
     def __init__(self, parent):
         """
@@ -1068,6 +1065,7 @@ class RegionSelection(WidgetPanel):
         # set the parent frame
         primary_frame = basic_widgets.Frame(parent)
         WidgetPanel.__init__(self, primary_frame)
+        WidgetWithMetadata.__init__(self, parent)
         self.winfo_toplevel().title("Region Selection")  # TODO: is this right?
 
         self.variables = AppVariables()
@@ -1082,16 +1080,6 @@ class RegionSelection(WidgetPanel):
         self.image_panel.hide_tools('shape_drawing')
         self.image_panel.hide_shapes()
 
-        # set up the metaicon popup
-        self.metaicon_popup_panel = tkinter.Toplevel(parent)
-        self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon.hide_on_close()
-        self.metaicon_popup_panel.withdraw()
-        # setup the metaviewer popup
-        self.metaviewer_popup_panel = tkinter.Toplevel(parent)
-        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer.hide_on_close()
-        self.metaviewer_popup_panel.withdraw()
         # setup the aperture tool
         self.aperture_popup_panel = tkinter.Toplevel(parent)
         self.aperture_tool = ApertureTool(self.aperture_popup_panel, self.variables)
@@ -1125,20 +1113,6 @@ class RegionSelection(WidgetPanel):
     # callbacks
     def exit(self):
         self.quit()
-
-    def metaviewer_popup(self):
-        """
-        Show the metaviewer
-        """
-
-        self.metaviewer_popup_panel.deiconify()
-
-    def metaicon_popup(self):
-        """
-        Show the metaicon
-        """
-
-        self.metaicon_popup_panel.deiconify()
 
     def aperture_tool_popup(self):
         """
@@ -1218,7 +1192,7 @@ class RegionSelection(WidgetPanel):
         event
         """
 
-        self.populate_metaicon()
+        self.my_populate_metaicon()
         self.aperture_tool.handle_reader_update()
 
     def callback_select_files(self):
@@ -1260,37 +1234,33 @@ class RegionSelection(WidgetPanel):
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
         # refresh appropriate GUI elements
-        self.populate_metaicon()
-        self.populate_metaviewer()
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
         self.aperture_tool.handle_reader_update()
 
-    def populate_metaicon(self):
+    def my_populate_metaicon(self):
         """
         Populate the metaicon.
         """
-
         if self.image_panel.canvas.variables.canvas_image_object is None or \
                 self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            self.metaicon.make_empty()
+            image_reader = None
+            the_index = None
+        else:
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+            the_index = self.image_panel.canvas.get_image_index()
+        self.populate_metaicon(image_reader, the_index)
 
-        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-
-        assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
-        self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
-
-    def populate_metaviewer(self):
+    def my_populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            self.metaviewer.empty_entries()
-
-        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-
-        assert isinstance(image_reader, ComplexImageReader)
-        self.metaviewer.populate_from_reader(image_reader.base_reader)
+        if self.image_panel.canvas.variables.canvas_image_object is None:
+            image_reader = None
+        else:
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+        self.populate_metaviewer(image_reader)
 
 
 def main():

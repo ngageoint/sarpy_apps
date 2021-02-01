@@ -15,13 +15,11 @@ import numpy
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
+from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.panels.file_selector import FileSelector
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
@@ -107,15 +105,9 @@ class AppVariables(object):
     horizontal_line_color = StringDescriptor(
         'horizontal_line_color', default_value='green',
         docstring='A hexidecimal or named color.')  # type: str
-    metaicon = widget_descriptors.PanelDescriptor(
-        "metaicon", MetaIcon,
-        docstring='The metaicon object.')  # type: MetaIcon
-    metaviewer = widget_descriptors.PanelDescriptor(
-        "metaviewer", Metaviewer,
-        docstring='The metaviewer object.')  # type: Metaviewer
 
 
-class WakeTool(WidgetPanel):
+class WakeTool(WidgetPanel, WidgetWithMetadata):
     """
     Tool that displays information based on a line and point drawn on an image.  Information pertains
     to the direction of the line and distance from the point to the line.
@@ -129,6 +121,7 @@ class WakeTool(WidgetPanel):
     def __init__(self, primary):
         primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
+        WidgetWithMetadata.__init__(self, primary)
         self.init_w_vertical_layout()
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.variables = AppVariables()
@@ -148,17 +141,6 @@ class WakeTool(WidgetPanel):
         self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
         self.side_panel.do_not_expand()
         self.side_panel.fill_x(False)
-
-        # set up the metaicon popup
-        self.metaicon_popup_panel = tkinter.Toplevel(primary)
-        self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon.hide_on_close()
-        self.metaicon_popup_panel.withdraw()
-        # setup the metaviewer popup
-        self.metaviewer_popup_panel = tkinter.Toplevel(primary)
-        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer.hide_on_close()
-        self.metaviewer_popup_panel.withdraw()
 
         # define menus
         menubar = tkinter.Menu()
@@ -190,20 +172,6 @@ class WakeTool(WidgetPanel):
     # callbacks for direct use
     def exit(self):
         self.quit()
-
-    def metaviewer_popup(self):
-        """
-        Show the metaviewer.
-        """
-
-        self.metaviewer_popup_panel.deiconify()
-
-    def metaicon_popup(self):
-        """
-        Show the metaicon.
-        """
-
-        self.metaicon_popup_panel.deiconify()
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
@@ -243,6 +211,7 @@ class WakeTool(WidgetPanel):
         if self.variables.point_id is not None:
             self.image_panel.canvas.delete_shape(self.variables.point_id)
         self.update_distance()
+        self.my_populate_metaicon()
 
     def callback_shape_edited(self, event):
         """
@@ -322,40 +291,37 @@ class WakeTool(WidgetPanel):
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
         # refresh appropriate GUI elements
-        self.populate_metaicon()
-        self.populate_metaviewer()
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
         # initialize our shape tracking
         self.variables.point_id = None
         self.variables.arrow_id = None
         self.variables.horizontal_line_id = None
 
-    def populate_metaicon(self):
+    def my_populate_metaicon(self):
         """
         Populate the metaicon.
         """
 
         if self.image_panel.canvas.variables.canvas_image_object is None or \
                 self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            self.metaicon.make_empty()
+            image_reader = None
+            the_index = None
+        else:
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+            the_index = self.image_panel.canvas.get_image_index()
+        self.populate_metaicon(image_reader, the_index)
 
-        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-
-        assert isinstance(image_reader, ComplexImageReader)
-        self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
-
-    def populate_metaviewer(self):
+    def my_populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            self.metaviewer.empty_entries()
-
-        image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-
-        assert isinstance(image_reader, ComplexImageReader)
-        self.metaviewer.populate_from_reader(image_reader.base_reader)
+        if self.image_panel.canvas.variables.canvas_image_object is None:
+            image_reader = None
+        else:
+            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
+        self.populate_metaviewer(image_reader)
 
     def arrow_draw_command(self):
         """

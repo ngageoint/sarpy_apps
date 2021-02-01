@@ -19,10 +19,13 @@ from tkinter.messagebox import showinfo, askyesnocancel, askyesno
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 from sarpy_apps.apps.annotation_tool.schema_editor import select_schema_entry
+
+from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
+    nitf_preferred_collection
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes import file_filters
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.panel_builder import WidgetPanel
@@ -704,7 +707,7 @@ class AppVariables(object):
         self._feature_dict[feature_id] = {'annotate_id': [], 'color': color}
 
 
-class AnnotationTool(WidgetPanel):
+class AnnotationTool(WidgetPanel, WidgetWithMetadata):
     _widget_list = ("context_panel", "annotate_panel")
     context_panel = widget_descriptors.PanelDescriptor(
         "context_panel", ContextImagePanel,
@@ -730,21 +733,12 @@ class AnnotationTool(WidgetPanel):
         self._modifying_annotate_tool = False
 
         WidgetPanel.__init__(self, self.primary)
+        WidgetWithMetadata.__init__(self, primary)
 
         self.init_w_horizontal_layout()
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         self.variables = AppVariables()
-
-        self.metaicon_popup_panel = tkinter.Toplevel(self.primary)
-        self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon.hide_on_close()
-        self.metaicon_popup_panel.withdraw()
-
-        self.metaviewer_popup_panel = tkinter.Toplevel(self.primary)
-        self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer.hide_on_close()
-        self.metaviewer_popup_panel.withdraw()
 
         menubar = tkinter.Menu()
 
@@ -808,6 +802,7 @@ class AnnotationTool(WidgetPanel):
         # set up context panel event listeners
         self.context_panel.image_panel.canvas.bind('<<SelectionFinalized>>', self.sync_context_selection_to_annotate_zoom)
         self.context_panel.image_panel.canvas.bind('<<RemapChanged>>', self.sync_remap_change)
+        self.context_panel.image_panel.canvas.bind('<<ImageIndexChanged>>', self.sync_image_index_changed)
 
         # set up annotate panel listeners
         self.annotate_panel.image_panel.canvas.bind('<<CurrentToolChanged>>', self.verify_setting_annotate_tool)
@@ -1300,20 +1295,6 @@ class AnnotationTool(WidgetPanel):
 
         self.quit()
 
-    def metaviewer_popup(self):
-        """
-        Pops up the metadata viewer.
-        """
-
-        self.metaviewer_popup_panel.deiconify()
-
-    def metaicon_popup(self):
-        """
-        Pops up the metaicon viewer.
-        """
-
-        self.metaicon_popup_panel.deiconify()
-
     def select_image_file(self):
         """
         Select the image callback.
@@ -1326,7 +1307,7 @@ class AnnotationTool(WidgetPanel):
         fname = askopenfilename(
             title='Select image file',
             initialdir=self._image_browse_directory,
-            filetypes=file_filters.nitf_preferred_collection)
+            filetypes=nitf_preferred_collection)
 
         if fname in ['', ()]:
             return
@@ -1343,12 +1324,11 @@ class AnnotationTool(WidgetPanel):
         self.context_panel.context_label.set_text('Create or select an annotation file using the File menu.')
         self.context_panel.image_panel.set_image_reader(image_reader)
         self.annotate_panel.image_panel.set_image_reader(image_reader)
-        self.metaicon.create_from_reader(image_reader.base_reader, index=0)
-        self.metaviewer.populate_from_reader(image_reader.base_reader)
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
         self.context_panel.image_panel.enable_tools()
 
     def create_new_annotation_file(self):
-        # TODO: verify functionality
         if not self._verify_image_selected():
             return
 
@@ -1357,7 +1337,7 @@ class AnnotationTool(WidgetPanel):
         schema_fname = askopenfilename(
             title='Select label schema',
             initialdir=self._schema_browse_directory,
-            filetypes=[file_filters.json_files, file_filters.all_files])
+            filetypes=[json_files, all_files])
         if schema_fname in ['', ()]:
             return
 
@@ -1379,7 +1359,7 @@ class AnnotationTool(WidgetPanel):
                 title='Select annotation file for image file {}'.format(image_fname),
                 initialdir=browse_dir,
                 initialfile='{}.annotation.json'.format(image_fname),
-                filetypes=[file_filters.json_files, file_filters.all_files])
+                filetypes=[json_files, all_files])
             if annotation_fname in ['', ()]:
                 annotation_fname = None
 
@@ -1416,7 +1396,7 @@ class AnnotationTool(WidgetPanel):
             title='Select annotation file for image file {}'.format(image_fname),
             initialdir=browse_dir,
             initialfile=init_file,
-            filetypes=[file_filters.json_files, file_filters.all_files])
+            filetypes=[json_files, all_files])
         if annotation_fname in ['', ()]:
             return
         if not os.path.exists(annotation_fname):
@@ -1530,6 +1510,20 @@ class AnnotationTool(WidgetPanel):
         """
 
         self.annotate_panel.image_panel.canvas.update_current_image()
+
+    #noinspection PyUnusedLocal
+    def sync_image_index_changed(self, event):
+        """
+        Handle that the image index has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.my_populate_metaicon()
+        # TODO: what else should conceptually happen? This is not possible unless
+        #  we permit an image with more than a single index.
 
     # noinspection PyUnusedLocal
     def verify_setting_annotate_tool(self, event):
@@ -1721,6 +1715,31 @@ class AnnotationTool(WidgetPanel):
 
         self.variables.current_annotate_canvas_id = event.x
         # TODO: update the treeview!
+
+    def my_populate_metaicon(self):
+        """
+        Populate the metaicon.
+        """
+
+        if self.context_panel.image_panel.canvas.variables.canvas_image_object is None or \
+                self.context_panel.image_panel.canvas.variables.canvas_image_object.image_reader is None:
+            image_reader = None
+            the_index = 0
+        else:
+            image_reader = self.context_panel.image_panel.canvas.variables.canvas_image_object.image_reader
+            the_index = self.context_panel.image_panel.canvas.get_image_index()
+        self.populate_metaicon(image_reader, the_index)
+
+    def my_populate_metaviewer(self):
+        """
+        Populate the metaviewer.
+        """
+
+        if self.context_panel.image_panel.canvas.variables.canvas_image_object is None:
+            image_reader = None
+        else:
+            image_reader = self.context_panel.image_panel.canvas.variables.canvas_image_object.image_reader
+        self.populate_metaviewer(image_reader)
 
 
 def main():
