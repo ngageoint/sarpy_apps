@@ -18,6 +18,7 @@ import sarpy.visualization.remap as remap
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.complex.aggregate import AggregateComplexReader
 from sarpy.io.complex.sicd_elements.SICD import SICDType
+from sarpy.io.product.converter import open_product
 
 
 class ComplexImageReader(ImageReader):
@@ -382,7 +383,7 @@ class DerivedImageReader(ImageReader):
     @base_reader.setter
     def base_reader(self, value):
         if isinstance(value, string_types):
-            value = open_complex(value)
+            value = open_product(value)
         if not isinstance(value, BaseReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type != "SIDD":

@@ -12,6 +12,7 @@ import os
 import tkinter
 from tkinter import ttk
 from tkinter.filedialog import askopenfilenames, askdirectory
+from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import ImageReader
@@ -22,7 +23,7 @@ from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, DerivedImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 
 
@@ -184,11 +185,25 @@ class ImageViewer(WidgetPanel):
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(fnames[0])[0]
 
-        # TODO: handle non-complex data possibilities here
-        if len(fnames) == 1:
-            the_reader = ComplexImageReader(fnames[0])
-        else:
+        the_reader = None
+        if len(fnames) > 1:
             the_reader = ComplexImageReader(fnames)
+        if the_reader is None:
+            try:
+                the_reader = ComplexImageReader(fnames[0])
+            except IOError:
+                the_reader = None
+        if the_reader is None:
+            the_reader = DerivedImageReader(fnames[0])
+            # try:
+            #     the_reader = DerivedImageReader(fnames[0])
+            # except IOError:
+            #     the_reader = None
+        if the_reader is None:
+            showinfo('Opener not found',
+                     message='File {} was not successfully opened as a SICD type '
+                             'or SIDD type file.'.format(fnames))
+            return
         self.update_reader(the_reader)
 
     def callback_select_directory(self):
@@ -234,9 +249,12 @@ class ImageViewer(WidgetPanel):
             self.metaicon.make_empty()
 
         image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-
-        assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
-        self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
+        if isinstance(image_reader, ComplexImageReader):
+            self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
+        elif isinstance(image_reader, DerivedImageReader):
+            self.metaicon.create_from_reader(image_reader.base_reader, index=self.image_panel.canvas.get_image_index())
+        else:
+            raise TypeError('Got unhandled image reader type {}'.format(type(image_reader)))
 
     def populate_metaviewer(self):
         """
@@ -249,8 +267,10 @@ class ImageViewer(WidgetPanel):
 
         image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
 
-        assert isinstance(image_reader, ComplexImageReader)  # TODO: handle other options
-        self.metaviewer.populate_from_reader(image_reader.base_reader)
+        if isinstance(image_reader, (ComplexImageReader, DerivedImageReader)):
+            self.metaviewer.populate_from_reader(image_reader.base_reader)
+        else:
+            raise TypeError('Got unhandled image reader type {}'.format(type(image_reader)))
 
 
 def main():
