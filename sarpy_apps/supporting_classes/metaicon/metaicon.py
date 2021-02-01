@@ -250,13 +250,13 @@ class MetaIcon(ImagePanel):
         azimuth = self.data_container.azimuth
         layover = self.data_container.layover
 
-        if azimuth and layover:
-            if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
-                layover = layover - self.data_container.multipath_ground
-            layover = 90 - (layover - azimuth)
-            return layover
-        else:
+        if azimuth is None or layover is None:
             return None
+        if (self.data_container.is_grid or self.data_container.image_plane == 'SLANT') and \
+                self.data_container.multipath_ground is not None:
+            layover = layover - self.data_container.multipath_ground
+        layover = 90 - (layover - azimuth)
+        return layover
 
     @property
     def shadow_arrow_angle(self):
@@ -269,7 +269,8 @@ class MetaIcon(ImagePanel):
         if shadow is None or azimuth is None:
             return None
 
-        if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
+        if (self.data_container.is_grid or self.data_container.image_plane == 'SLANT') and \
+                self.data_container.multipath_ground is not None:
             shadow = azimuth - 180 - self.data_container.multipath_ground
         shadow = 90 - (shadow - azimuth)
         return shadow

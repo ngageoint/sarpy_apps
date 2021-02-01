@@ -537,27 +537,25 @@ class MetaIconDataContainer(object):
                 'sidd is expected to be an instance of SIDD type, got type {}'.format(type(sidd)))
 
         def extract_location():
+            ll_coords = None
             if isinstance(sidd, SIDDType):
                 try:
-                    llh_coords = sidd.GeoData.ImageCorners.get_array(dtype=numpy.dtype('float64'))
-                    ecf_coords = geodetic_to_ecf(llh_coords)
-                    coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
-                    variables['lat'] = coords[0]
-                    variables['lon'] = coords[1]
+                    ll_coords = sidd.GeoData.ImageCorners.get_array(dtype=numpy.dtype('float64'))
                 except AttributeError:
                     pass
             elif isinstance(sidd, SIDDType1):
                 try:
                     ll_coords = sidd.GeographicAndTarget.GeographicCoverage.Footprint.get_array(
                         dtype=numpy.dtype('float64'))
-                    llh_coords = numpy.zeros((ll_coords.shape[0], 3), dtype=numpy.float64)
-                    llh_coords[:, :2] = ll_coords
-                    ecf_coords = geodetic_to_ecf(llh_coords)
-                    coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
-                    variables['lat'] = coords[0]
-                    variables['lon'] = coords[1]
                 except AttributeError:
                     pass
+            if ll_coords is not None:
+                llh_coords = numpy.zeros((ll_coords.shape[0], 3), dtype=numpy.float64)
+                llh_coords[:, :2] = ll_coords
+                ecf_coords = geodetic_to_ecf(llh_coords)
+                coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
+                variables['lat'] = coords[0]
+                variables['lon'] = coords[1]
 
         def extract_exploitation_features():
             if sidd.ExploitationFeatures is None:
