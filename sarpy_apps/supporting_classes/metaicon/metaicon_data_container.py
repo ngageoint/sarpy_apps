@@ -180,7 +180,8 @@ class MetaIconDataContainer(object):
 
         if self.collector_name is not None:
             if self.collect_start is not None:
-                dt = self.collect_start.astype(datetime)
+                dt_in_seconds = self.collect_start.astype('datetime64[s]')
+                dt = dt_in_seconds.astype(datetime)
                 date_str_1, date_str_2 = dt.strftime("%d%b%y").upper(), dt.strftime("%H%MZ")
             else:
                 date_str_1, date_str_2 = "DDMMMYY", "HMZ"
