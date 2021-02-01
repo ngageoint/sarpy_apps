@@ -338,13 +338,10 @@ class LabelEntryWidget(object):
         Sets the text on the parent selection button.
         """
 
-        if self._parent_id is None:
-            self.entry_widget.parent_button.set_text('<Choose>')
+        if self._parent_id is None or self._parent_id == '':
+            self.entry_widget.parent_button.set_text('<Top Level>')
         else:
-            if self._parent_id == '':
-                self.entry_widget.parent_button.set_text('<top>')
-            else:
-                self.entry_widget.parent_button.set_text(self.label_schema.labels[self._parent_id])
+            self.entry_widget.parent_button.set_text(self.label_schema.labels[self._parent_id])
 
     def parent_callback(self):
         """
@@ -379,13 +376,13 @@ class LabelEntryWidget(object):
             try:
                 self.label_schema.add_entry(the_id, the_name, the_parent=the_parent)
             except Exception as e:
-                showinfo("Creation Error", message="Got Error: {}".format(e))
+                showinfo("Creation Error", message="Creation error - {}".format(e))
                 return
         else:
             try:
                 self.label_schema.change_entry(the_id, the_name, the_parent)
             except Exception as e:
-                showinfo("Edit Error", message="Got Error: {}".format(e))
+                showinfo("Edit Error", message="Editing error - {}".format(e))
                 return
         self.root.quit()
 
@@ -412,7 +409,7 @@ class SchemaEditor(WidgetPanel):
         'confidence_label', 'confidence_entry',
         'geometries_label', 'geometries_entry',
         'edit_button', 'new_button',
-        'treeview')
+        'schema_viewer')
 
     version_label = LabelDescriptor(
         'version_label', default_text='Version:', docstring='The version label')  # type: basic_widgets.Label
@@ -445,9 +442,9 @@ class SchemaEditor(WidgetPanel):
     new_button = ButtonDescriptor(
         'new_button', default_text='New Entry',
         docstring='The new entry button')  # type: basic_widgets.Button
-    treeview = TypedDescriptor(
-        'treeview', SchemaViewer,
-        docstring='The treeview of the label schema')  # type: SchemaViewer
+    schema_viewer = TypedDescriptor(
+        'schema_viewer', SchemaViewer,
+        docstring='The viewer widget for the label schema.')  # type: SchemaViewer
 
     def __init__(self, root):
         self.browse_directory = os.path.expanduser('~')
@@ -459,14 +456,14 @@ class SchemaEditor(WidgetPanel):
         self.primary = basic_widgets.Frame(root)
         WidgetPanel.__init__(self, self.primary)
         self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
-        # modify packing so that the treeview gets the extra space
+        # modify packing so that the viewer gets the extra space
         self.version_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.version_date_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.classification_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.confidence_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.geometries_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.edit_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.treeview.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
+        self.schema_viewer.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
 
         # setup the appearance of labels
         self.version_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
@@ -528,6 +525,7 @@ class SchemaEditor(WidgetPanel):
 
     def _confidence_validate(self):
         the_value = self.confidence_entry.get().strip()
+        print('the confidence value', the_value)
         if the_value == '':
             the_values = None
         else:
@@ -546,7 +544,7 @@ class SchemaEditor(WidgetPanel):
 
     def _populate_all(self):
         self._populate_fields_schema()
-        self._populate_treeview_schema()
+        self._populate_schema_viewer()
 
     def _populate_fields_schema(self):
         """
@@ -579,8 +577,8 @@ class SchemaEditor(WidgetPanel):
             self.geometries_entry.set_text(
                 ' '.join(self.label_schema.permitted_geometries))
 
-    def _populate_treeview_schema(self):
-        self.treeview.fill_from_label_schema(self.label_schema)
+    def _populate_schema_viewer(self):
+        self.schema_viewer.fill_from_label_schema(self.label_schema)
 
     def edit_entry(self):
         """
@@ -595,15 +593,15 @@ class SchemaEditor(WidgetPanel):
             showinfo('No Schema Selected', message='Choose schema location from File menu')
             return
 
-        selected = self.treeview.focus()
+        selected = self.schema_viewer.treeview.focus()
         if selected == '':
-            showinfo('No Element Selected', message='Choose element from treeview')
+            showinfo('No Element Selected', message='Choose element from Viewer')
             return
         else:
             self._unsaved_edits = True
             popup = LabelEntryWidget(self.label_schema, edit_id=selected)
             popup.destroy()
-            self._populate_treeview_schema()
+            self._populate_schema_viewer()
 
     def new_entry(self):
         """
@@ -621,7 +619,7 @@ class SchemaEditor(WidgetPanel):
         self._unsaved_edits = True
         popup = LabelEntryWidget(self.label_schema, edit_id=None)
         popup.destroy()
-        self._populate_treeview_schema()
+        self._populate_schema_viewer()
 
     def new_schema(self):
         """
