@@ -57,13 +57,15 @@ class SchemaViewer(basic_widgets.Treeview):
     For the purpose of viewing the schema definition.
     """
 
-    def __init__(self, master, geometry_size=None, **kwargs):
+    def __init__(self, master, label_schema=None, geometry_size=None, **kwargs):
         """
 
         Parameters
         ----------
         master : tk.Tk|tk.TopLevel
             The GUI element which is the parent or master of this node.
+        label_schema : None|LabelSchema
+            The label schema.
         geometry_size : None|str
             The optional geometry size for the parent.
         kwargs
@@ -81,6 +83,7 @@ class SchemaViewer(basic_widgets.Treeview):
             pass
         # instantiate the treeview
         self.treeview = basic_widgets.Treeview(self, columns=('Name', ))
+        self._label_schema = label_schema
         # define the column headings
         self.treeview.heading('#0', text='Name')
         self.treeview.heading('#1', text='ID')
@@ -91,8 +94,9 @@ class SchemaViewer(basic_widgets.Treeview):
         # pack these components into the frame
         self.treeview.pack(side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
         self.scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        self.rerender_entry('')
 
-    def empty_entries(self):
+    def _empty_entries(self):
         """
         Empty all entries - for the purpose of reinitializing.
 
@@ -105,6 +109,60 @@ class SchemaViewer(basic_widgets.Treeview):
 
     def close_window(self):
         self.parent.withdraw()
+
+    def delete_entry(self, the_id):
+        """
+        Delete the given entry.
+
+        Parameters
+        ----------
+        the_id : str
+        """
+
+        # noinspection PyBroadException
+        try:
+            self.treeview.delete(the_id)  # try to delete, and just skip if it fails
+        except:
+            pass
+
+        if the_id in self._label_schema.labels:
+            self._label_schema.delete_entry(the_id, recursive=True)
+
+    def rerender_entry(self, the_id):
+        """
+        Re(create) the entry for the given id.
+
+        Parameters
+        ----------
+        the_id : str
+        """
+
+        if self._label_schema is None:
+            self._empty_entries()
+            return
+
+        if the_id is None or the_id == '':
+            self._empty_entries()
+            for element_id in self._label_schema.subtypes['']:
+                self.rerender_entry(element_id)
+        else:
+
+            # noinspection PyBroadException
+            try:
+                self.treeview.delete(the_id)
+            except:
+                pass
+
+            if the_id not in self._label_schema.labels:
+                return
+            parent_id = self._label_schema.get_parent(the_id)
+            the_index = self._label_schema.subtypes[parent_id].index(the_id)
+            the_label = self._label_schema.labels[the_id]
+            self.treeview.insert(parent_id, the_index, the_id, text=the_label, values=(the_id,))
+            children = self._label_schema.subtypes.get(the_id, None)
+            if children is not None:
+                for child_id in children:
+                    self.rerender_entry(child_id)
 
     def fill_from_label_schema(self, schema):
         """
@@ -119,18 +177,9 @@ class SchemaViewer(basic_widgets.Treeview):
         None
         """
 
-        def iterate(the_id, parent_id):
-            self.treeview.insert(parent_id, 'end', the_id, text=schema.labels[the_id], values=(the_id, ))
-            for child_id in schema.subtypes.get(the_id, []):
-                iterate(child_id, the_id)
-
-        # validate the label schema input
         schema = _validate_schema(schema)
-        # empty any present entries
-        self.empty_entries()
-
-        for element_id in schema.subtypes['']:
-            iterate(element_id, '')
+        self._label_schema = schema
+        self.rerender_entry('')
 
 
 class _SchemaSelectionWidget(object):
@@ -153,8 +202,7 @@ class _SchemaSelectionWidget(object):
 
         self.root = tkinter.Toplevel()
         self.root.wm_title('Select Label Schema Entry')
-        self.viewer = SchemaViewer(self.root, geometry_size='250x400')
-        self.viewer.fill_from_label_schema(label_schema)
+        self.viewer = SchemaViewer(self.root, label_schema=label_schema, geometry_size='250x400')
         self.submit_button = basic_widgets.Button(self.root, text='Submit', command=self.set_value)
         self.submit_button.pack()
         self.root.mainloop()
@@ -304,6 +352,7 @@ class LabelEntryWidget(object):
 
         self.root = tkinter.Toplevel()
         self.entry_widget = _LabelEntryPanel(self.root)
+        self.id_changed = None
 
         if not isinstance(label_schema, LabelSchema):
             raise TypeError('label_schema must be a label_schema type.')
@@ -375,12 +424,15 @@ class LabelEntryWidget(object):
 
             try:
                 self.label_schema.add_entry(the_id, the_name, the_parent=the_parent)
+                self.id_changed = the_id
             except Exception as e:
                 showinfo("Creation Error", message="Creation error - {}".format(e))
                 return
         else:
             try:
-                self.label_schema.change_entry(the_id, the_name, the_parent)
+                result = self.label_schema.change_entry(the_id, the_name, the_parent)
+                if result:
+                    self.id_changed = the_id
             except Exception as e:
                 showinfo("Edit Error", message="Editing error - {}".format(e))
                 return
@@ -403,13 +455,14 @@ class LabelEntryWidget(object):
 
 class SchemaEditor(WidgetPanel):
     _widget_list = (
-        'version_label', 'version_entry',
-        'version_date_label', 'version_date_entry',
-        'classification_label', 'classification_entry',
-        'confidence_label', 'confidence_entry',
-        'geometries_label', 'geometries_entry',
-        'edit_button', 'new_button',
-        'schema_viewer')
+        ('version_label', 'version_entry'),
+        ('version_date_label', 'version_date_entry'),
+        ('classification_label', 'classification_entry'),
+        ('confidence_label', 'confidence_entry'),
+        ('geometries_label', 'geometries_entry'),
+        ('new_button', 'edit_button', 'delete_button'),
+        ('move_up_button', 'move_down_button'),
+        ('schema_viewer', ))
 
     version_label = LabelDescriptor(
         'version_label', default_text='Version:', docstring='The version label')  # type: basic_widgets.Label
@@ -436,12 +489,23 @@ class SchemaEditor(WidgetPanel):
     geometries_entry = EntryDescriptor(
         'geometries_entry', default_text='', docstring='The geometries value')  # type: basic_widgets.Entry
 
-    edit_button = ButtonDescriptor(
-        'edit_button', default_text='Edit Selected',
-        docstring='The edit button')  # type: basic_widgets.Button
     new_button = ButtonDescriptor(
         'new_button', default_text='New Entry',
         docstring='The new entry button')  # type: basic_widgets.Button
+    edit_button = ButtonDescriptor(
+        'edit_button', default_text='Edit Entry',
+        docstring='The edit button')  # type: basic_widgets.Button
+    delete_button = ButtonDescriptor(
+        'delete_button', default_text='Delete Entry',
+        docstring='The delete entry button')  # type: basic_widgets.Button
+
+    move_up_button = ButtonDescriptor(
+        'move_up_button', default_text='Move Entry Up',
+        docstring='The move up entry button')  # type: basic_widgets.Button
+    move_down_button = ButtonDescriptor(
+        'move_down_button', default_text='Move Entry Down',
+        docstring='The move down entry button')  # type: basic_widgets.Button
+
     schema_viewer = TypedDescriptor(
         'schema_viewer', SchemaViewer,
         docstring='The viewer widget for the label schema.')  # type: SchemaViewer
@@ -455,7 +519,8 @@ class SchemaEditor(WidgetPanel):
 
         self.primary = basic_widgets.Frame(root)
         WidgetPanel.__init__(self, self.primary)
-        self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
+        self.init_w_rows()
+        # self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
         # modify packing so that the viewer gets the extra space
         self.version_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.version_date_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
@@ -463,6 +528,7 @@ class SchemaEditor(WidgetPanel):
         self.confidence_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.geometries_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.edit_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.move_up_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.schema_viewer.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
 
         # setup the appearance of labels
@@ -480,6 +546,9 @@ class SchemaEditor(WidgetPanel):
         self.geometries_entry.config(state='disabled')
         self.edit_button.config(command=self.edit_entry)
         self.new_button.config(command=self.new_entry)
+        self.delete_button.config(command=self.delete_entry)
+        self.move_up_button.config(command=self.move_up)
+        self.move_down_button.config(command=self.move_down)
 
         # set up the menu bar
         menu = tkinter.Menu()
@@ -542,10 +611,6 @@ class SchemaEditor(WidgetPanel):
             self.label_schema.confidence_values = the_values
         return True
 
-    def _populate_all(self):
-        self._populate_fields_schema()
-        self._populate_schema_viewer()
-
     def _populate_fields_schema(self):
         """
         Populate the GUI values from the schema.
@@ -577,9 +642,6 @@ class SchemaEditor(WidgetPanel):
             self.geometries_entry.set_text(
                 ' '.join(self.label_schema.permitted_geometries))
 
-    def _populate_schema_viewer(self):
-        self.schema_viewer.fill_from_label_schema(self.label_schema)
-
     def edit_entry(self):
         """
         Edit the selected element.
@@ -597,11 +659,12 @@ class SchemaEditor(WidgetPanel):
         if selected == '':
             showinfo('No Element Selected', message='Choose element from Viewer')
             return
-        else:
+
+        popup = LabelEntryWidget(self.label_schema, edit_id=selected)
+        if popup.id_changed is not None:
+            self.schema_viewer.rerender_entry(popup.id_changed)
             self._unsaved_edits = True
-            popup = LabelEntryWidget(self.label_schema, edit_id=selected)
-            popup.destroy()
-            self._populate_schema_viewer()
+        popup.destroy()
 
     def new_entry(self):
         """
@@ -616,10 +679,83 @@ class SchemaEditor(WidgetPanel):
             showinfo('No Schema Selected', message='Choose schema location from File menu')
             return
 
-        self._unsaved_edits = True
         popup = LabelEntryWidget(self.label_schema, edit_id=None)
+        if popup.id_changed is not None:
+            self.schema_viewer.rerender_entry(popup.id_changed)
+            self._unsaved_edits = True
         popup.destroy()
-        self._populate_schema_viewer()
+
+    def delete_entry(self):
+        """
+        Delete the selected entry.
+
+        Returns
+        -------
+        None
+        """
+        if self._file_name is None:
+            showinfo('No Schema Selected', message='Choose schema location from File menu')
+            return
+
+        selected = self.schema_viewer.treeview.focus()
+        if selected == '':
+            showinfo('No Element Selected', message='Choose element from Viewer')
+            return
+
+        # does the selected entry have any children?
+        children = self.label_schema.subtypes.get(selected, None)
+        if children is not None and len(children) > 0:
+            response = askyesnocancel('Delete Children?', message='Selected entry has children. Delete all children?')
+            if response is not True:
+                return
+        self.schema_viewer.delete_entry(selected)
+        self._unsaved_edits = True
+
+    def move_up(self):
+        """
+        Move the selected entry up one spot.
+
+        Returns
+        -------
+        None
+        """
+
+        if self._file_name is None:
+            showinfo('No Schema Selected', message='Choose schema location from File menu')
+            return
+
+        selected = self.schema_viewer.treeview.focus()
+        if selected == '':
+            showinfo('No Element Selected', message='Choose element from Viewer')
+            return
+
+        result = self.label_schema.reorder_child_element(selected, spaces=-1)
+        if result:
+            self.schema_viewer.rerender_entry(selected)
+            self._unsaved_edits = True
+
+    def move_down(self):
+        """
+        Move the selected entry down one spot.
+
+        Returns
+        -------
+        None
+        """
+
+        if self._file_name is None:
+            showinfo('No Schema Selected', message='Choose schema location from File menu')
+            return
+
+        selected = self.schema_viewer.treeview.focus()
+        if selected == '':
+            showinfo('No Element Selected', message='Choose element from Viewer')
+            return
+
+        result = self.label_schema.reorder_child_element(selected, spaces=1)
+        if result:
+            self.schema_viewer.rerender_entry(selected)
+            self._unsaved_edits = True
 
     def new_schema(self):
         """
@@ -643,7 +779,8 @@ class SchemaEditor(WidgetPanel):
         self._new_file = True
         self._unsaved_edits = True
         self.label_schema = LabelSchema()
-        self._populate_all()
+        self.schema_viewer.fill_from_label_schema(self.label_schema)
+        self._populate_fields_schema()
 
     def open_schema(self):
         """
@@ -674,7 +811,8 @@ class SchemaEditor(WidgetPanel):
         self._new_file = False
         self._unsaved_edits = False
         self.label_schema = LabelSchema.from_file(schema_file)
-        self._populate_all()
+        self.schema_viewer.fill_from_label_schema(self.label_schema)
+        self._populate_fields_schema()
 
     def save(self):
         """
