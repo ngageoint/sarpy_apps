@@ -11,7 +11,8 @@ import os
 from shutil import copyfile
 import time
 from collections import OrderedDict
-from typing import Dict, List, Tuple, Any
+from typing import Union, Dict, List, Tuple, Any
+from datetime import datetime, timezone
 
 import tkinter
 from tkinter import ttk
@@ -24,8 +25,6 @@ from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
-from sarpy_apps.supporting_classes.metaviewer import Metaviewer
-from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.panel_builder import WidgetPanel
@@ -200,6 +199,152 @@ class LabelingPopup(object):
 
     def __del__(self):
         self.destroy()
+
+
+##############
+# Annotation List Viewer
+
+class AnnotationListViewer(basic_widgets.Frame):
+    """
+    Widget for visualizing an annotation list.
+    """
+
+
+    def __init__(self, master, annotation_list=None, geometry_size=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        master : tkinter.Tk|tkinter.Toplevel
+        annotation_list : None|FileAnnotationCollection
+        geometry_size : None|str
+        kwargs
+            The optional keywords for the Frame initialization.
+        """
+
+        self._annotation_list = None  # type: Union[None, FileAnnotationCollection]
+        super(AnnotationListViewer, self).__init__(master, **kwargs)
+        self.parent = master
+        if geometry_size is not None:
+            self.parent.geometry(geometry_size)
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
+        try:
+            self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+        except AttributeError:
+            pass
+
+        self.treeview = basic_widgets.Treeview(self, columns=('Date', 'Geometry', 'ID'))
+        # define the column headings
+        self.treeview.heading('#0', text='Label')
+        self.treeview.heading('#1', text='Date')
+        self.treeview.heading('#2', text='Geometry')
+        self.treeview.heading('#3', text='ID')
+        # instantiate the scroll bar and bind commands
+        self.scroll_bar = basic_widgets.Scrollbar(
+            self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
+        self.treeview.configure(xscrollcommand=self.scroll_bar.set)
+        # pack these components into the frame
+        self.treeview.pack(side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
+        self.scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        self.fill_from_annotation_list(annotation_list)
+
+    def _render_entry(self, annotation):
+        """
+        Render the given annotation.
+
+        Parameters
+        ----------
+        annotation : Annotation
+        """
+
+        def get_annotation_string():
+            # type: () -> (str, str)
+            # fetch the properties
+            properties = annotation.properties
+            if properties is None or len(properties) == 0:
+                return '<None>', ''
+            else:
+                entry = properties[0]
+                return self._annotation_list.label_schema.labels[entry.label_id], \
+                       datetime.fromtimestamp(entry.timestamp, timezone.utc).strftime('%Y-%m-%dT%H%M%SZ')
+
+        def get_geometry_string():
+            # type: () -> str
+            if annotation.geometry is None:
+                return '<None>'
+            else:
+                return annotation.geometry.__class__.__name__
+
+        the_label, the_date_str = get_annotation_string()
+        geometry_string = get_geometry_string()
+        the_index = self._annotation_list.annotations.get_integer_index(annotation.uid)
+        self.treeview.insert('', the_index, annotation.uid, text=the_label, values=(the_date_str, geometry_string, annotation.uid))
+
+    def _empty_entries(self):
+        """
+        Empty all entries - for the purpose of reinitializing.
+
+        Returns
+        -------
+        None
+        """
+
+        self.treeview.delete(*self.treeview.get_children())
+
+    def delete_entry(self, the_id):
+        """
+        Delete the given entry.
+
+        Parameters
+        ----------
+        the_id : str
+        """
+
+        # noinspection PyBroadException
+        try:
+            self.treeview.delete(the_id)  # try to delete, and just skip if it fails
+        except:
+            pass
+
+        if the_id in self._annotation_list.annotations:
+            self._annotation_list.delete_annotation(the_id)
+
+    def rerender_entry(self, the_id):
+        """
+        Rerender the given entry.
+
+        Parameters
+        ----------
+        the_id : str
+        """
+
+        if self._annotation_list is None:
+            self._empty_entries()
+            return
+
+        if the_id is None or the_id == '':
+            self.fill_from_annotation_list(self._annotation_list)
+        else:
+            self._render_entry(self._annotation_list.annotations[the_id])
+
+    def fill_from_annotation_list(self, annotation_list):
+        """
+        Fill the treeview from the given annotation list.
+
+        Parameters
+        ----------
+        annotation_list : None|FileAnnotationCollection
+        """
+
+        self._empty_entries()
+        self._annotation_list = annotation_list
+        if self._annotation_list is None:
+            return
+        for annotation in self._annotation_list.annotations:
+            self._render_entry(annotation)
+
+    def close_window(self):
+        self.parent.withdraw()
 
 
 #########

@@ -52,7 +52,7 @@ def _validate_schema(schema):
 ###########
 # Treeview for a label schema, and associated widget
 
-class SchemaViewer(basic_widgets.Treeview):
+class SchemaViewer(basic_widgets.Frame):
     """
     For the purpose of viewing the schema definition.
     """
@@ -72,6 +72,7 @@ class SchemaViewer(basic_widgets.Treeview):
             The keyword argument collection
         """
 
+        self._label_schema = None
         super(SchemaViewer, self).__init__(master, **kwargs)
         self.parent = master
         if geometry_size is not None:
@@ -81,9 +82,9 @@ class SchemaViewer(basic_widgets.Treeview):
             self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
         except AttributeError:
             pass
+
         # instantiate the treeview
         self.treeview = basic_widgets.Treeview(self, columns=('Name', ))
-        self._label_schema = label_schema
         # define the column headings
         self.treeview.heading('#0', text='Name')
         self.treeview.heading('#1', text='ID')
@@ -94,7 +95,7 @@ class SchemaViewer(basic_widgets.Treeview):
         # pack these components into the frame
         self.treeview.pack(side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
         self.scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
-        self.rerender_entry('')
+        self.fill_from_label_schema(label_schema)
 
     def _empty_entries(self):
         """
@@ -142,9 +143,7 @@ class SchemaViewer(basic_widgets.Treeview):
             return
 
         if the_id is None or the_id == '':
-            self._empty_entries()
-            for element_id in self._label_schema.subtypes['']:
-                self.rerender_entry(element_id)
+            self.fill_from_label_schema(self._label_schema)
         else:
 
             # noinspection PyBroadException
@@ -177,9 +176,12 @@ class SchemaViewer(basic_widgets.Treeview):
         None
         """
 
-        schema = _validate_schema(schema)
+        self._empty_entries()
         self._label_schema = schema
-        self.rerender_entry('')
+        if self._label_schema is None:
+            return
+        for element_id in self._label_schema.subtypes['']:
+            self.rerender_entry(element_id)
 
 
 class _SchemaSelectionWidget(object):
