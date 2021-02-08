@@ -15,7 +15,7 @@ import numpy
 
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, IntegerDescriptor
 from tk_builder.panel_builder import WidgetPanel
@@ -34,7 +34,7 @@ class ButtonPanel(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_box_layout(2, column_widths=8, row_heights=2)
+        self.init_w_box_layout(1, column_widths=8, row_heights=5)
 
 
 class InfoPanel(WidgetPanel):
@@ -60,7 +60,7 @@ class InfoPanel(WidgetPanel):
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
 
-        self.init_w_box_layout(n_columns=2, column_widths=[20, 10])
+        self.init_w_box_layout(n_columns=2, column_widths=[20, 10], row_heights=5)
 
         self.canvas_distance_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         self.pixel_distance_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
@@ -80,7 +80,7 @@ class SidePanel(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_horizontal_layout()
+        self.init_w_vertical_layout()
 
 
 #######
@@ -113,34 +113,26 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
     to the direction of the line and distance from the point to the line.
     """
 
-    _widget_list = ("side_panel", "image_panel")
-    side_panel = widget_descriptors.PanelDescriptor(
-        "side_panel", SidePanel, default_text="wake tool controls")      # type: SidePanel
-    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")  # type: ImagePanel
-
     def __init__(self, primary):
         primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         WidgetWithMetadata.__init__(self, primary)
-        self.init_w_vertical_layout()
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.image_panel = ImagePanel(primary_frame)  # type: ImagePanel
+        self.side_panel = SidePanel(primary_frame)  # type: SidePanel
         self.variables = AppVariables()
 
-        self.side_panel.set_spacing_between_buttons(0)
+        self.image_panel.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=tkinter.TRUE)
+        self.side_panel.pack(expand=tkinter.FALSE)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # set up event listeners
         self.side_panel.buttons.line_draw.config(command=self.arrow_draw_command)
         self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
         self.image_panel.canvas.variables.state.line_width = self.variables.line_width
-        self.image_panel.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         # hide unnecessary tools
         self.image_panel.hide_tools(['shape_drawing', 'select'])
         self.image_panel.hide_shapes()
-
-        self.side_panel.pack(fill=tkinter.X, expand=tkinter.NO, side="top")
-        self.side_panel.do_not_expand()
-        self.side_panel.fill_x(False)
 
         # define menus
         menubar = tkinter.Menu()
@@ -160,7 +152,6 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
 
         # handle packing
         primary.config(menu=menubar)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # bind useful events from our canvas
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.callback_index_changed)  # has the effect of refreshing the canvas

@@ -23,7 +23,7 @@ from tk_builder.widgets.image_canvas import ToolConstants
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 
 ###########

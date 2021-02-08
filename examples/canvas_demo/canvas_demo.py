@@ -95,8 +95,6 @@ class CanvasDemo(WidgetPanel):
         self.pyplot_panel.pack(expand=tkinter.YES)
         self.canvas_demo_image_panel.pack(expand=tkinter.YES)
 
-        # define panels widget_wrappers in primary frame
-        self.button_panel.set_spacing_between_buttons(0)
         # bind events to callbacks here
         self.button_panel.fname_select.config(command=self.callback_initialize_canvas_image)
         self.button_panel.rect_select.config(command=self.callback_set_to_select)

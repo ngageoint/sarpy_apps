@@ -23,7 +23,7 @@ from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, DerivedImageReader
-from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 
 class AppVariables(object):

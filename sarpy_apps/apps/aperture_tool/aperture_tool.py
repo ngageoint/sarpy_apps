@@ -33,7 +33,7 @@ from sarpy.processing.aperture_filter import ApertureFilter
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
-from sarpy_apps.supporting_classes.wiget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 # TODO: review the RadioButtonPanel situation?
 
