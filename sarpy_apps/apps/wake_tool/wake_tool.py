@@ -101,7 +101,7 @@ class AppVariables(object):
     line_width = IntegerDescriptor(
         'line_width', default_value=3, docstring='')  # type: int
     horizontal_line_width = IntegerDescriptor(
-        'horizontal_line_width', default_value=2, docstring='')  # type: int
+        'horizontal_line_width', default_value=3, docstring='')  # type: int
     horizontal_line_color = StringDescriptor(
         'horizontal_line_color', default_value='green',
         docstring='A hexidecimal or named color.')  # type: str

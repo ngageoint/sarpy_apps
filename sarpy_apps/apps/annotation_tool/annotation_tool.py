@@ -748,14 +748,14 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
 
+        self.annotate_panel = AnnotationListPanel(self.primary)  # type: AnnotationListPanel
+        self.annotate_panel.config(borderwidth=0)
+        self.primary.add(self.annotate_panel, width=300, height=600, padx=5, pady=5, sticky=tkinter.NSEW)
+
         self.context_panel = ImagePanel(self.primary)  # type: ImagePanel
         self.context_panel.canvas.set_canvas_size(400, 500)
         self.context_panel.config(borderwidth=0)
-        self.primary.add(self.context_panel, padx=5, pady=5, sticky=tkinter.NSEW)
-
-        self.annotate_panel = AnnotationListPanel(self.primary)  # type: AnnotationListPanel
-        self.annotate_panel.config(borderwidth=0)
-        self.primary.add(self.annotate_panel, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(self.context_panel, width=450, height=600, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
@@ -828,6 +828,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         self.variables._current_feature_id = feature_id
         self.annotate_panel.viewer.treeview.focus(feature_id)
+        self.annotate_panel.viewer.treeview.selection_set(feature_id)
         canvas_shapes = self.variables.get_canvas_shapes_for_feature(feature_id)
         if canvas_shapes is None:
             self.set_current_canvas_id(None, check_feature=False)
@@ -842,6 +843,9 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         None|str: The image file name.
         """
 
+        if self.context_panel.canvas.variables.canvas_image_object is None or \
+                self.context_panel.canvas.variables.canvas_image_object.image_reader is None:
+            return None
         return self.context_panel.canvas.variables.canvas_image_object.image_reader.file_name
 
     # utility functions
@@ -936,7 +940,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         def insert_line():
             # type: () -> Tuple[int, str]
-            image_coords = the_geometry.coordinates[:, 2].tolist()
+            image_coords = the_geometry.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
             canvas_id = self.context_panel.canvas.create_new_line((0, 0, 0, 0), **kwargs)
             self.context_panel.canvas.modify_existing_shape_using_image_coords(
@@ -1026,6 +1030,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         for geometry in base_geometries:
             canvas_id, the_color = self._create_shape_from_geometry(
                 feature, geometry, the_color=the_color)
+        self._ensure_color_for_shapes(feature.uid)
 
     def _create_feature_from_shape(self, canvas_id, make_current=True):
         """
@@ -1188,8 +1193,8 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         #   Zoom the context panel to that box + 50% on each side
         feature = self.variables.file_annotation_collection.annotations[feature_id]
         bounding_box = feature.geometry.get_bbox()
-        y_diff = max(bounding_box[2] - bounding_box[0], 50)
-        x_diff = max(bounding_box[3] - bounding_box[1], 50)
+        y_diff = max(bounding_box[2] - bounding_box[0], 100)
+        x_diff = max(bounding_box[3] - bounding_box[1], 100)
         zoom_box = [bounding_box[0] - 0.5*y_diff, bounding_box[1] - 0.5*x_diff, bounding_box[2] + 0.5*y_diff, bounding_box[3] + 0.5*x_diff]
         self.context_panel.canvas.zoom_to_full_image_selection(zoom_box)
 
