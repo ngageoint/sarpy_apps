@@ -402,9 +402,7 @@ class RcsTool(WidgetPanel, WidgetWithMetadata):
     def handle_table_left_mouse_click(self, event):
         item = self.rcs_table.table.identify('item', event.x, event.y)
         if item != "":
-            item = int(item)
-            self.image_panel.canvas.variables.current_shape_id = item
-            self.image_panel.canvas.set_current_tool_to_edit_shape()
+            self.image_panel.canvas.set_current_tool_to_edit_shape(int(item))
 
     def handle_table_selection(self, event):
         item = self.rcs_table.table.selection()
@@ -415,9 +413,7 @@ class RcsTool(WidgetPanel, WidgetWithMetadata):
         else:
             item = item[0]
         if item != "":
-            item = int(item)
-            self.image_panel.canvas.variables.current_shape_id = item
-            self.image_panel.canvas.set_current_tool_to_edit_shape()
+            self.image_panel.canvas.set_current_tool_to_edit_shape(int(item))
 
     def handle_canvas_left_mouse_release(self, event):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
@@ -432,12 +428,12 @@ class RcsTool(WidgetPanel, WidgetWithMetadata):
                 shape = "Ellipse"
             if self.rcs_table.n_entries == n_shapes_on_canvas - 1:
                 table_vals = (shape, self.image_panel.canvas.variables.state.foreground_color, "yes", "0", "0")
-                self.rcs_table.insert_row(self.image_panel.canvas.variables.current_shape_id, table_vals)
+                self.rcs_table.insert_row(self.image_panel.canvas.current_shape_id, table_vals)
             else:
                 pass
 
-        if self.image_panel.canvas.variables.current_shape_id is not None:
-            self.rcs_table.table.selection_set(self.image_panel.canvas.variables.current_shape_id)
+        if self.image_panel.canvas.current_shape_id is not None:
+            self.rcs_table.table.selection_set(self.image_panel.canvas.current_shape_id)
 
     def edit_rcs_table(self):
         current_item = self.rcs_table.table.focus()
@@ -458,7 +454,7 @@ class RcsTool(WidgetPanel, WidgetWithMetadata):
         return
 
     def delete_shape(self):
-        # current_shape_id = self.image_panel.canvas.variables.current_shape_id
+        # current_shape_id = self.image_panel.canvas.current_shape_id
         # if current_shape_id in self.image_panel.canvas.get_non_tool_shape_ids():
         #     self.image_panel.canvas.delete_shape(current_shape_id)
         #     self.rcs_table.delete(current_shape_id)

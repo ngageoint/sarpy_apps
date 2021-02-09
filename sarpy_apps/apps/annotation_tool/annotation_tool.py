@@ -28,7 +28,6 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
-from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 
@@ -179,7 +178,7 @@ class LabelingPopup(object):
             label_id=self._object_type_id,
             confidence=self.widget.confidence.get())
         self.annotation.add_annotation_metadata(annotation_metadata)
-        self.main_app_variables.unsaved_changed = True
+        self.main_app_variables.unsaved_changes = True
         self.root.quit()
 
     def setup_confidence_selections(self):
@@ -393,7 +392,8 @@ class AppVariables(object):
     """
     The main application variables for the annotation panel.
     """
-    unsaved_changed = BooleanDescriptor(
+
+    unsaved_changes = BooleanDescriptor(
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
     label_schema = TypedDescriptor(
@@ -414,7 +414,7 @@ class AppVariables(object):
         self._feature_dict = OrderedDict()
         self._canvas_to_feature = OrderedDict()
         self._current_annotate_canvas_id = None
-        self._current_feature_id = ''
+        self._current_feature_id = None
 
     # do these variables need to be unveiled?
     @property
@@ -444,15 +444,6 @@ class AppVariables(object):
 
         return self._current_annotate_canvas_id
 
-    @current_annotate_canvas_id.setter
-    def current_annotate_canvas_id(self, value):
-        if value is None:
-            self._current_annotate_canvas_id = None
-            self._current_feature_id = None
-        else:
-            self._current_annotate_canvas_id = value
-            self._current_feature_id = self._canvas_to_feature.get(value, None)
-
     @property
     def current_feature_id(self):
         """
@@ -460,22 +451,6 @@ class AppVariables(object):
         """
 
         return self._current_feature_id
-
-    def set_current_feature_id(self, feature_id):
-        """
-        Sets the current feature id.
-        """
-
-        if (feature_id is None) or (feature_id not in self._feature_dict):
-            self._current_feature_id = None
-            self._current_annotate_canvas_id = None
-            return
-
-        self._current_feature_id = feature_id
-        if self._current_annotate_canvas_id is None:
-            return
-        if self._current_annotate_canvas_id not in self.get_canvas_shapes_for_feature(feature_id):
-            self._current_annotate_canvas_id = None
 
     # fetch tracking information
     def get_canvas_shapes_for_feature(self, feature_id):
@@ -769,7 +744,6 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
         # temporary state variables
         self._modifying_shapes_on_canvas = False
-        self._modifying_canvas_tool = False
 
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
@@ -824,7 +798,6 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         # set up context panel canvas event listeners
         self.context_panel.canvas.bind('<<ImageIndexChanged>>', self.sync_image_index_changed)
-        self.context_panel.canvas.bind('<<CurrentToolChanged>>', self.verify_setting_canvas_tool)
         self.context_panel.canvas.bind('<<ShapeCreate>>', self.shape_create_on_canvas)
         self.context_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.shape_finalized_on_canvas)
         self.context_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_canvas)
@@ -833,6 +806,35 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         # set up the annotate_panel viewer event listeners
         self.annotate_panel.viewer.treeview.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
+    def set_current_canvas_id(self, value, check_feature=True):
+        if value is None:
+            self.variables._current_annotate_canvas_id = None
+            self.context_panel.canvas.current_shape_id = None
+        else:
+            self.variables._current_annotate_canvas_id = value
+            self.context_panel.canvas.current_shape_id = value
+            if check_feature:
+                self.set_current_feature_id(self.variables.canvas_to_feature.get(value, None))
+
+    def set_current_feature_id(self, feature_id):
+        """
+        Sets the current feature id.
+        """
+
+        if (feature_id is None) or (feature_id not in self.variables.feature_dict):
+            self.variables._current_feature_id = None
+            self.set_current_canvas_id(None, check_feature=False)
+            return
+
+        self.variables._current_feature_id = feature_id
+        self.annotate_panel.viewer.treeview.focus(feature_id)
+        canvas_shapes = self.variables.get_canvas_shapes_for_feature(feature_id)
+        if canvas_shapes is None:
+            self.set_current_canvas_id(None, check_feature=False)
+        elif len(canvas_shapes) == 1:
+            self.set_current_canvas_id(canvas_shapes[0], check_feature=False)
+        elif self.variables.current_annotate_canvas_id not in canvas_shapes:
+            self.set_current_canvas_id(None, check_feature=False)
 
     @property
     def image_file_name(self):
@@ -1025,13 +1027,14 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             canvas_id, the_color = self._create_shape_from_geometry(
                 feature, geometry, the_color=the_color)
 
-    def _create_feature_from_shape(self, canvas_id):
+    def _create_feature_from_shape(self, canvas_id, make_current=True):
         """
         Create a blank annotation from an annotation shape.
 
         Parameters
         ----------
         canvas_id : int
+        make_current : bool
 
         Returns
         -------
@@ -1045,11 +1048,13 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         geometry_object = self._get_geometry_from_shape(canvas_id)
         annotation = Annotation(geometry=geometry_object)
         self.variables.file_annotation_collection.add_annotation(annotation)
-        self.variables.unsaved_changed = True
+        self.variables.unsaved_changes = True
 
         vector_object = self.context_panel.canvas.get_vector_object(canvas_id)
         self.variables.set_feature_tracking(annotation.uid, canvas_id, color=vector_object.color)
         self.annotate_panel.viewer.rerender_entry(annotation.uid)
+        if make_current:
+            self.set_current_canvas_id(canvas_id, check_feature=True)
         return annotation.uid
 
     def _update_feature_geometry(self, feature_id):
@@ -1067,7 +1072,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         annotation = self.variables.file_annotation_collection.annotations[feature_id]
         self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
         self.annotate_panel.viewer.rerender_entry(annotation.uid)
-        self.variables.unsaved_changed = True
+        self.variables.unsaved_changes = True
 
     def _add_shape_to_feature(self, feature_id, canvas_id):
         """
@@ -1094,7 +1099,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self._ensure_color_for_shapes(feature_id)
         # update the entry of our annotation object
         self._update_feature_geometry(feature_id)
-        self.variables.unsaved_changed = True
+        self.variables.unsaved_changes = True
         self.annotate_panel.viewer.rerender_entry(feature_id)
 
     def _initialize_geometry(self, annotation_file_name, annotation_collection):
@@ -1115,7 +1120,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self.variables.annotation_file_name = annotation_file_name
         self.variables.label_schema = annotation_collection.label_schema
         self.variables.file_annotation_collection = annotation_collection
-        self.variables.current_annotate_canvas_id = None # TODO: any other state variables to update?
+        self.set_current_feature_id(None) # TODO: any other state variables to update?
 
         # dump all the old shapes
         self._modifying_shapes_on_canvas = True
@@ -1144,7 +1149,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self._initialize_geometry(annotation_fname, annotation_collection)
         self.context_panel.enable_tools()
         self.context_panel.enable_shapes()
-        self.variables.unsaved_changed = False
+        self.variables.unsaved_changes = False
 
     def _delete_feature(self, feature_id):
         """
@@ -1156,7 +1161,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if self.variables.current_feature_id == feature_id:
-            self.variables.set_current_feature_id(None)
+            self.set_current_feature_id(None)
 
         # remove feature from tracking, and get list of shapes to delete
         canvas_ids = self.variables.delete_feature_from_tracking(feature_id)
@@ -1165,6 +1170,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             self.context_panel.canvas.delete_shape(entry)
         # delete from the treeview
         self.annotate_panel.viewer.delete_entry(feature_id)
+        self.variables.unsaved_changes = True
 
     def zoom_to_feature(self, feature_id):
         """
@@ -1232,6 +1238,26 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             return False
         return True
 
+    def _prompt_unsaved(self):
+        """
+        Check for any unsaved changes, and prompt for action.
+
+        Returns
+        -------
+        bool
+            True if underlying action to continue, False if it should not.
+        """
+
+        if not self.variables.unsaved_changes:
+            return True
+
+        response = askyesnocancel('Save Changes?', message='There are unsaved changes for your annotations. Do you want to save them?')
+        if response is True:
+            self.save_annotation_file()
+        elif response is None:
+            return  False # cancel
+        return True
+
     @staticmethod
     def _get_side_lengths(coords):
         """
@@ -1259,7 +1285,9 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         The tool exit function
         """
 
-        self.quit()
+        response = self._prompt_unsaved()
+        if response:
+            self.quit()
 
     def select_image_file(self):
         """
@@ -1271,15 +1299,9 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         # prompt for any unsaved changes
-        if self.variables.unsaved_changed:
-            response = askyesnocancel(
-                'There are unsaved changes',
-                message='Save the unsaved changes from the present file before changing?')
-            if response is True:
-                self.save_annotation_file()
-            elif response is None:
-                return  # this is "Cancel"
-
+        response = self._prompt_unsaved()
+        if not response:
+            return
 
         fname = askopenfilename(
             title='Select image file',
@@ -1308,14 +1330,9 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         # prompt for any unsaved changes
-        if self.variables.unsaved_changed:
-            response = askyesnocancel(
-                'There are unsaved changes',
-                message='Save the unsaved changes from the present file before changing?')
-            if response is True:
-                self.save_annotation_file()
-            elif response is None:
-                return  # this is "Cancel"
+        response = self._prompt_unsaved()
+        if not response:
+            return
 
         schema_fname = askopenfilename(
             title='Select label schema',
@@ -1367,14 +1384,9 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         # prompt for any unsaved changes
-        if self.variables.unsaved_changed:
-            response = askyesnocancel(
-                'There are unsaved changes',
-                message='Save the unsaved changes from the present file before changing?')
-            if response is True:
-                self.save_annotation_file()
-            elif response is None:
-                return  # this is "Cancel"
+        response = self._prompt_unsaved()
+        if not response:
+            return
 
         # TODO: verify functionality
         browse_dir, image_fname = os.path.split(self.image_file_name)
@@ -1422,11 +1434,11 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if not self._verify_file_annotation_selected(popup=True):
-            self.variables.unsaved_changed = False
+            self.variables.unsaved_changes = False
             return
 
         self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
-        self.variables.unsaved_changed = False
+        self.variables.unsaved_changes = False
 
     def callback_delete_shape(self):
         """
@@ -1456,7 +1468,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             if response is True:
                 self._delete_feature(feature_id)
             else:
-                self.variables.set_current_feature_id(feature_id)
+                self.set_current_feature_id(feature_id)
 
     def callback_delete_feature(self):
         """
@@ -1516,35 +1528,6 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         # TODO: what else should conceptually happen? This is not possible unless
         #  we permit an image with more than a single index.
 
-    # noinspection PyUnusedLocal
-    def verify_setting_canvas_tool(self, event):
-        """
-        Verify the canvas tool setting is sensible.
-
-        Parameters
-        ----------
-        event
-        """
-
-        if self._modifying_canvas_tool:
-            # don't get caught in a recursive loop
-            return
-
-        should_be_enabled = self._verify_file_annotation_selected(popup=False)
-        if not should_be_enabled:
-            self.context_panel.disable_tools()
-            self.context_panel.disable_shapes()
-
-        new_tool = self.context_panel.canvas.current_tool
-        if new_tool == ToolConstants.VIEW:
-            return  # this is always fine
-        elif not should_be_enabled:
-            self._modifying_canvas_tool = True
-            # NB: this temporary state variable is required to prevent recursive calls
-            self.context_panel.canvas.set_tool(ToolConstants.VIEW)
-            self._modifying_canvas_tool = False
-            return
-
     def shape_create_on_canvas(self, event):
         """
         Handles the event that a shape has been created on the canvas.
@@ -1569,8 +1552,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
                 return
 
         the_id = self._create_feature_from_shape(event.x)
-        self.variables.current_annotate_canvas_id = event.x
-        # TODO: update the treeview? Maybe set the selection?
+        self.set_current_canvas_id(event.x, check_feature=True)
 
     def shape_finalized_on_canvas(self, event):
         """
@@ -1589,6 +1571,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         # extract the appropriate feature, and sync changes to the list
         feature_id = self.variables.get_feature_for_annotate(event.x)
         self._update_feature_geometry(feature_id)
+        self.set_current_canvas_id(event.x, check_feature=True)
 
     def shape_delete_on_canvas(self, event):
         """
@@ -1602,7 +1585,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if self.variables.current_annotate_canvas_id == event.x:
-            self.variables.current_annotate_canvas_id = None
+            self.set_current_canvas_id(None, check_feature=False)
 
         if self._modifying_shapes_on_canvas:
             return
@@ -1626,7 +1609,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         if self.variables.current_annotate_canvas_id == event.x:
             return # nothing needs to be done
-        self.variables.current_annotate_canvas_id = event.x
+        self.set_current_canvas_id(event.x, check_feature=True)
         if self.variables.current_feature_id is not None:
             self.annotate_panel.viewer.treeview.focus(self.variables.current_feature_id)
 
@@ -1672,11 +1655,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         if feature_id == old_feature_id:
             return  # nothing needs to be done
 
-        self.variables.set_current_feature_id(feature_id)
-        canvas_shapes = self.variables.get_canvas_shapes_for_feature(feature_id)
-        if canvas_shapes is not None and len(canvas_shapes) == 1:
-            self.variables.current_annotate_canvas_id = canvas_shapes[0]
-            self.context_panel.canvas.set_current_shape_id(canvas_shapes[0])
+        self.set_current_feature_id(feature_id)
 
 
 def main():

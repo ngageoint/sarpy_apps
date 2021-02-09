@@ -353,7 +353,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         end_y = point_y
         horizontal_line_coords = (point_x, point_y, end_x, end_y)
         # save last object selected on canvas (either the point or the line)
-        last_shape_id = self.image_panel.canvas.variables.current_shape_id
+        last_shape_id = self.image_panel.canvas.current_shape_id
         if self.variables.horizontal_line_id is None:
             self.variables.horizontal_line_id = self.image_panel.canvas.create_new_line(
                 horizontal_line_coords,
@@ -364,7 +364,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
             self.image_panel.canvas.modify_existing_shape_using_canvas_coords(
                 self.variables.horizontal_line_id, horizontal_line_coords)
         # set current object ID back to what it was after drawing the horizontal line
-        self.image_panel.canvas.variables.current_shape_id = last_shape_id
+        self.image_panel.canvas.current_shape_id = last_shape_id
         canvas_distance = self.image_panel.canvas.get_canvas_line_length(self.variables.horizontal_line_id)
         pixel_distance = self.image_panel.canvas.get_image_line_length(self.variables.horizontal_line_id)
         geo_distance = self.calculate_wake_distance()

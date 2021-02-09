@@ -149,14 +149,14 @@ class CanvasDemo(WidgetPanel):
 
     def callback_handle_canvas_left_mouse_click(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_click(event)
-        current_shape = self.canvas_demo_image_panel.canvas.variables.current_shape_id
+        current_shape = self.canvas_demo_image_panel.canvas.current_shape_id
         if current_shape:
             self.variables.shapes_in_selector.append(current_shape)
             self.variables.shapes_in_selector = sorted(list(set(self.variables.shapes_in_selector)))
 
     def callback_handle_canvas_left_mouse_release(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.canvas_demo_image_panel.canvas.variables.select_rect.uid == self.canvas_demo_image_panel.canvas.variables.current_shape_id:
+        if self.canvas_demo_image_panel.canvas.variables.select_rect.uid == self.canvas_demo_image_panel.canvas.current_shape_id:
             self.update_selection()
 
     def callback_edit(self):
