@@ -105,7 +105,7 @@ class StatsViewer(basic_widgets.Frame):
                 if primary_entry is not None:
                     prim_stats = primary_entry.statistics[j]
                     sid += '*'
-                    mean_str = frm_str.format(stats.mean, prim_stats.mean)
+                    mean_str = frm_str.format(stats.mean)+', '+frm_str.format(stats.mean/prim_stats.mean)
                 else:
                     mean_str = frm_str.format(stats.mean)
                 self.treeview.insert(
@@ -130,31 +130,32 @@ class RCSValueCollectionPanel(basic_widgets.Frame):
         self._rcs_feature = rcs_feature
         self._primary_feature = primary_feature
         basic_widgets.Frame.__init__(self, master)
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         # manually instantiate the elements
         self.name_label = basic_widgets.Label(
-            master, text='Name:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        self.name_entry = basic_widgets.Entry(master, text='')
+            self, text='Name:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.name_entry = basic_widgets.Entry(self, text='')
         self.name_entry.set_text('' if rcs_feature.properties.name is None else rcs_feature.properties.name)
         self.description_label = basic_widgets.Label(
-            master, text='Description:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        self.description_text = tkinter.Text(master)
+            self, text='Description:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.description_text = tkinter.Text(self, height=4, width=40)
         self.description_text.insert(
             tkinter.INSERT, '' if rcs_feature.properties.description is None else rcs_feature.properties.description)
 
         self.pixel_count_label = basic_widgets.Label(
-            master, text='Pixel Count:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+            self, text='Pixel Count:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         the_pixel_count_text = '' if rcs_feature.properties.pixel_count is None else '{0:d}'.format(rcs_feature.properties.pixel_count)
         self.pixel_count_entry = basic_widgets.Label(
-            master, text=the_pixel_count_text, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+            self, text=the_pixel_count_text, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
 
         self.id_label = basic_widgets.Label(
-            master, text='Feature ID:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+            self, text='Feature ID:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         self.id_entry = basic_widgets.Label(
-            master, text=rcs_feature.uid, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+            self, text=rcs_feature.uid, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
 
-        self.cancel = basic_widgets.Button(master, text='Cancel')
-        self.submit = basic_widgets.Button(master, text='Submit')
-        self.stats_viewer = StatsViewer(master, rcs_feature, primary_feature)
+        self.cancel = basic_widgets.Button(self, text='Cancel')
+        self.submit = basic_widgets.Button(self, text='Submit')
+        self.stats_viewer = StatsViewer(self, rcs_feature, primary_feature)
 
         # manually set the positioning
         self.name_label.grid(row=0, column=0, sticky='NESW')
