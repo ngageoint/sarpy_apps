@@ -1,10 +1,11 @@
 # This details the important differences introduced in sarpy_apps 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .8 - Complete refactoring of all tools and completion of labeling (formerly annotation) and rcs tools
 * .7 - Adjustments for tk_builder and sarpy updates
        Updates to tools:
            Metaviewer updates
-           Taser tool updates
+           ImageViewer tool updates
            Aperture tool updates
            Metaicon updates
            Creation of a labelling schema editor tool

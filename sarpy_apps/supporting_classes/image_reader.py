@@ -1,20 +1,24 @@
+"""
+Helper classes fulfilling the ImageReader pattern.
+"""
+
+__classification__ = "UNCLASSIFIED"
+__author__ = ("Jason Casey", "Thomas McCullough")
+
+
 import logging
 import numpy
 from typing import Union, List, Tuple
 
 from sarpy.compliance import string_types, int_func
 from sarpy.io.general.base import BaseReader
-from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.image_reader import ImageReader
 import sarpy.visualization.remap as remap
 
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.complex.aggregate import AggregateComplexReader
 from sarpy.io.complex.sicd_elements.SICD import SICDType
-
-
-
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+from sarpy.io.product.converter import open_product
 
 
 class ComplexImageReader(ImageReader):
@@ -37,6 +41,10 @@ class ComplexImageReader(ImageReader):
         self._remap_function = remap.density
         # set the reader
         self.base_reader = reader
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
 
     @property
     def base_reader(self):
@@ -84,6 +92,18 @@ class ComplexImageReader(ImageReader):
         self._index = value
         self._data_size = data_sizes[value]
 
+    @property
+    def remapable(self):
+        return True
+
+    @property
+    def remap_function(self):
+        return self._remap_function
+
+    @property
+    def image_count(self):
+        return 0 if self._chippers is None else len(self._chippers)
+
     def __getitem__(self, item):
         cdata = self._chippers[self.index].__getitem__(item)
         decimated_image_data = self.remap_complex_data(cdata)
@@ -113,6 +133,19 @@ class ComplexImageReader(ImageReader):
             logging.error('Got unexpected value for remap {}'.format(remap_type))
             self._remap_function = remap.density
 
+    def get_sicd(self):
+        """
+        Gets the relevant SICD structure.
+
+        Returns
+        -------
+        None|SICDType
+        """
+
+        if self._index is None:
+            return None
+        return self.base_reader.get_sicds_as_tuple()[self._index]
+
 
 class QuadPolImageReader(ImageReader):
     __slots__ = (
@@ -130,6 +163,10 @@ class QuadPolImageReader(ImageReader):
         self._remap_function = remap.density
         # set the reader
         self.base_reader = reader
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
 
     @property
     def base_reader(self):
@@ -197,6 +234,18 @@ class QuadPolImageReader(ImageReader):
         self._index = value
         self._data_size = data_size
         self._order_indices(value, indices)
+
+    @property
+    def remapable(self):
+        return True
+
+    @property
+    def remap_function(self):
+        return self._remap_function
+
+    @property
+    def image_count(self):
+        return 0 if self._chippers is None else len(self.sicd_partition)
 
     def _order_indices(self, index, indices):
         """
@@ -334,7 +383,7 @@ class DerivedImageReader(ImageReader):
     @base_reader.setter
     def base_reader(self, value):
         if isinstance(value, string_types):
-            value = open_complex(value)
+            value = open_product(value)
         if not isinstance(value, BaseReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type != "SIDD":
@@ -364,6 +413,22 @@ class DerivedImageReader(ImageReader):
             value = 0
         self._index = value
         self._data_size = data_sizes[value]
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
+
+    @property
+    def remapable(self):
+        return False
+
+    @property
+    def remap_function(self):
+        return None
+
+    @property
+    def image_count(self):
+        return 0 if self._chippers is None else len(self._chippers)
 
     def __getitem__(self, item):
         return self._chippers[self.index].__getitem__(item)

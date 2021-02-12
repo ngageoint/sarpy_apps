@@ -2,6 +2,10 @@
 The container object for the metaicon object.
 """
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import logging
 from datetime import datetime
 
@@ -15,9 +19,6 @@ from sarpy.io.product.sidd2_elements.SIDD import SIDDType  # version 2.0
 from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
 from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
 from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
-
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
 
 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
@@ -180,7 +181,8 @@ class MetaIconDataContainer(object):
 
         if self.collector_name is not None:
             if self.collect_start is not None:
-                dt = self.collect_start.astype(datetime)
+                dt_in_seconds = self.collect_start.astype('datetime64[s]')
+                dt = dt_in_seconds.astype(datetime)
                 date_str_1, date_str_2 = dt.strftime("%d%b%y").upper(), dt.strftime("%H%MZ")
             else:
                 date_str_1, date_str_2 = "DDMMMYY", "HMZ"
@@ -536,27 +538,25 @@ class MetaIconDataContainer(object):
                 'sidd is expected to be an instance of SIDD type, got type {}'.format(type(sidd)))
 
         def extract_location():
+            ll_coords = None
             if isinstance(sidd, SIDDType):
                 try:
-                    llh_coords = sidd.GeoData.ImageCorners.get_array(dtype=numpy.dtype('float64'))
-                    ecf_coords = geodetic_to_ecf(llh_coords)
-                    coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
-                    variables['lat'] = coords[0]
-                    variables['lon'] = coords[1]
+                    ll_coords = sidd.GeoData.ImageCorners.get_array(dtype=numpy.dtype('float64'))
                 except AttributeError:
                     pass
             elif isinstance(sidd, SIDDType1):
                 try:
                     ll_coords = sidd.GeographicAndTarget.GeographicCoverage.Footprint.get_array(
                         dtype=numpy.dtype('float64'))
-                    llh_coords = numpy.zeros((ll_coords.shape[0], 3), dtype=numpy.float64)
-                    llh_coords[:, :2] = ll_coords
-                    ecf_coords = geodetic_to_ecf(llh_coords)
-                    coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
-                    variables['lat'] = coords[0]
-                    variables['lon'] = coords[1]
                 except AttributeError:
                     pass
+            if ll_coords is not None:
+                llh_coords = numpy.zeros((ll_coords.shape[0], 3), dtype=numpy.float64)
+                llh_coords[:, :2] = ll_coords
+                ecf_coords = geodetic_to_ecf(llh_coords)
+                coords = ecf_to_geodetic(numpy.mean(ecf_coords, axis=0))
+                variables['lat'] = coords[0]
+                variables['lon'] = coords[1]
 
         def extract_exploitation_features():
             if sidd.ExploitationFeatures is None:

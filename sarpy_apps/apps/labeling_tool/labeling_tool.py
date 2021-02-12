@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-This module provides a tool for creating an RCS associated annotation for a SAR
-image.
+This module provides a tool for creating a general annotation for a SAR image.
 """
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Thomas McCullough"
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 
-import logging
 import os
 from shutil import copyfile
 import time
 from collections import OrderedDict
 from typing import Union, Dict, List, Tuple, Any
+from datetime import datetime, timezone
 
 import tkinter
 from tkinter import ttk
 from tkinter.messagebox import showinfo, askyesnocancel, askyesno
-from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 
-import numpy
+from sarpy_apps.apps.labeling_tool.schema_editor import select_schema_entry
 
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
@@ -28,151 +27,79 @@ from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.panel_builder import WidgetPanelNoLabel
+from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 
-from sarpy.compliance import string_types, integer_types, int_func
-from sarpy.annotation.rcs import RCSStatistics, RCSValue, RCSValueCollection, \
-    RCSFeature, FileRCSCollection
-from sarpy.geometry.geometry_elements import Geometry, LinearRing, Polygon, \
-    MultiPolygon
-from sarpy.io.complex.utils import get_im_physical_coords
+from sarpy.compliance import string_types, integer_types
+from sarpy.annotation.label import FileLabelCollection, LabelFeature, \
+    LabelMetadata, LabelMetadataList, LabelSchema
+from sarpy.geometry.geometry_elements import Geometry, GeometryCollection, \
+    Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
 
 
-###############
-# RCSValueCollectionPanel
+##############
+# Labeling Panel and Popup Widget
 
-class StatsViewer(basic_widgets.Frame):
-    def __init__(self, master, rcs_feature, primary_feature):
-        """
+class LabelingPanel(WidgetPanel):
+    _widget_list = (
+        ("object_type_label", "choose_type"),
+        ("comment_label", "comment"),
+        ("confidence_label", "confidence"),
+        ("cancel", "submit"))
+    object_type_label = widget_descriptors.LabelDescriptor(
+        "object_type_label", default_text='Type:')  # type: basic_widgets.Label
+    choose_type = widget_descriptors.ButtonDescriptor(
+        "choose_type", default_text='Choose')  # type: basic_widgets.Button
 
-        Parameters
-        ----------
-        master
-        rcs_feature : RCSFeature
-        primary_feature : None|RCSFeature
-        """
+    comment_label = widget_descriptors.LabelDescriptor(
+        "comment_label", default_text='Comment:')  # type: basic_widgets.Label
+    comment = widget_descriptors.TypedDescriptor(
+        "comment", tkinter.Text)  # type: tkinter.Text
 
-        self._rcs_feature = rcs_feature
-        self._primary_feature = primary_feature
-        basic_widgets.Frame.__init__(self, master)
-        self.treeview = basic_widgets.Treeview(self, columns=('Mean', 'Std', 'Max', 'Min'))
-        # define the column headings
-        self.treeview.heading('#0', text='Name')
-        self.treeview.heading('#1', text='Mean')
-        self.treeview.heading('#2', text='Std')
-        self.treeview.heading('#3', text='Max')
-        self.treeview.heading('#4', text='Min')
-        # instantiate the scroll bar and bind commands
-        self.vert_scroll_bar = basic_widgets.Scrollbar(
-            self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
-        self.treeview.configure(xscrollcommand=self.vert_scroll_bar.set)
-        self.horz_scroll_bar = basic_widgets.Scrollbar(
-            self.treeview.master, orient=tkinter.HORIZONTAL, command=self.treeview.xview)
-        self.treeview.configure(yscrollcommand=self.vert_scroll_bar.set)
-        # pack these components into the frame
-        self.vert_scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
-        self.horz_scroll_bar.pack(side=tkinter.BOTTOM, fill=tkinter.X)
-        self.treeview.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        self.fill_tree()
+    confidence_label = widget_descriptors.LabelDescriptor(
+        "confidence_label", default_text='Confidence:')  # type: basic_widgets.Label
+    confidence = widget_descriptors.ComboboxDescriptor(
+        "confidence", default_text='')  # type: basic_widgets.Combobox
 
-    def fill_tree(self):
-        """
-        Fill the RCS values tree view.
-        """
+    cancel = widget_descriptors.ButtonDescriptor(
+        "cancel", default_text='Cancel')  # type: basic_widgets.Button
+    submit = widget_descriptors.ButtonDescriptor(
+        "submit", default_text='Submit')  # type: basic_widgets.Button
 
-        frm_str = '{0:0.6G}'
-        if self._rcs_feature.properties is None or \
-                self._rcs_feature.properties.elements is None:
-            return
-
-        for i, entry in enumerate(self._rcs_feature.properties.elements):
-            the_id = '{}'.format(i)
-            if entry.polarization is None:
-                the_text = 'index {}'.format(the_id)
-            else:
-                the_text = 'pol {}, index {}'.format(entry.polarization, the_id)
-            if self._primary_feature is not None:
-                the_text += '*'
-                primary_entry = self._primary_feature.properties.elements[i]
-            else:
-                primary_entry = None
-            self.treeview.insert('', 'end', iid=the_id, text=the_text, values=('', '', '', ''))
-
-            for j, stats in enumerate(entry.statistics):
-                sid = '{}-{}'.format(i, j)
-                if primary_entry is not None:
-                    prim_stats = primary_entry.statistics[j]
-                    sid += '*'
-                    mean_str = frm_str.format(stats.mean, prim_stats.mean)
-                else:
-                    mean_str = frm_str.format(stats.mean)
-                self.treeview.insert(
-                    the_id, 'end', iid=sid, text=stats.name,
-                    values=(mean_str, frm_str.format(stats.std), frm_str.format(stats.max), frm_str.format(stats.min)))
-
-
-class RCSValueCollectionPanel(basic_widgets.Frame):
-    def __init__(self, master, rcs_feature, primary_feature):
+    def __init__(self, master):
         """
 
         Parameters
         ----------
         master : tkinter.Toplevel
             The app master.
-        rcs_feature : RCSFeature
-        primary_feature : None|RCSFeature
         """
 
-        self.root = master
-        self.changed = False
-        self._rcs_feature = rcs_feature
-        self._primary_feature = primary_feature
-        basic_widgets.Frame.__init__(self, master)
+        WidgetPanel.__init__(self, master)
         # manually instantiate the elements
-        self.name_label = basic_widgets.Label(
-            master, text='Name:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        self.name_entry = basic_widgets.Entry(master, text='')
-        self.name_entry.set_text('' if rcs_feature.properties.name is None else rcs_feature.properties.name)
-        self.description_label = basic_widgets.Label(
-            master, text='Description:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        self.description_text = tkinter.Text(master)
-        self.description_text.insert(
-            tkinter.INSERT, '' if rcs_feature.properties.description is None else rcs_feature.properties.description)
-
-        self.pixel_count_label = basic_widgets.Label(
-            master, text='Pixel Count:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        the_pixel_count_text = '' if rcs_feature.properties.pixel_count is None else '{0:d}'.format(rcs_feature.properties.pixel_count)
-        self.pixel_count_entry = basic_widgets.Label(
-            master, text=the_pixel_count_text, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-
-        self.id_label = basic_widgets.Label(
-            master, text='Feature ID:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        self.id_entry = basic_widgets.Label(
-            master, text=rcs_feature.uid, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-
+        self.object_type_label = basic_widgets.Label(master, text='Type:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.choose_type = basic_widgets.Button(master, text='Choose')
+        self.comment_label = basic_widgets.Label(master, text='Comment:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.comment = tkinter.Text(master)
+        self.confidence_label = basic_widgets.Label(master, text='Confidence:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.confidence = basic_widgets.Combobox(master, text='')
         self.cancel = basic_widgets.Button(master, text='Cancel')
         self.submit = basic_widgets.Button(master, text='Submit')
-        self.stats_viewer = StatsViewer(master, rcs_feature, primary_feature)
-
         # manually set the positioning
-        self.name_label.grid(row=0, column=0, sticky='NESW')
-        self.name_entry.grid(row=0, column=1, sticky='NESW')
-        self.description_label.grid(row=1, column=0, sticky='NESW')
-        self.description_text.grid(row=1, column=1, sticky='NESW')
-        self.pixel_count_label.grid(row=2, column=0, sticky='NESW')
-        self.pixel_count_entry.grid(row=2, column=1, sticky='NESW')
-        self.id_label.grid(row=3, column=0, sticky='NESW')
-        self.id_entry.grid(row=3, column=1, sticky='NESW')
-        self.cancel.grid(row=4, column=0, sticky='NESW')
-        self.submit.grid(row=4, column=1, sticky='NESW')
-        self.stats_viewer.grid(row=5, column=0, columnspan=2, sticky='NSEW')
+        self.object_type_label.grid(row=0, column=0, sticky='NESW')
+        self.choose_type.grid(row=0, column=1, sticky='NESW')
+        self.comment_label.grid(row=1, column=0, sticky='NESW')
+        self.comment.grid(row=1, column=1, rowspan=3, sticky='NESW')
+        self.confidence_label.grid(row=4, column=0, sticky='NESW')
+        self.confidence.grid(row=4, column=1, sticky='NESW')
+        self.cancel.grid(row=5, column=0, sticky='NESW')
+        self.submit.grid(row=5, column=1, sticky='NESW')
 
 
-class RCSValueCollectionPopup(object):
+class LabelingPopup(object):
     """
-    This is a widget for viewing the RCS values details.
+    This is a widget for performing the labeling portion of the annotation.
 
     This starts it's own tkinter.Toplevel, which maintains it's own mainloop.
     This allows it to freeze execution of the calling application.
@@ -186,44 +113,81 @@ class RCSValueCollectionPopup(object):
         main_app_variables : AppVariables
         """
 
+        self._object_type_id = None
         self.main_app_variables = main_app_variables
-        self.changed = False
+        self.label_schema = main_app_variables.label_schema
+
         self.root = tkinter.Toplevel()
-        rcs_feature = self.main_app_variables.get_current_feature()  # it is assumed that this will not be None
-        if self.main_app_variables.primary_feature_id is not None and \
-                self.main_app_variables.primary_feature_id != self.main_app_variables.current_feature_id:
-            primary_feature = self.main_app_variables.get_primary_feature()
+        self.widget = LabelingPanel(self.root)
+
+        self.widget.set_text("Annotate")
+
+        # set up base types for initial dropdown menu
+        self.setup_confidence_selections()
+
+        # get the current annotation
+        current_id = self.main_app_variables.current_feature_id
+        self.annotation = self.main_app_variables.file_annotation_collection.annotations[current_id]
+
+        # populate existing fields if editing an existing geometry
+        annotation_metadata_list = self.annotation.properties
+        # verify that we can operate on this thing
+        assert (annotation_metadata_list is None or
+                isinstance(annotation_metadata_list, LabelMetadataList))
+        if annotation_metadata_list is not None and len(annotation_metadata_list) > 0:
+            annotate_metadata = annotation_metadata_list[0]
+            self._object_type_id = annotate_metadata.label_id
+            self.widget.choose_type.set_text(self.label_schema.labels[self._object_type_id])
+            self.widget.comment.insert(tkinter.INSERT, annotate_metadata.comment)
+            self.widget.confidence.set(annotate_metadata.confidence)
         else:
-            primary_feature = None
-        self._rcs_feature = rcs_feature
-        self.widget = RCSValueCollectionPanel(self.root, rcs_feature, primary_feature)
+            self._object_type_id = None
+            self.widget.choose_type.set_text("****")
+            self.widget.comment.insert(tkinter.INSERT, "")
+            self.widget.confidence.set("")
+
+        # label appearance
+        self.widget.object_type_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.widget.comment_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.widget.confidence_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+
+        # set up callbacks
+        self.widget.choose_type.config(command=self.select_object_type)
         self.widget.cancel.config(command=self.callback_cancel)
         self.widget.submit.config(command=self.callback_submit)
         self.root.mainloop()
+
+    def select_object_type(self):
+        current_value = self._object_type_id
+        value = select_schema_entry(self.label_schema, start_id=current_value)
+        self._object_type_id = value
+        self.widget.choose_type.set_text(self.label_schema.labels[value])
 
     def callback_cancel(self):
         self.root.quit()
 
     def callback_submit(self):
-        the_name = self.widget.name_entry.get().strip()
-        the_description = self.widget.description_text.get('1.0', 'end-1c')
-        self.changed = False
-        if self._rcs_feature.properties.name is None:
-            if the_name != '':
-                self._rcs_feature.properties.name = the_name
-                self.changed = True
-        elif self._rcs_feature.properties.name != the_name:
-            self._rcs_feature.properties.name = None if the_name == '' else the_name
-            self.changed = True
+        if self._object_type_id is None:
+            showinfo("Select Object Type", message="Select the object type")
+            return
 
-        if self._rcs_feature.properties.description is None:
-            if the_description != '':
-                self._rcs_feature.properties.description = the_description
-                self.changed = True
-        elif self._rcs_feature.properties.description != the_description:
-            self._rcs_feature.properties.description = None if the_description == '' else the_description
-            self.changed = True
+        the_comment = self.widget.comment.get('1.0', 'end-1c')
+        annotation_metadata = LabelMetadata(
+            comment=the_comment,
+            label_id=self._object_type_id,
+            confidence=self.widget.confidence.get())
+        self.annotation.add_annotation_metadata(annotation_metadata)
+        self.main_app_variables.unsaved_changes = True
         self.root.quit()
+
+    def setup_confidence_selections(self):
+        confidence_values = self.label_schema.confidence_values
+        if confidence_values is None or len(confidence_values) < 1:
+            self.widget.confidence.set('')
+            self.widget.confidence.config(state='disabled')
+        else:
+            self.widget.confidence.update_combobox_values(confidence_values)
+            self.widget.confidence.config(state='readonly')
 
     def destroy(self):
         # noinspection PyBroadException
@@ -236,31 +200,30 @@ class RCSValueCollectionPopup(object):
         self.destroy()
 
 
-###############
-# RCSCollectionPanel
+##############
+# Annotation List Viewer and panel
 
-class RCSCollectionViewer(basic_widgets.Frame):
+class LabelCollectionViewer(basic_widgets.Frame):
     """
-    Widget for visualizing the RCSCollection.
+    Widget for visualizing an annotation list.
     """
 
-    def __init__(self, master, annotation_list=None, primary_element=None, geometry_size=None, **kwargs):
+
+    def __init__(self, master, annotation_list=None, geometry_size=None, **kwargs):
         """
 
         Parameters
         ----------
         master
             The tkinter element master.
-        annotation_list : None|FileRCSCollection
-        primary_element : None|str
+        annotation_list : None|FileLabelCollection
         geometry_size : None|str
         kwargs
             The optional keywords for the Frame initialization.
         """
 
-        self._annotation_list = None  # type: Union[None, FileRCSCollection]
-        self._primary_element = primary_element
-        super(RCSCollectionViewer, self).__init__(master, **kwargs)
+        self._annotation_list = None  # type: Union[None, FileLabelCollection]
+        super(LabelCollectionViewer, self).__init__(master, **kwargs)
         self.parent = master
         if geometry_size is not None:
             self.parent.geometry(geometry_size)
@@ -270,9 +233,12 @@ class RCSCollectionViewer(basic_widgets.Frame):
         except AttributeError:
             pass
 
-        self.treeview = basic_widgets.Treeview(self, columns=())
+        self.treeview = basic_widgets.Treeview(self, columns=('Date', 'Geometry', 'ID'))
         # define the column headings
-        self.treeview.heading('#0', text='Name')
+        self.treeview.heading('#0', text='Label')
+        self.treeview.heading('#1', text='Date')
+        self.treeview.heading('#2', text='Geometry')
+        self.treeview.heading('#3', text='ID')
         # instantiate the scroll bar and bind commands
         self.vert_scroll_bar = basic_widgets.Scrollbar(
             self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
@@ -284,25 +250,7 @@ class RCSCollectionViewer(basic_widgets.Frame):
         self.vert_scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self.horz_scroll_bar.pack(side=tkinter.BOTTOM, fill=tkinter.X)
         self.treeview.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        self.fill_from_annotation_list(annotation_list, self._primary_element)
-
-    def set_primary_element(self, value):
-        """
-        Sets the primary id.
-
-        Parameters
-        ----------
-        value : None|str
-        """
-
-        old_primary_element = self._primary_element
-        if old_primary_element == value:
-            return  # nothing to be done
-        self._primary_element = value
-        if old_primary_element is not None:
-            self.rerender_entry(old_primary_element)
-        if value is not None:
-            self.rerender_entry(value)
+        self.fill_from_annotation_list(annotation_list)
 
     def _render_entry(self, annotation):
         """
@@ -310,15 +258,31 @@ class RCSCollectionViewer(basic_widgets.Frame):
 
         Parameters
         ----------
-        annotation : RCSFeature
+        annotation : LabelFeature
         """
 
+        def get_annotation_string():
+            # type: () -> (str, str)
+            # fetch the properties
+            properties = annotation.properties
+            if properties is None or len(properties) == 0:
+                return '<None>', ''
+            else:
+                entry = properties[0]
+                return self._annotation_list.label_schema.labels[entry.label_id], \
+                       datetime.fromtimestamp(entry.timestamp, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        def get_geometry_string():
+            # type: () -> str
+            if annotation.geometry is None:
+                return '<None>'
+            else:
+                return annotation.geometry.__class__.__name__
+
+        the_label, the_date_str = get_annotation_string()
+        geometry_string = get_geometry_string()
         the_index = self._annotation_list.annotations.get_integer_index(annotation.uid)
-        the_name = '<{}>'.format(annotation.uid) if (annotation.properties is None or annotation.properties.name is None) \
-            else annotation.properties.name
-        if annotation.uid == self._primary_element:
-            the_name += '*'
-        self.treeview.insert('', the_index, annotation.uid, text=the_name)
+        self.treeview.insert('', the_index, annotation.uid, text=the_label, values=(the_date_str, geometry_string, annotation.uid))
 
     def _empty_entries(self):
         """
@@ -363,7 +327,7 @@ class RCSCollectionViewer(basic_widgets.Frame):
             return
 
         if the_id is None or the_id == '':
-            self.fill_from_annotation_list(self._annotation_list, self._primary_element)
+            self.fill_from_annotation_list(self._annotation_list)
         else:
             # noinspection PyBroadException
             try:
@@ -373,18 +337,16 @@ class RCSCollectionViewer(basic_widgets.Frame):
 
             self._render_entry(self._annotation_list.annotations[the_id])
 
-    def fill_from_annotation_list(self, annotation_list, primary_id):
+    def fill_from_annotation_list(self, annotation_list):
         """
         Fill the treeview from the given annotation list.
 
         Parameters
         ----------
-        annotation_list : None|FileRCSCollection
-        primary_id : None|str
+        annotation_list : None|FileLabelCollection
         """
 
         self._empty_entries()
-        self._primary_element = primary_id
         self._annotation_list = annotation_list
         if self._annotation_list is None or self._annotation_list.annotations is None:
             return
@@ -395,39 +357,39 @@ class RCSCollectionViewer(basic_widgets.Frame):
         self.parent.withdraw()
 
 
-class RCSPanelButtons(WidgetPanelNoLabel):
+class LabelPanelButtons(WidgetPanelNoLabel):
     _widget_list = ("annotate_button", "zoom_button")
     annotate_button = widget_descriptors.ButtonDescriptor(
-        "annotate_button", default_text="See Details")  # type: basic_widgets.Button
+        "annotate_button", default_text="Set Label")  # type: basic_widgets.Button
     zoom_button = widget_descriptors.ButtonDescriptor(
         "zoom_button", default_text="Zoom to Feature")  # type: basic_widgets.Button
 
     def __init__(self, master):
-        super(RCSPanelButtons, self).__init__(master)
-        self.init_w_vertical_layout()
+        super(LabelPanelButtons, self).__init__(master)
+        self.init_w_horizontal_layout()
 
 
-class RCSCollectionPanel(WidgetPanelNoLabel):
+class LabelCollectionPanel(WidgetPanelNoLabel):
     """
     The panel for the annotation list.
     """
 
     _widget_list = ("buttons", "viewer")
     buttons = widget_descriptors.TypedDescriptor(
-        "buttons", RCSPanelButtons)  # type: RCSPanelButtons
+        "buttons", LabelPanelButtons)  # type: LabelPanelButtons
     viewer = widget_descriptors.TypedDescriptor(
-        "viewer", RCSCollectionViewer)  # type: RCSCollectionViewer
+        "viewer", LabelCollectionViewer)  # type: LabelCollectionViewer
 
     def __init__(self, master):
-        super(RCSCollectionPanel, self).__init__(master)
+        super(LabelCollectionPanel, self).__init__(master)
         self.init_w_vertical_layout()
         self.buttons.config(relief=tkinter.RIDGE)
         self.buttons.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.viewer.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
 
 
-###############
-# Main tool
+#########
+# Main Annotation Window elements
 
 class AppVariables(object):
     """
@@ -437,12 +399,15 @@ class AppVariables(object):
     unsaved_changes = BooleanDescriptor(
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
-    file_rcs_collection = TypedDescriptor(
-        'file_rcs_collection', FileRCSCollection,
-        docstring='The rcs annotation collection object.')  # type: FileRCSCollection
+    label_schema = TypedDescriptor(
+        'label_schema', LabelSchema,
+        docstring='The label schema object.')  # type: LabelSchema
+    file_annotation_collection = TypedDescriptor(
+        'file_annotation_collection', FileLabelCollection,
+        docstring='The file annotation collection.')  # type: FileLabelCollection
     annotation_file_name = StringDescriptor(
         'annotation_file_name',
-        docstring='The path for the rcs collection file.')  # type: str
+        docstring='The path for the annotation results file.')  # type: str
     add_shape_to_current_annotation = BooleanDescriptor(
         'add_shape_to_current_annotation', default_value=False,
         docstring='We a new shape is created, do we add it to the current annotation, '
@@ -453,7 +418,6 @@ class AppVariables(object):
         self._canvas_to_feature = OrderedDict()
         self._current_canvas_id = None
         self._current_feature_id = None
-        self._primary_feature_id = None
 
     # do these variables need to be unveiled?
     @property
@@ -491,52 +455,7 @@ class AppVariables(object):
 
         return self._current_feature_id
 
-    @property
-    def primary_feature_id(self):
-        """
-        None|str: The primary feature id. If set, the mean rcs values will be displayed relative to these values.
-        """
-
-        return self._primary_feature_id
-
-    @primary_feature_id.setter
-    def primary_feature_id(self, value):
-        if value is None:
-            self._primary_feature_id = None
-            return
-        if value not in self._feature_dict:
-            raise KeyError('feature id {} does not exist.'.format(value))
-        self._primary_feature_id = value
-
     # fetch tracking information
-    def get_current_feature(self):
-        """
-        Gets the current feature.
-
-        Returns
-        -------
-        None|RCSFeature
-        """
-
-        if self._current_feature_id is None:
-            return None
-        else:
-            return self.file_rcs_collection.annotations[self._current_feature_id]
-
-    def get_primary_feature(self):
-        """
-        Gets the primary feature.
-
-        Returns
-        -------
-        None|RCSFeature
-        """
-
-        if self._primary_feature_id is None:
-            return None
-        else:
-            return self.file_rcs_collection.annotations[self._primary_feature_id]
-
     def get_canvas_shapes_for_feature(self, feature_id):
         """
         Gets the annotation shape ids associated with the given feature id.
@@ -599,7 +518,6 @@ class AppVariables(object):
         self._canvas_to_feature = OrderedDict()
         self._current_canvas_id = None
         self._current_feature_id = None
-        self._primary_feature_id = None
 
     def set_feature_tracking(self, feature_id, canvas_id, color):
         """
@@ -746,8 +664,6 @@ class AppVariables(object):
                 delete_shapes.append(entry)
         # remove the feature from tracking
         del self._feature_dict[feature_id]
-        if self._primary_feature_id == feature_id:
-            self._primary_feature_id = None
         return delete_shapes
 
     def delete_shape_from_tracking(self, annotation_id):
@@ -817,7 +733,7 @@ class AppVariables(object):
         self._feature_dict[feature_id] = {'canvas_id': [], 'color': color}
 
 
-class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
+class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
     def __init__(self, primary):
         """
 
@@ -835,9 +751,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
 
-        self.label_panel = RCSCollectionPanel(self.primary)  # type: RCSCollectionPanel
+        self.label_panel = LabelCollectionPanel(self.primary)  # type: LabelCollectionPanel
         self.label_panel.config(borderwidth=0)
-        self.primary.add(self.label_panel, width=250, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(self.label_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.context_panel = ImagePanel(self.primary)  # type: ImagePanel
         self.context_panel.canvas.set_canvas_size(400, 500)
@@ -852,7 +768,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         menu_bar = tkinter.Menu()
         file_menu = tkinter.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="Open Image", command=self.select_image_file)
-        file_menu.add_command(label="Open Directory", command=self.select_directory)
         file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
         file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
         file_menu.add_separator()
@@ -862,7 +777,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         # edit menu
         edit_menu = tkinter.Menu(menu_bar, tearoff=0)
-        edit_menu.add_command(label="Make Primary", command=self.callback_set_primary)
         edit_menu.add_command(label="Delete Shape", command=self.callback_delete_shape)
         edit_menu.add_command(label="Delete Feature/Annotation", command=self.callback_delete_feature)
 
@@ -880,7 +794,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         # hide unwanted elements on the panel toolbars
         self.context_panel.hide_tools('select')
-        self.context_panel.hide_shapes(['point', 'line', 'arrow', 'text'])
+        self.context_panel.hide_shapes(['arrow', 'text'])
         self.context_panel.hide_select_index()
         # disable tools until an image is selected
         self.context_panel.disable_tools()
@@ -913,10 +827,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
     def set_current_feature_id(self, feature_id):
         """
         Sets the current feature id.
-
-        Parameters
-        ----------
-        feature_id : None|str
         """
 
         if (feature_id is None) or (feature_id not in self.variables.feature_dict):
@@ -935,23 +845,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         elif self.variables.current_canvas_id not in canvas_shapes:
             self.set_current_canvas_id(None, check_feature=False)
 
-    def set_primary_feature_id(self, feature_id):
-        """
-        Sets the primary feature id.
-
-        Parameters
-        ----------
-        feature_id : None|str
-        """
-
-        if (feature_id is None) or (feature_id not in self.variables.feature_dict):
-            self.variables._primary_feature_id = None
-            self.label_panel.viewer.set_primary_element(None)
-            return
-
-        self.variables._primary_feature_id = feature_id
-        self.label_panel.viewer.set_primary_element(feature_id)
-
     @property
     def image_file_name(self):
         """
@@ -965,142 +858,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
     # utility functions
     ####
-
-    @staticmethod
-    def _get_polygon_processing(polygon):
-        """
-        Gets the necessary information for processing the given polygon.
-
-        Parameters
-        ----------
-        polygon : Polygon
-
-        Returns
-        -------
-        row_bounds : Tuple[int, int]
-            The lower and upper bounds for the rows.
-        col_bounds : Tuple[int, int]
-            The lower and upper bounds for the columns.
-        mask: numpy.ndarray
-            The boolean inclusion mask.
-        """
-
-        if not isinstance(polygon, Polygon):
-            raise TypeError('Input is required to be a polygon.')
-        bounding_box = polygon.get_bbox()
-        if len(bounding_box) != 4:
-            raise ValueError('Got unexpected bounding box {}'.format(bounding_box))
-
-        row_bounds = (int_func(bounding_box[0]), int_func(bounding_box[2]) + 1)
-        col_bounds = (int_func(bounding_box[1]), int_func(bounding_box[3]) + 1)
-        mask = polygon.grid_contained(
-            numpy.arange(row_bounds[0], row_bounds[1]),
-            numpy.arange(col_bounds[0], col_bounds[1]))
-        return row_bounds, col_bounds, mask
-
-    def _get_rcs_value_collection(self, geometry, name=None, description=None):
-        """
-        Gets the RCSValuesCollection for the given geometry object.
-
-        Parameters
-        ----------
-        geometry : None|Polygon|MultiPolygon
-        name : None|str
-        description : None|str
-
-        Returns
-        -------
-        RCSValueCollection
-        """
-
-        def do_the_entry(array, the_entry):
-            # type: (numpy.ndarray, dict) -> None
-            the_entry['total'] += numpy.sum(array)
-            the_entry['total2'] += numpy.sum(array*array)
-            the_entry['count'] += array.size
-            the_entry['max'] = max(the_entry['max'], numpy.max(array))
-            the_entry['min'] = min(the_entry['min'], numpy.min(array))
-
-        def do_noise(t_sicd, t_x_array, t_y_array, the_entry):
-            noise = t_sicd.Radiometric.NoiseLevel.NoisePoly(t_x_array, t_y_array)  # this is in db...
-            noise = numpy.exp(numpy.log(10) * noise / 10.)  # convert to pixel power
-            do_the_entry(noise, the_entry)
-
-        def do_poly(t_sicd, t_attribute, t_x_array, t_y_array, t_pp, the_entry):
-            value = getattr(t_sicd.Radiometric, t_attribute)(t_x_array, t_y_array)*t_pp
-            do_the_entry(value, the_entry)
-
-        def create_rcs_stat(the_entry, the_name, the_list):
-            the_count = the_entry['count']
-            if the_count == 0:
-                return
-            the_mean = the_entry['total']/float(the_count)
-            the_list.append(
-                RCSStatistics(
-                    name=the_name, mean=the_mean, std=numpy.sqrt(the_entry['total2']/float(the_count) - the_mean*the_mean),
-                    max=the_entry['max'], min=the_entry['min']))
-
-        if geometry is None:
-            return RCSValueCollection(name=name, description=description)
-        elif isinstance(geometry, Polygon):
-            polygons = [geometry, ]
-        elif isinstance(geometry, MultiPolygon):
-            polygons = MultiPolygon.polygons
-        else:
-            raise TypeError('Unhandled input of type {}'.format(type(geometry)))
-
-        reader = self.context_panel.canvas.get_base_reader()
-        the_sicds = reader.get_sicds_as_tuple()
-        # NB: it is assumed that this is of sicd type, and that there is only one partition
-        stat_values = [{
-            key : {'total': 0.0, 'total2': 0.0, 'count': int_func(0), 'max': float('-inf'), 'min': float('inf')}
-            for key in ['PixelPower', 'NoisePower', 'RCS', 'Beta0', 'Gamma0', 'Sigma0']} for _ in the_sicds]
-
-        for polygon in polygons:
-            row_bounds, col_bounds, mask = self._get_polygon_processing(polygon)
-            if not numpy.any(mask):
-                continue
-
-            for i, the_sicd in enumerate(reader.get_sicds_as_tuple()):
-                data = reader[row_bounds[0]:row_bounds[1], col_bounds[0]:col_bounds[1], i][mask]
-                data = data.real*data.real + data.imag*data.imag  # get pixel power
-                do_the_entry(data, stat_values[i]['PixelPower'])
-
-                if the_sicd.Radiometric is not None:
-                    row_array = numpy.arange(row_bounds[0], row_bounds[1], 1, dtype=numpy.int32)
-                    x_array = get_im_physical_coords(row_array, the_sicd.Grid, the_sicd.ImageData, 'Row')
-                    col_array = numpy.arange(col_bounds[0], col_bounds[1], 1, dtype=numpy.int32)
-                    y_array = get_im_physical_coords(col_array, the_sicd.Grid, the_sicd.ImageData, 'Col')
-                    yarr, xarr = numpy.meshgrid(y_array, x_array)
-                    xarr = xarr[mask]
-                    yarr = yarr[mask]
-
-                    # do noise, if possible
-                    if the_sicd.Radiometric.NoiseLevel is not None and \
-                            the_sicd.Radiometric.NoiseLevel.NoiseLevelType == 'ABSOLUTE':
-                        do_noise(the_sicd, xarr, yarr, stat_values[i]['NoisePower'])
-                    # do the others...
-                    for attribute_name, attribute in [
-                            ('RCS', 'RCSSFPoly'), ('Beta0', 'BetaZeroSFPoly'),
-                            ('Gamma0', 'GammaZeroSFPoly'), ('Sigma0', 'SigmaZeroSFPoly')]:
-                        do_poly(the_sicd, attribute, xarr, yarr, data, stat_values[i][attribute_name])
-
-        values = []
-        pixel_count = None
-        for i, the_sicd in enumerate(the_sicds):
-            stats = []
-            for key in ['PixelPower', 'NoisePower', 'RCS', 'Beta0', 'Gamma0', 'Sigma0']:
-                t_entry = stat_values[i][key]
-                create_rcs_stat(t_entry, key, stats)
-                if pixel_count is None:
-                    if t_entry['count'] > 0:
-                        pixel_count = t_entry['count']
-                elif t_entry['count'] > 0 and pixel_count != t_entry['count']:
-                    logging.warning('Got differing pixel_counts {} and {}'.format(pixel_count, t_entry['count']))
-            values.append(RCSValue(polarization=the_sicd.get_processed_polarization(), statistics=stats))
-        # print(stat_values)
-        return RCSValueCollection(name=name, description=description, pixel_count=pixel_count, elements=values)
-
     def _ensure_color_for_shapes(self, feature_id):
         """
         Ensure that all shapes associated with the given feature_id are rendered
@@ -1156,7 +913,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         elif len(canvas_ids) == 1:
             return self._get_geometry_from_shape(canvas_ids[0])
         else:
-            return MultiPolygon(coordinates=[self._get_geometry_from_shape(entry) for entry in canvas_ids])
+            return GeometryCollection(geometries=[self._get_geometry_from_shape(entry) for entry in canvas_ids])
 
     def _create_shape_from_geometry(self, feature, the_geometry, the_color=None):
         """
@@ -1165,7 +922,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        feature : RCSFeature
+        feature : LabelFeature
             The feature, only used here for logging a failure.
         the_geometry : Point|LineString|Polygon
         the_color : None|str
@@ -1177,6 +934,28 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         the_color : str
             The color of the shape.
         """
+
+        def insert_point():
+            # type: () -> Tuple[int, str]
+            image_coords = the_geometry.coordinates[:2].tolist()
+            # create the shape on the annotate panel
+            canvas_id = self.context_panel.canvas.create_new_point((0, 0), **kwargs)
+            self.context_panel.canvas.modify_existing_shape_using_image_coords(
+                canvas_id, image_coords)
+            the_annotate_vector = self.context_panel.canvas.get_vector_object(canvas_id)
+            kwargs['color'] = the_annotate_vector.color
+            return canvas_id, kwargs['color']
+
+        def insert_line():
+            # type: () -> Tuple[int, str]
+            image_coords = the_geometry.coordinates[:, :2].flatten().tolist()
+            # create the shape on the annotate panel
+            canvas_id = self.context_panel.canvas.create_new_line((0, 0, 0, 0), **kwargs)
+            self.context_panel.canvas.modify_existing_shape_using_image_coords(
+                canvas_id, image_coords)
+            the_annotate_vector = self.context_panel.canvas.get_vector_object(canvas_id)
+            kwargs['color'] = the_annotate_vector.color
+            return canvas_id, kwargs['color']
 
         def insert_polygon():
             # type: () -> Tuple[int, str]
@@ -1195,12 +974,16 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             kwargs = {'color': the_color}
 
         self._modifying_shapes_on_canvas = True
-        if isinstance(the_geometry, Polygon):
+        if isinstance(the_geometry, Point):
+            annotate_shape_id, shape_color = insert_point()
+        elif isinstance(the_geometry, LineString):
+            annotate_shape_id, shape_color = insert_line()
+        elif isinstance(the_geometry, Polygon):
             annotate_shape_id, shape_color = insert_polygon()
         else:
             showinfo(
                 'Unhandled Geometry',
-                message='RCSFeature id {} has unsupported feature component of type {} which '
+                message='LabelFeature id {} has unsupported feature component of type {} which '
                         'will be omitted from display. Any save of the annotation '
                         'will not contain this feature.'.format(feature.uid, type(the_geometry)))
             self._modifying_shapes_on_canvas = False
@@ -1218,21 +1001,32 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        feature : RCSFeature
+        feature : LabelFeature
         """
 
         def extract_base_geometry(the_element, base_collection):
             # type: (Geometry, List) -> None
             if the_element is None:
                 return
-            elif isinstance(the_element, Polygon):
-                base_collection.append(the_element)
+            elif isinstance(the_element, GeometryCollection):
+                if the_element.geometries is None:
+                    return
+                for sub_element in the_element.geometries:
+                    extract_base_geometry(sub_element, base_collection)
+            elif isinstance(the_element, MultiPoint):
+                if the_element.points is None:
+                    return
+                base_collection.extend(the_element.points)
+            elif isinstance(the_element, MultiLineString):
+                if the_element.lines is None:
+                    return
+                base_collection.extend(the_element.lines)
             elif isinstance(the_element, MultiPolygon):
                 if the_element.polygons is None:
                     return
                 base_collection.extend(the_element.polygons)
             else:
-                raise TypeError('Got unsupported geomtry type {}'.format(type(the_element)))
+                base_collection.append(the_element)
 
         the_color = None
         # initialize the feature tracking
@@ -1265,10 +1059,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         # the event listener method
 
         geometry_object = self._get_geometry_from_shape(canvas_id)
-        rcs_value_collection = self._get_rcs_value_collection(geometry_object)
-
-        annotation = RCSFeature(geometry=geometry_object, properties=rcs_value_collection)
-        self.variables.file_rcs_collection.add_annotation(annotation)
+        annotation = LabelFeature(geometry=geometry_object)
+        self.variables.file_annotation_collection.add_annotation(annotation)
         self.variables.unsaved_changes = True
 
         vector_object = self.context_panel.canvas.get_vector_object(canvas_id)
@@ -1288,20 +1080,10 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         feature_id : str
         """
 
-        annotation = self.variables.file_rcs_collection.annotations[feature_id]
-        if annotation.properties is None:
-            the_name = None
-            the_description = None
-        else:
-            the_name = annotation.properties.name
-            the_description = annotation.properties.description
-
         geometry = self._get_geometry_for_feature(feature_id)
-        rcs_value_collection = self._get_rcs_value_collection(
-            geometry, name=the_name, description=the_description)
 
-        annotation.geometry = geometry
-        annotation.properties = rcs_value_collection
+        annotation = self.variables.file_annotation_collection.annotations[feature_id]
+        self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
         self.label_panel.viewer.rerender_entry(annotation.uid)
         self.variables.unsaved_changes = True
 
@@ -1340,7 +1122,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Parameters
         ----------
         annotation_file_name : str
-        annotation_collection : FileRCSCollection
+        annotation_collection : FileLabelCollection
 
         Returns
         -------
@@ -1349,7 +1131,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         # set our appropriate variables
         self.variables.annotation_file_name = annotation_file_name
-        self.variables.file_rcs_collection = annotation_collection
+        self.variables.label_schema = annotation_collection.label_schema
+        self.variables.file_annotation_collection = annotation_collection
         self.set_current_feature_id(None)
 
         # dump all the old shapes
@@ -1372,11 +1155,10 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Parameters
         ----------
         annotation_fname : str
-        annotation_collection : FileRCSCollection
+        annotation_collection : FileLabelCollection
         """
 
-        self.variables.primary_feature_id = None
-        self.label_panel.viewer.fill_from_annotation_list(annotation_collection, None)
+        self.label_panel.viewer.fill_from_annotation_list(annotation_collection)
         self._initialize_geometry(annotation_fname, annotation_collection)
         self.context_panel.enable_tools()
         self.context_panel.enable_shapes()
@@ -1393,9 +1175,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         if self.variables.current_feature_id == feature_id:
             self.set_current_feature_id(None)
-        if self.variables.primary_feature_id == feature_id:
-            self.variables.primary_feature_id = None
-            self.label_panel.viewer.set_primary_element(None)
 
         # remove feature from tracking, and get list of shapes to delete
         canvas_ids = self.variables.delete_feature_from_tracking(feature_id)
@@ -1418,7 +1197,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if feature_id is None:
             return
 
-        feature = self.variables.file_rcs_collection.annotations[feature_id]
+        feature = self.variables.file_annotation_collection.annotations[feature_id]
         bounding_box = feature.geometry.get_bbox()
         y_diff = max(bounding_box[2] - bounding_box[0], 100)
         x_diff = max(bounding_box[3] - bounding_box[1], 100)
@@ -1464,7 +1243,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not self._verify_image_selected(popup=popup):
             return False
 
-        if self.variables.file_rcs_collection is None:
+        if self.variables.file_annotation_collection is None:
             if popup:
                 showinfo('No Annotation file set up.', message='Please define an Annotation file, using the file menu.')
             return False
@@ -1545,44 +1324,12 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         self._image_browse_directory = os.path.split(fname)[0]
         image_reader = ComplexImageReader(fname)
-        # check that there is only a single partition
-        partitions = image_reader.base_reader.get_sicd_partitions()
-        if len(partitions) > 1:
-            showinfo('Single Image Footprint Required',
-                     message='The given image reader for file {} has {} distinct partitions. '
-                             'RCS annotation is only permitted for image readers with a single '
-                             'partition (image footprint). '
-                             'Aborting'.format(image_reader.file_name, len(partitions)))
+        if image_reader.image_count != 1:
+            showinfo('Single Image Required',
+                     message='The given image reader for file {} has {} distinct images. '
+                             'Annotation is only permitted for single image readers. '
+                             'Aborting'.format(image_reader.file_name, image_reader.image_count))
             return
-
-        self.context_panel.set_image_reader(image_reader)
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
-        self.context_panel.enable_tools()
-
-    def select_directory(self):
-        # prompt for any unsaved changes
-        response = self._prompt_unsaved()
-        if not response:
-            return
-
-        dirname = askdirectory(initialdir=self._image_browse_directory, mustexist=True)
-        if dirname is None or dirname in [(), '']:
-            return
-
-        image_reader = ComplexImageReader(dirname)
-        # check that there is only a single partition
-        partitions = image_reader.base_reader.get_sicd_partitions()
-        if len(partitions) > 1:
-            showinfo('Single Image Footprint Required',
-                     message='The given image reader for file {} has {} distinct partitions. '
-                             'RCS annotation is only permitted for image readers with a single '
-                             'partition (image footprint). '
-                             'Aborting'.format(image_reader.file_name, len(partitions)))
-            return
-
-        # update the default directory for browsing
-        self._image_browse_directory = os.path.split(dirname)[0]
 
         self.context_panel.set_image_reader(image_reader)
         self.my_populate_metaicon()
@@ -1598,6 +1345,23 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not response:
             return
 
+        schema_fname = askopenfilename(
+            title='Select label schema',
+            initialdir=self._schema_browse_directory,
+            filetypes=[json_files, all_files])
+        if schema_fname in ['', ()]:
+            return
+
+        self._schema_browse_directory = os.path.split(schema_fname)[0]
+        try:
+            label_schema = LabelSchema.from_file(schema_fname)
+        except Exception as e:
+            showinfo(
+                'Failed Opening Schema',
+                message='Failed opening schema {} with exception {}. '
+                        'Aborting new annotation creation.'.format(schema_fname, e))
+            return
+
         browse_dir, image_fname = os.path.split(self.image_file_name)
 
         annotation_fname = None
@@ -1605,7 +1369,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             annotation_fname = asksaveasfilename(
                 title='Select annotation file for image file {}'.format(image_fname),
                 initialdir=browse_dir,
-                initialfile='{}.rcs.json'.format(image_fname),
+                initialfile='{}.labels.json'.format(image_fname),
                 filetypes=[json_files, all_files])
             if annotation_fname in ['', ()]:
                 annotation_fname = None
@@ -1622,7 +1386,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if annotation_fname is None:
             return
 
-        annotation_collection = FileRCSCollection(image_file_name=image_fname)
+        annotation_collection = FileLabelCollection(
+            label_schema=label_schema, image_file_name=image_fname)
         self._initialize_annotation_file(annotation_fname, annotation_collection)
 
     def select_annotation_file(self):
@@ -1636,7 +1401,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         browse_dir, image_fname = os.path.split(self.image_file_name)
         # guess at a sensible initial file name
-        init_file = '{}.rcs.json'.format(image_fname)
+        init_file = '{}.labels.json'.format(image_fname)
         if not os.path.exists(os.path.join(browse_dir, init_file)):
             init_file = ''
 
@@ -1652,7 +1417,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         try:
-            annotation_collection = FileRCSCollection.from_file(annotation_fname)
+            annotation_collection = FileLabelCollection.from_file(annotation_fname)
         except Exception as e:
             showinfo('File Annotation Error',
                      message='Opening annotation file {} failed with error {}. Aborting.'.format(annotation_fname, e))
@@ -1682,7 +1447,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             self.variables.unsaved_changes = False
             return
 
-        self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
+        self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
         self.variables.unsaved_changes = False
 
     def callback_delete_shape(self):
@@ -1749,18 +1514,14 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             showinfo('No feature is selected', message="Please select the feature to view.")
             return
 
-        popup = RCSValueCollectionPopup(self.variables)
-        if popup.changed:
-            self.label_panel.viewer.rerender_entry(self.variables.current_feature_id)
-            self.variables.unsaved_changes = True
-
+        popup = LabelingPopup(self.variables)
+        self.label_panel.viewer.rerender_entry(self.variables.current_feature_id)
         popup.destroy()
 
     def callback_zoom_to_feature(self):
         """
         Handles pressing the zoom to feature button.
         """
-
         self._verify_file_annotation_selected()
 
         if self.variables.current_feature_id is None:
@@ -1769,22 +1530,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         self.zoom_to_feature(self.variables.current_feature_id)
 
-    def callback_set_primary(self):
-        """
-        Handles setting the primary element.
-        """
-
-        self._verify_file_annotation_selected()
-
-        if self.variables.current_feature_id is None:
-            showinfo('No feature is selected', message="Please select the feature to make primary.")
-            return
-
-        response = askyesnocancel('Confirm marking selection as primary?', message='Confirm primary feature selection.')
-        if response is None or response is False:
-            return
-
-        self.set_primary_feature_id(self.variables.current_feature_id)
 
     # event listeners
     #####
@@ -1937,7 +1682,7 @@ def main():
     the_style.theme_use('classic')
 
     # noinspection PyUnusedLocal
-    app = RCSTool(root)
+    app = LabelingTool(root)
     root.mainloop()
 
 

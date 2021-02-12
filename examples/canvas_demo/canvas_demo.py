@@ -1,21 +1,24 @@
 import os
 
 import tkinter
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
+
+import numpy
+
+from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
-from tk_builder.widgets import basic_widgets
-from tk_builder.widgets import widget_descriptors
+from tk_builder.utils.geometry_utils.kml_util import KmlUtil
+from tk_builder.widgets import basic_widgets, widget_descriptors
+from tk_builder.widgets.image_canvas import ShapeTypeConstants
+
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
 import sarpy.visualization.remap as remap
 
-import numpy
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
@@ -24,13 +27,10 @@ __author__ = "Jason Casey"
 class CanvasDemoButtonPanel(WidgetPanel):
     _widget_list = ("fname_select",
                     "rect_select",
-                    "draw_line_w_drag",
-                    "draw_line_w_click",
-                    "draw_arrow_w_drag",
-                    "draw_arrow_w_click",
-                    "draw_rect_w_drag",
-                    "draw_rect_w_click",
-                    "draw_polygon_w_click",
+                    "draw_line",
+                    "draw_arrow",
+                    "draw_rect",
+                    "draw_polygon",
                     "draw_point",
                     "edit",
                     "color_selector",
@@ -38,13 +38,10 @@ class CanvasDemoButtonPanel(WidgetPanel):
                     )
     fname_select = widget_descriptors.ButtonDescriptor("fname_select")  # type: basic_widgets.Button
     rect_select = widget_descriptors.ButtonDescriptor("rect_select")  # type: basic_widgets.Button
-    draw_line_w_drag = widget_descriptors.ButtonDescriptor("draw_line_w_drag")  # type: basic_widgets.Button
-    draw_line_w_click = widget_descriptors.ButtonDescriptor("draw_line_w_click")  # type: basic_widgets.Button
-    draw_arrow_w_drag = widget_descriptors.ButtonDescriptor("draw_arrow_w_drag")  # type: basic_widgets.Button
-    draw_arrow_w_click = widget_descriptors.ButtonDescriptor("draw_arrow_w_click")  # type: basic_widgets.Button
-    draw_rect_w_drag = widget_descriptors.ButtonDescriptor("draw_rect_w_drag")  # type: basic_widgets.Button
-    draw_rect_w_click = widget_descriptors.ButtonDescriptor("draw_rect_w_click")  # type: basic_widgets.Button
-    draw_polygon_w_click = widget_descriptors.ButtonDescriptor("draw_polygon_w_click")  # type: basic_widgets.Button
+    draw_line = widget_descriptors.ButtonDescriptor("draw_line")  # type: basic_widgets.Button
+    draw_arrow = widget_descriptors.ButtonDescriptor("draw_arrow")  # type: basic_widgets.Button
+    draw_rect = widget_descriptors.ButtonDescriptor("draw_rect")  # type: basic_widgets.Button
+    draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon")  # type: basic_widgets.Button
     draw_point = widget_descriptors.ButtonDescriptor("draw_point")  # type: basic_widgets.Button
     color_selector = widget_descriptors.ButtonDescriptor("color_selector")      # type: basic_widgets.Button
     edit = widget_descriptors.ButtonDescriptor("edit")      # type: basic_widgets.Button
@@ -88,29 +85,24 @@ class CanvasDemo(WidgetPanel):
     canvas_demo_image_panel = widget_descriptors.ImagePanelDescriptor("canvas_demo_image_panel")   # type: ImagePanel
 
     def __init__(self, primary):
-        primary_frame = tkinter.Frame(primary)
+        primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
         self.variables = AppVariables()
 
         self.init_w_horizontal_layout()
-        primary_frame.pack(fill=tkinter.BOTH, expand=1)
-        self.button_panel.pack(fill=tkinter.X, expand=False)
-        self.pyplot_panel.pack(expand=True)
-        self.canvas_demo_image_panel.pack(expand=True)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.button_panel.pack(fill=tkinter.X, expand=tkinter.NO)
+        self.pyplot_panel.pack(expand=tkinter.YES)
+        self.canvas_demo_image_panel.pack(expand=tkinter.YES)
 
-        # define panels widget_wrappers in primary frame
-        self.button_panel.set_spacing_between_buttons(0)
         # bind events to callbacks here
         self.button_panel.fname_select.config(command=self.callback_initialize_canvas_image)
         self.button_panel.rect_select.config(command=self.callback_set_to_select)
 
-        self.button_panel.draw_line_w_drag.config(command=self.callback_draw_line_w_drag)
-        self.button_panel.draw_line_w_click.config(command=self.callback_draw_line_w_click)
-        self.button_panel.draw_arrow_w_drag.config(command=self.callback_draw_arrow_w_drag)
-        self.button_panel.draw_arrow_w_click.config(command=self.callback_draw_arrow_w_click)
-        self.button_panel.draw_rect_w_drag.config(command=self.callback_draw_rect_w_drag)
-        self.button_panel.draw_rect_w_click.config(command=self.callback_draw_rect_w_click)
-        self.button_panel.draw_polygon_w_click.config(command=self.callback_draw_polygon_w_click)
+        self.button_panel.draw_line.config(command=self.callback_draw_line)
+        self.button_panel.draw_arrow.config(command=self.callback_draw_arrow)
+        self.button_panel.draw_rect.config(command=self.callback_draw_rect)
+        self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
         self.button_panel.draw_point.config(command=self.callback_draw_point)
         self.button_panel.edit.config(command=self.callback_edit)
         self.button_panel.color_selector.config(command=self.callback_activate_color_selector)
@@ -120,12 +112,11 @@ class CanvasDemo(WidgetPanel):
         self.canvas_demo_image_panel.canvas.on_left_mouse_release(self.callback_handle_canvas_left_mouse_release)
 
     def callback_save_kml(self):
-        kml_save_fname = tkinter.filedialog.asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
+        kml_save_fname = asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
 
         kml_util = KmlUtil()
 
-        canvas_shapes = self.canvas_demo_image_panel.canvas.variables.shape_ids
-        for shape_id in canvas_shapes:
+        for shape_id in self.canvas_demo_image_panel.canvas.variables.shape_ids:
             image_coords = self.canvas_demo_image_panel.canvas.get_shape_image_coords(shape_id)
             shape_type = self.canvas_demo_image_panel.canvas.get_shape_type(shape_id)
             if image_coords:
@@ -142,30 +133,30 @@ class CanvasDemo(WidgetPanel):
 
                 xy_point_list = [(x, y) for x, y in zip(world_x_coordinates, world_y_coordinates)]
 
-                if shape_id == self.canvas_demo_image_panel.canvas.variables.zoom_rect_id:
+                if shape_id == self.canvas_demo_image_panel.canvas.variables.zoom_rect.uid:
                     pass
-                elif shape_type == self.canvas_demo_image_panel.canvas.variables.select_rect_id:
+                elif shape_type == self.canvas_demo_image_panel.canvas.variables.select_rect.uid:
                     pass
-                elif shape_type == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.POINT:
+                elif shape_type == ShapeTypeConstants.POINT:
                     kml_util.add_point(str(shape_id), xy_point_list[0])
-                elif canvas_shapes == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.LINE:
+                elif shape_type == ShapeTypeConstants.LINE:
                     kml_util.add_linestring(str(shape_id), xy_point_list)
-                elif shape_type == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.POLYGON:
+                elif shape_type == ShapeTypeConstants.POLYGON:
                     kml_util.add_polygon(str(shape_id), xy_point_list)
-                elif shape_type == self.canvas_demo_image_panel.canvas.SHAPE_TYPES.RECT:
+                elif shape_type == ShapeTypeConstants.RECT:
                     kml_util.add_polygon(str(shape_id), xy_point_list)
         kml_util.write_to_file(kml_save_fname)
 
     def callback_handle_canvas_left_mouse_click(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_click(event)
-        current_shape = self.canvas_demo_image_panel.canvas.variables.current_shape_id
+        current_shape = self.canvas_demo_image_panel.canvas.current_shape_id
         if current_shape:
             self.variables.shapes_in_selector.append(current_shape)
             self.variables.shapes_in_selector = sorted(list(set(self.variables.shapes_in_selector)))
 
     def callback_handle_canvas_left_mouse_release(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_release(event)
-        if self.canvas_demo_image_panel.canvas.variables.select_rect_id == self.canvas_demo_image_panel.canvas.variables.current_shape_id:
+        if self.canvas_demo_image_panel.canvas.variables.select_rect.uid == self.canvas_demo_image_panel.canvas.current_shape_id:
             self.update_selection()
 
     def callback_edit(self):
@@ -174,32 +165,23 @@ class CanvasDemo(WidgetPanel):
     def callback_activate_color_selector(self):
         self.canvas_demo_image_panel.canvas.activate_color_selector()
 
-    def callback_draw_line_w_drag(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line_by_dragging()
+    def callback_draw_line(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line()
 
-    def callback_draw_line_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_line_by_clicking()
+    def callback_draw_arrow(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow()
 
-    def callback_draw_arrow_w_drag(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging()
-
-    def callback_draw_arrow_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_arrow_by_clicking()
-
-    def callback_draw_rect_w_drag(self):
+    def callback_draw_rect(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect()
 
-    def callback_draw_rect_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_rect_by_clicking()
-
-    def callback_draw_polygon_w_click(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking()
+    def callback_draw_polygon(self):
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_polygon()
 
     def callback_draw_point(self):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_point()
 
     def callback_set_to_select(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_selection_tool()
+        self.canvas_demo_image_panel.canvas.set_current_tool_to_select()
 
     # define custom callbacks here
     def callback_remap(self):
@@ -210,7 +192,7 @@ class CanvasDemo(WidgetPanel):
         selection = self.button_panel.remap_dropdown.get()
         self.variables.image_reader.set_remap_type(remap_dict[selection])
         image_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(
-            self.canvas_demo_image_panel.canvas.variables.select_rect_id)
+            self.canvas_demo_image_panel.canvas.variables.select_rect.uid)
         self.pyplot_panel.update_image(image_data)
         self.canvas_demo_image_panel.canvas.update_current_image()
 
