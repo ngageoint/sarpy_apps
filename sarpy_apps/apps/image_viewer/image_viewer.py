@@ -178,10 +178,6 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
                 the_reader = None
         if the_reader is None:
             the_reader = DerivedImageReader(fnames[0])
-            # try:
-            #     the_reader = DerivedImageReader(fnames[0])
-            # except IOError:
-            #     the_reader = None
         if the_reader is None:
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type '

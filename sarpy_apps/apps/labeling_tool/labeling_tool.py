@@ -19,7 +19,7 @@ from tkinter import ttk
 from tkinter.messagebox import showinfo, askyesnocancel, askyesno
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
-from sarpy_apps.apps.annotation_tool.schema_editor import select_schema_entry
+from sarpy_apps.apps.labeling_tool.schema_editor import select_schema_entry
 
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
@@ -1369,7 +1369,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
             annotation_fname = asksaveasfilename(
                 title='Select annotation file for image file {}'.format(image_fname),
                 initialdir=browse_dir,
-                initialfile='{}.annotation.json'.format(image_fname),
+                initialfile='{}.labels.json'.format(image_fname),
                 filetypes=[json_files, all_files])
             if annotation_fname in ['', ()]:
                 annotation_fname = None
@@ -1401,7 +1401,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
         browse_dir, image_fname = os.path.split(self.image_file_name)
         # guess at a sensible initial file name
-        init_file = '{}.annotation.json'.format(image_fname)
+        init_file = '{}.labels.json'.format(image_fname)
         if not os.path.exists(os.path.join(browse_dir, init_file)):
             init_file = ''
 
