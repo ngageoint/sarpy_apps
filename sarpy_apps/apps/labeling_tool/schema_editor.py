@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module provides a tool for creating annotation for a SAR image.
+This module provides a tool for creating labeled annotations for a SAR image.
 """
 
 __classification__ = "UNCLASSIFIED"
@@ -14,7 +14,7 @@ from tkinter.messagebox import showinfo, askyesno, askyesnocancel
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 from sarpy.compliance import string_types
-from sarpy.annotation.schema_processing import LabelSchema
+from sarpy.annotation.label import LabelSchema
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.widget_descriptors import ButtonDescriptor, LabelDescriptor, \

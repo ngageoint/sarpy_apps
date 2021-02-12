@@ -32,9 +32,8 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanD
 from tk_builder.panels.image_panel import ImagePanel
 
 from sarpy.compliance import string_types, integer_types
-from sarpy.annotation.schema_processing import LabelSchema
-from sarpy.annotation.annotate import FileAnnotationCollection, Annotation, \
-    AnnotationMetadata, AnnotationMetadataList
+from sarpy.annotation.label import FileLabelCollection, LabelFeature, \
+    LabelMetadata, LabelMetadataList, LabelSchema
 from sarpy.geometry.geometry_elements import Geometry, GeometryCollection, \
     Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
 
@@ -134,7 +133,7 @@ class LabelingPopup(object):
         annotation_metadata_list = self.annotation.properties
         # verify that we can operate on this thing
         assert (annotation_metadata_list is None or
-                isinstance(annotation_metadata_list, AnnotationMetadataList))
+                isinstance(annotation_metadata_list, LabelMetadataList))
         if annotation_metadata_list is not None and len(annotation_metadata_list) > 0:
             annotate_metadata = annotation_metadata_list[0]
             self._object_type_id = annotate_metadata.label_id
@@ -173,7 +172,7 @@ class LabelingPopup(object):
             return
 
         the_comment = self.widget.comment.get('1.0', 'end-1c')
-        annotation_metadata = AnnotationMetadata(
+        annotation_metadata = LabelMetadata(
             comment=the_comment,
             label_id=self._object_type_id,
             confidence=self.widget.confidence.get())
@@ -191,6 +190,7 @@ class LabelingPopup(object):
             self.widget.confidence.config(state='readonly')
 
     def destroy(self):
+        # noinspection PyBroadException
         try:
             self.root.destroy()
         except:
@@ -201,9 +201,9 @@ class LabelingPopup(object):
 
 
 ##############
-# Annotation List Viewer and the panel
+# Annotation List Viewer and panel
 
-class AnnotationListViewer(basic_widgets.Frame):
+class LabelCollectionViewer(basic_widgets.Frame):
     """
     Widget for visualizing an annotation list.
     """
@@ -216,14 +216,14 @@ class AnnotationListViewer(basic_widgets.Frame):
         ----------
         master
             The tkinter element master.
-        annotation_list : None|FileAnnotationCollection
+        annotation_list : None|FileLabelCollection
         geometry_size : None|str
         kwargs
             The optional keywords for the Frame initialization.
         """
 
-        self._annotation_list = None  # type: Union[None, FileAnnotationCollection]
-        super(AnnotationListViewer, self).__init__(master, **kwargs)
+        self._annotation_list = None  # type: Union[None, FileLabelCollection]
+        super(LabelCollectionViewer, self).__init__(master, **kwargs)
         self.parent = master
         if geometry_size is not None:
             self.parent.geometry(geometry_size)
@@ -258,7 +258,7 @@ class AnnotationListViewer(basic_widgets.Frame):
 
         Parameters
         ----------
-        annotation : Annotation
+        annotation : LabelFeature
         """
 
         def get_annotation_string():
@@ -343,7 +343,7 @@ class AnnotationListViewer(basic_widgets.Frame):
 
         Parameters
         ----------
-        annotation_list : None|FileAnnotationCollection
+        annotation_list : None|FileLabelCollection
         """
 
         self._empty_entries()
@@ -357,36 +357,39 @@ class AnnotationListViewer(basic_widgets.Frame):
         self.parent.withdraw()
 
 
-class AnnotationListPanel(WidgetPanelNoLabel):
-    """
-    The panel for the annotation list.
-    """
-
-    _widget_list = ("delete_shape", "delete_annotation", "annotate_button", "zoom_button", "viewer")
-    delete_shape = widget_descriptors.ButtonDescriptor(
-        "delete_shape", default_text='Delete Shape')  # type: basic_widgets.Button
-    delete_annotation = widget_descriptors.ButtonDescriptor(
-        "delete_annotation", default_text='Delete Annotation')  # type: basic_widgets.Button
+class LabelPanelButtons(WidgetPanelNoLabel):
+    _widget_list = ("annotate_button", "zoom_button")
     annotate_button = widget_descriptors.ButtonDescriptor(
         "annotate_button", default_text="Set Label")  # type: basic_widgets.Button
     zoom_button = widget_descriptors.ButtonDescriptor(
         "zoom_button", default_text="Zoom to Feature")  # type: basic_widgets.Button
-    viewer = widget_descriptors.TypedDescriptor(
-        "viewer", AnnotationListViewer)  # type: AnnotationListViewer
 
     def __init__(self, master):
-        super(AnnotationListPanel, self).__init__(master)
+        super(LabelPanelButtons, self).__init__(master)
+        self.init_w_horizontal_layout()
+
+
+class LabelCollectionPanel(WidgetPanelNoLabel):
+    """
+    The panel for the annotation list.
+    """
+
+    _widget_list = ("buttons", "viewer")
+    buttons = widget_descriptors.TypedDescriptor(
+        "buttons", LabelPanelButtons)  # type: LabelPanelButtons
+    viewer = widget_descriptors.TypedDescriptor(
+        "viewer", LabelCollectionViewer)  # type: LabelCollectionViewer
+
+    def __init__(self, master):
+        super(LabelCollectionPanel, self).__init__(master)
         self.init_w_vertical_layout()
-        self.delete_shape.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.delete_annotation.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.annotate_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.zoom_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
+        self.buttons.config(relief=tkinter.RIDGE)
+        self.buttons.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
         self.viewer.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
 
 
 #########
 # Main Annotation Window elements
-
 
 class AppVariables(object):
     """
@@ -400,8 +403,8 @@ class AppVariables(object):
         'label_schema', LabelSchema,
         docstring='The label schema object.')  # type: LabelSchema
     file_annotation_collection = TypedDescriptor(
-        'file_annotation_collection', FileAnnotationCollection,
-        docstring='The file annotation collection.')  # type: FileAnnotationCollection
+        'file_annotation_collection', FileLabelCollection,
+        docstring='The file annotation collection.')  # type: FileLabelCollection
     annotation_file_name = StringDescriptor(
         'annotation_file_name',
         docstring='The path for the annotation results file.')  # type: str
@@ -413,7 +416,7 @@ class AppVariables(object):
     def __init__(self):
         self._feature_dict = OrderedDict()
         self._canvas_to_feature = OrderedDict()
-        self._current_annotate_canvas_id = None
+        self._current_canvas_id = None
         self._current_feature_id = None
 
     # do these variables need to be unveiled?
@@ -437,12 +440,12 @@ class AppVariables(object):
 
     # good properties
     @property
-    def current_annotate_canvas_id(self):
+    def current_canvas_id(self):
         """
         None|int: The current annotation feature id.
         """
 
-        return self._current_annotate_canvas_id
+        return self._current_canvas_id
 
     @property
     def current_feature_id(self):
@@ -513,7 +516,7 @@ class AppVariables(object):
 
         self._feature_dict = OrderedDict()
         self._canvas_to_feature = OrderedDict()
-        self._current_annotate_canvas_id = None
+        self._current_canvas_id = None
         self._current_feature_id = None
 
     def set_feature_tracking(self, feature_id, canvas_id, color):
@@ -663,7 +666,7 @@ class AppVariables(object):
         del self._feature_dict[feature_id]
         return delete_shapes
 
-    def delete_annotation_from_tracking(self, annotation_id):
+    def delete_shape_from_tracking(self, annotation_id):
         """
         Remove the annotation id from tracking. This requires that the shape has
         been removed from any associated feature.
@@ -730,7 +733,7 @@ class AppVariables(object):
         self._feature_dict[feature_id] = {'canvas_id': [], 'color': color}
 
 
-class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
+class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
     def __init__(self, primary):
         """
 
@@ -748,39 +751,46 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
 
-        self.annotate_panel = AnnotationListPanel(self.primary)  # type: AnnotationListPanel
-        self.annotate_panel.config(borderwidth=0)
-        self.primary.add(self.annotate_panel, width=300, height=600, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.label_panel = LabelCollectionPanel(self.primary)  # type: LabelCollectionPanel
+        self.label_panel.config(borderwidth=0)
+        self.primary.add(self.label_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.context_panel = ImagePanel(self.primary)  # type: ImagePanel
         self.context_panel.canvas.set_canvas_size(400, 500)
         self.context_panel.config(borderwidth=0)
-        self.primary.add(self.context_panel, width=450, height=600, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(self.context_panel, width=600, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         self.variables = AppVariables()
 
-        # menubar items
-        menubar = tkinter.Menu()
-        filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open Image", command=self.select_image_file)
-        filemenu.add_command(label="Open Existing Annotation", command=self.select_annotation_file)
-        filemenu.add_command(label="Create New Annotation", command=self.create_new_annotation_file)
-        filemenu.add_separator()
-        filemenu.add_command(label="Save Annotation File", command=self.save_annotation_file)
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.exit)
+        # menu_bar items
+        menu_bar = tkinter.Menu()
+        file_menu = tkinter.Menu(menu_bar, tearoff=0)
+        file_menu.add_command(label="Open Image", command=self.select_image_file)
+        file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
+        file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
+        file_menu.add_separator()
+        file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.exit)
 
-        # create more pulldown menus
-        popups_menu = tkinter.Menu(menubar, tearoff=0)
-        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # edit menu
+        edit_menu = tkinter.Menu(menu_bar, tearoff=0)
+        edit_menu.add_command(label="Delete Shape", command=self.callback_delete_shape)
+        edit_menu.add_command(label="Delete Feature/Annotation", command=self.callback_delete_feature)
 
-        menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Popups", menu=popups_menu)
+        # metadata popup menu
+        metadata_menu = tkinter.Menu(menu_bar, tearoff=0)
+        metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # TODO: make a feature merge tool?
 
-        primary.config(menu=menubar)
+        menu_bar.add_cascade(label="File", menu=file_menu)
+        menu_bar.add_cascade(label="Edit", menu=edit_menu)
+        menu_bar.add_cascade(label="Metadata", menu=metadata_menu)
+
+        primary.config(menu=menu_bar)
 
         # hide unwanted elements on the panel toolbars
         self.context_panel.hide_tools('select')
@@ -791,10 +801,8 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self.context_panel.disable_shapes()
 
         # set button callbacks
-        self.annotate_panel.delete_shape.config(command=self.callback_delete_shape)
-        self.annotate_panel.delete_annotation.config(command=self.callback_delete_feature)
-        self.annotate_panel.annotate_button.config(command=self.callback_annotation_popup)
-        self.annotate_panel.zoom_button.config(command=self.callback_zoom_to_feature)
+        self.label_panel.buttons.annotate_button.config(command=self.callback_annotation_popup)
+        self.label_panel.buttons.zoom_button.config(command=self.callback_zoom_to_feature)
 
         # set up context panel canvas event listeners
         self.context_panel.canvas.bind('<<ImageIndexChanged>>', self.sync_image_index_changed)
@@ -803,15 +811,15 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self.context_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_canvas)
         self.context_panel.canvas.bind('<<ShapeSelect>>', self.shape_selected_on_canvas)
 
-        # set up the annotate_panel viewer event listeners
-        self.annotate_panel.viewer.treeview.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
+        # set up the label_panel viewer event listeners
+        self.label_panel.viewer.treeview.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
     def set_current_canvas_id(self, value, check_feature=True):
         if value is None:
-            self.variables._current_annotate_canvas_id = None
+            self.variables._current_canvas_id = None
             self.context_panel.canvas.current_shape_id = None
         else:
-            self.variables._current_annotate_canvas_id = value
+            self.variables._current_canvas_id = value
             self.context_panel.canvas.current_shape_id = value
             if check_feature:
                 self.set_current_feature_id(self.variables.canvas_to_feature.get(value, None))
@@ -827,14 +835,14 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         self.variables._current_feature_id = feature_id
-        self.annotate_panel.viewer.treeview.focus(feature_id)
-        self.annotate_panel.viewer.treeview.selection_set(feature_id)
+        self.label_panel.viewer.treeview.focus(feature_id)
+        self.label_panel.viewer.treeview.selection_set(feature_id)
         canvas_shapes = self.variables.get_canvas_shapes_for_feature(feature_id)
         if canvas_shapes is None:
             self.set_current_canvas_id(None, check_feature=False)
         elif len(canvas_shapes) == 1:
             self.set_current_canvas_id(canvas_shapes[0], check_feature=False)
-        elif self.variables.current_annotate_canvas_id not in canvas_shapes:
+        elif self.variables.current_canvas_id not in canvas_shapes:
             self.set_current_canvas_id(None, check_feature=False)
 
     @property
@@ -914,7 +922,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        feature : Annotation
+        feature : LabelFeature
             The feature, only used here for logging a failure.
         the_geometry : Point|LineString|Polygon
         the_color : None|str
@@ -975,7 +983,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         else:
             showinfo(
                 'Unhandled Geometry',
-                message='Annotation id {} has unsupported feature component of type {} which '
+                message='LabelFeature id {} has unsupported feature component of type {} which '
                         'will be omitted from display. Any save of the annotation '
                         'will not contain this feature.'.format(feature.uid, type(the_geometry)))
             self._modifying_shapes_on_canvas = False
@@ -993,7 +1001,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        feature : Annotation
+        feature : LabelFeature
         """
 
         def extract_base_geometry(the_element, base_collection):
@@ -1051,13 +1059,13 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         # the event listener method
 
         geometry_object = self._get_geometry_from_shape(canvas_id)
-        annotation = Annotation(geometry=geometry_object)
+        annotation = LabelFeature(geometry=geometry_object)
         self.variables.file_annotation_collection.add_annotation(annotation)
         self.variables.unsaved_changes = True
 
         vector_object = self.context_panel.canvas.get_vector_object(canvas_id)
         self.variables.set_feature_tracking(annotation.uid, canvas_id, color=vector_object.color)
-        self.annotate_panel.viewer.rerender_entry(annotation.uid)
+        self.label_panel.viewer.rerender_entry(annotation.uid)
         if make_current:
             self.set_current_canvas_id(canvas_id, check_feature=True)
         return annotation.uid
@@ -1076,7 +1084,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         annotation = self.variables.file_annotation_collection.annotations[feature_id]
         self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
-        self.annotate_panel.viewer.rerender_entry(annotation.uid)
+        self.label_panel.viewer.rerender_entry(annotation.uid)
         self.variables.unsaved_changes = True
 
     def _add_shape_to_feature(self, feature_id, canvas_id):
@@ -1105,7 +1113,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         # update the entry of our annotation object
         self._update_feature_geometry(feature_id)
         self.variables.unsaved_changes = True
-        self.annotate_panel.viewer.rerender_entry(feature_id)
+        self.label_panel.viewer.rerender_entry(feature_id)
 
     def _initialize_geometry(self, annotation_file_name, annotation_collection):
         """
@@ -1114,7 +1122,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         Parameters
         ----------
         annotation_file_name : str
-        annotation_collection : FileAnnotationCollection
+        annotation_collection : FileLabelCollection
 
         Returns
         -------
@@ -1125,7 +1133,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         self.variables.annotation_file_name = annotation_file_name
         self.variables.label_schema = annotation_collection.label_schema
         self.variables.file_annotation_collection = annotation_collection
-        self.set_current_feature_id(None) # TODO: any other state variables to update?
+        self.set_current_feature_id(None)
 
         # dump all the old shapes
         self._modifying_shapes_on_canvas = True
@@ -1147,10 +1155,10 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         Parameters
         ----------
         annotation_fname : str
-        annotation_collection : FileAnnotationCollection
+        annotation_collection : FileLabelCollection
         """
 
-        self.annotate_panel.viewer.fill_from_annotation_list(annotation_collection)
+        self.label_panel.viewer.fill_from_annotation_list(annotation_collection)
         self._initialize_geometry(annotation_fname, annotation_collection)
         self.context_panel.enable_tools()
         self.context_panel.enable_shapes()
@@ -1174,7 +1182,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         for entry in canvas_ids:
             self.context_panel.canvas.delete_shape(entry)
         # delete from the treeview
-        self.annotate_panel.viewer.delete_entry(feature_id)
+        self.label_panel.viewer.delete_entry(feature_id)
         self.variables.unsaved_changes = True
 
     def zoom_to_feature(self, feature_id):
@@ -1189,8 +1197,6 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         if feature_id is None:
             return
 
-        # TODO: get bounding box for the feature
-        #   Zoom the context panel to that box + 50% on each side
         feature = self.variables.file_annotation_collection.annotations[feature_id]
         bounding_box = feature.geometry.get_bbox()
         y_diff = max(bounding_box[2] - bounding_box[0], 100)
@@ -1380,7 +1386,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         if annotation_fname is None:
             return
 
-        annotation_collection = FileAnnotationCollection(
+        annotation_collection = FileLabelCollection(
             label_schema=label_schema, image_file_name=image_fname)
         self._initialize_annotation_file(annotation_fname, annotation_collection)
 
@@ -1393,7 +1399,6 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         if not response:
             return
 
-        # TODO: verify functionality
         browse_dir, image_fname = os.path.split(self.image_file_name)
         # guess at a sensible initial file name
         init_file = '{}.annotation.json'.format(image_fname)
@@ -1412,7 +1417,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         try:
-            annotation_collection = FileAnnotationCollection.from_file(annotation_fname)
+            annotation_collection = FileLabelCollection.from_file(annotation_fname)
         except Exception as e:
             showinfo('File Annotation Error',
                      message='Opening annotation file {} failed with error {}. Aborting.'.format(annotation_fname, e))
@@ -1453,10 +1458,14 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         if not self._verify_file_annotation_selected(popup=True):
             return # nothing to be done
 
-        shape_id = self.variables.current_annotate_canvas_id
+        shape_id = self.variables.current_canvas_id
         feature_id = self.variables.current_feature_id
         if shape_id is None:
             showinfo('No shape is selected', message="No shape is selected.")
+            return
+
+        response = askyesnocancel('Confirm deletion?', message='Confirm shape deletion.')
+        if response is None or response is False:
             return
 
         # remove the shape from the given feature tracking
@@ -1487,6 +1496,11 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         if feature_id is None:
             showinfo('No feature is selected', message="No feature is selected to delete.")
             return
+
+        response = askyesnocancel('Confirm deletion?', message='Confirm shape deletion.')
+        if response is None or response is False:
+            return
+
         self._delete_feature(feature_id)
 
     def callback_annotation_popup(self):
@@ -1501,7 +1515,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         popup = LabelingPopup(self.variables)
-        self.annotate_panel.viewer.rerender_entry(self.variables.current_feature_id)
+        self.label_panel.viewer.rerender_entry(self.variables.current_feature_id)
         popup.destroy()
 
     def callback_zoom_to_feature(self):
@@ -1530,7 +1544,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         self.my_populate_metaicon()
-        # TODO: what else should conceptually happen? This is not possible unless
+        # What else should conceptually happen? This is not possible unless
         #  we permit an image with more than a single index.
 
     def shape_create_on_canvas(self, event):
@@ -1571,8 +1585,6 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             the shape type (int) enum value.
         """
 
-        # TODO: this should not need to be short-circuited?
-
         # extract the appropriate feature, and sync changes to the list
         feature_id = self.variables.get_feature_for_annotate(event.x)
         self._update_feature_geometry(feature_id)
@@ -1589,7 +1601,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             the shape type (int) enum value.
         """
 
-        if self.variables.current_annotate_canvas_id == event.x:
+        if self.variables.current_canvas_id == event.x:
             self.set_current_canvas_id(None, check_feature=False)
 
         if self._modifying_shapes_on_canvas:
@@ -1599,7 +1611,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
         # get a fatal error here
 
         # remove this shape from tracking completely
-        self.variables.delete_annotation_from_tracking(event.x)
+        self.variables.delete_shape_from_tracking(event.x)
 
     def shape_selected_on_canvas(self, event):
         """
@@ -1612,11 +1624,11 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
             the shape type (int) enum value.
         """
 
-        if self.variables.current_annotate_canvas_id == event.x:
+        if self.variables.current_canvas_id == event.x:
             return # nothing needs to be done
         self.set_current_canvas_id(event.x, check_feature=True)
         if self.variables.current_feature_id is not None:
-            self.annotate_panel.viewer.treeview.focus(self.variables.current_feature_id)
+            self.label_panel.viewer.treeview.focus(self.variables.current_feature_id)
 
     def my_populate_metaicon(self):
         """
@@ -1656,7 +1668,7 @@ class AnnotationTool(basic_widgets.Frame, WidgetWithMetadata):
 
         old_feature_id = self.variables.current_feature_id
 
-        feature_id = self.annotate_panel.viewer.treeview.focus()
+        feature_id = self.label_panel.viewer.treeview.focus()
         if feature_id == old_feature_id:
             return  # nothing needs to be done
 
@@ -1670,7 +1682,7 @@ def main():
     the_style.theme_use('classic')
 
     # noinspection PyUnusedLocal
-    app = AnnotationTool(root)
+    app = LabelingTool(root)
     root.mainloop()
 
 

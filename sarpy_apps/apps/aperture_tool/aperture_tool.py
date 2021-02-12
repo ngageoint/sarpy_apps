@@ -35,8 +35,6 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
-# TODO: review the RadioButtonPanel situation?
-
 
 ##################
 # Animation panel
@@ -404,7 +402,7 @@ class ApertureTool(WidgetPanel):
         popups_menu.add_command(label="Main Controls", command=self.main_controls_popup)
         popups_menu.add_command(label="Phase History", command=self.ph_popup)
         popups_menu.add_command(label="Animation", command=self.animation_fast_slow_popup)
-        menubar.add_cascade(label="Popups", menu=popups_menu)
+        menubar.add_cascade(label="Details", menu=popups_menu)
 
         primary.config(menu=menubar)
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -1099,7 +1097,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         # ensure menus cascade
         menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Popups", menu=popups_menu)
+        menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         # handle packing
         parent.config(menu=menubar)

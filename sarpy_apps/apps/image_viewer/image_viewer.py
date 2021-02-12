@@ -64,7 +64,7 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         # ensure menus cascade
         menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Popups", menu=popups_menu)
+        menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         # handle packing
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
