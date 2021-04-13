@@ -28,23 +28,4 @@ __author__ = "Thomas McCullough"
 
 #   7.) Noise comparison? line 1914 - Just open rcs tool.
 
-import sarpy.io.complex as sarpy_io
-
-ro = sarpy_io.open(img_file)  # img_file is the input NITF
-# ro.sicd_meta could be a single sicd structure, or a tuple of them (maybe with only one element)
-sicd_meta = ro.get_sicds_as_tuple()[0]  # this will definitely be the first
-
-# the coordinates are read from a csv file line - target
-obj_lat = float(target[13])
-obj_lon = float(target[14])
-obj_hae = float(target[15])
-find_pt = [obj_lat, obj_lon, obj_hae]
-
-# to call right from the sicd structure - equivalent to the below
-im_row, im_col = sicd_meta.project_ground_to_image_geo([obj_lat, obj_lon, obj_hae], ordering='latlong')
-
-# to call using the point_projection module
-import sarpy.geometry.point_projection as sarpy_geo
-im_row, im_col = sarpy_geo.ground_to_image_geo(find_pt, sicd_meta, ordering='latlong')
-
 
