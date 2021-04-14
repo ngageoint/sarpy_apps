@@ -14,15 +14,14 @@ import numpy
 import tkinter
 from tkinter import ttk
 
-from tkinter.filedialog import asksaveasfilename, askopenfilenames, askdirectory
+from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
-from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, \
-    BooleanDescriptor, FloatDescriptor, StringDescriptor
+from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, StringDescriptor
 from tk_builder.image_reader import NumpyImageReader
-from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.utils.image_utils import frame_sequence_utils
+from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
@@ -54,12 +53,24 @@ class AppVariables(object):
     col_line_high = IntegerDescriptor(
         'col_line_high',
         docstring='The id of the frequency_panel of the upper column bandwidth line.')  # type: Union[None, int]
+    row_deltak1 = IntegerDescriptor(
+        'row_deltak1',
+        docstring='The id of the frequency_panel of the row deltak1 line.')  # type: Union[None, int]
+    row_deltak2 = IntegerDescriptor(
+        'row_deltak2',
+        docstring='The id of the frequency_panel of the row deltak2 line.')  # type: Union[None, int]
+    col_deltak1 = IntegerDescriptor(
+        'col_deltak1',
+        docstring='The id of the frequency_panel of the column deltak1.')  # type: Union[None, int]
+    col_deltak2 = IntegerDescriptor(
+        'col_deltak2',
+        docstring='The id of the frequency_panel of the column deltak2.')  # type: Union[None, int]
 
 
 class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
     _widget_list = ("image_panel", "frequency_panel")
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
-    frequency_panel = widget_descriptors.PanelDescriptor("frequency_panel", ImagePanel)   # type: ImagePanel
+    frequency_panel = widget_descriptors.ImagePanelDescriptor("frequency_panel")   # type: ImagePanel
 
     def __init__(self, primary):
         primary_frame = basic_widgets.Frame(primary)
@@ -96,10 +107,8 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.frequency_panel.hide_tools(['shape_drawing', 'select'])
         self.frequency_panel.hide_shapes()
         self.frequency_panel.hide_select_index()
-        self._initialize_bandwidth_lines()
 
         # bind canvas events for proper functionality
-        # this makes for bad performance on a larger image - may not be best to activate
         self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
@@ -111,11 +120,11 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
         if file_name is None:
-            the_title = "Image Viewer"
+            the_title = "Frequency Support Tool"
         elif isinstance(file_name, (list, tuple)):
-            the_title = "Image Viewer, Multiple Files"
+            the_title = "Frequency Support Tool, Multiple Files"
         else:
-            the_title = "Image Viewer for {}".format(os.path.split(file_name)[1])
+            the_title = "Frequency Support Tool for {}".format(os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
@@ -140,10 +149,13 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             min(full_cols, int(0.5*(full_cols + default_size))))
         self.image_panel.canvas.zoom_to_full_image_selection((0, 0, full_rows, full_cols))
         # set selection rectangle
+        self.image_panel.canvas.set_current_tool_to_select()
         self.image_panel.canvas.modify_existing_shape_using_image_coords(
             self.image_panel.canvas.variables.select_rect.uid, middle)
         self.image_panel.canvas.show_shape(self.image_panel.canvas.variables.select_rect.uid)
-        self.image_panel.canvas.emit_select_finalized()
+        # we need to set some drawing state here...this is ugly, but not worth
+        anchor = self.image_panel.canvas.get_shape_canvas_coords(self.image_panel.canvas.variables.select_rect.uid)[:2]
+        self.image_panel.canvas.set_select_initial_state(anchor)
 
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):
@@ -227,16 +239,36 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.update_reader(the_reader)
 
     def _initialize_bandwidth_lines(self):
-        if self.variables.row_line_low is None or self.frequency_panel.canvas.get_vector_object(self.variables.row_line_low) is None:
+        if self.variables.row_line_low is None or \
+                self.frequency_panel.canvas.get_vector_object(self.variables.row_line_low) is None:
+            self.variables.row_deltak1 = self.frequency_panel.canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+            self.variables.row_deltak2 = self.frequency_panel.canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+            self.variables.col_deltak1 = self.frequency_panel.canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+            self.variables.col_deltak2 = self.frequency_panel.canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+
             self.variables.row_line_low = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue')
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
             self.variables.row_line_high = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue')
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
             self.variables.col_line_low = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue')
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
             self.variables.col_line_high = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue')
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+
         else:
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.row_deltak1, (0, 0, 0, 0))
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.row_deltak2, (0, 0, 0, 0))
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.col_deltak1, (0, 0, 0, 0))
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.col_deltak2, (0, 0, 0, 0))
+
             self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
                 self.variables.row_line_low, (0, 0, 0, 0))
             self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
@@ -248,11 +280,25 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
     def update_displayed_selection(self):
         def get_extent(coords):
-            left = min(coords[1::2])
-            right = max(coords[1::2])
-            top = max(coords[0::2])
-            bottom = min(coords[0::2])
-            return left, right, top, bottom
+            return min(coords[0::2]), max(coords[0::2]), min(coords[1::2]), max(coords[1::2])
+
+        def draw_row_delta_lines():
+            deltak1 = (row_count - 1)*(0.5 + the_sicd.Grid.Row.SS*the_sicd.Grid.Row.DeltaK1) + 1
+            deltak2 = (row_count - 1)*(0.5 + the_sicd.Grid.Row.SS*the_sicd.Grid.Row.DeltaK2) + 1
+
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.row_deltak1, (deltak1, 0, deltak1, col_count))
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.row_deltak2, (deltak2, 0, deltak2, col_count))
+
+        def draw_col_delta_lines():
+            deltak1 = (col_count - 1)*(0.5 + the_sicd.Grid.Col.SS*the_sicd.Grid.Col.DeltaK1) + 1
+            deltak2 = (col_count - 1)*(0.5 + the_sicd.Grid.Col.SS*the_sicd.Grid.Col.DeltaK2) + 1
+
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.col_deltak1, (0, deltak1, row_count, deltak1))
+            self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
+                self.variables.col_deltak2, (0, deltak2, row_count, deltak2))
 
         def draw_row_bandwidth_lines():
             try:
@@ -280,7 +326,7 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 delta_kcoa_center = 0.0
 
             col_bw_low = (col_count - 1) * (
-                    0.5 + the_sicd.Grid.Col.SS *(delta_kcoa_center - 0.5*the_sicd.Grid.Col.ImpRespBW)) + 1
+                    0.5 + the_sicd.Grid.Col.SS*(delta_kcoa_center - 0.5*the_sicd.Grid.Col.ImpRespBW)) + 1
             col_bw_high = (col_count - 1) * (
                     0.5 + the_sicd.Grid.Col.SS*(delta_kcoa_center + 0.5*the_sicd.Grid.Col.ImpRespBW)) + 1
 
@@ -295,25 +341,26 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         threshold = self.image_panel.canvas.variables.config.select_size_threshold
         select_id = self.image_panel.canvas.variables.select_rect.uid
         rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
-        extent = get_extent(rect_coords)
-        row_count = abs(extent[3] - extent[2])
-        col_count = abs(extent[1] - extent[0])
+        extent = get_extent(rect_coords)  # left, right, bottom, top
+        row_count = extent[1] - extent[0]
+        col_count = extent[3] - extent[2]
 
         the_sicd = self.variables.image_reader.get_sicd()
         row_phys, col_phys = get_physical_coordinates(
-            the_sicd, 0.5*(extent[2]+extent[3]), 0.5*(extent[0]+extent[1]))
+            the_sicd, 0.5*(extent[0]+extent[1]), 0.5*(extent[2]+extent[3]))
 
         if row_count < threshold or col_count < threshold:
             junk_data = numpy.zeros((100, 100), dtype='uint8')
             self.frequency_panel.set_image_reader(NumpyImageReader(junk_data))
             self._initialize_bandwidth_lines()
         else:
-            image_data = self.image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id, decimation=1)
+            image_data = self.variables.image_reader.base_reader[extent[0]:extent[1], extent[2]:extent[3]]
             if image_data is not None:
                 self.frequency_panel.set_image_reader(
                     NumpyImageReader(remap.density(fftshift(fft2_sicd(image_data, the_sicd)))))
-                # TODO: this is the wrong thing...fix it up.
                 self._initialize_bandwidth_lines()
+                draw_row_delta_lines()
+                draw_col_delta_lines()
                 draw_row_bandwidth_lines()
                 draw_col_bandwidth_lines()
             else:
