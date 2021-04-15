@@ -7,25 +7,17 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Thomas McCullough"
 
 
-#   1.) Log location - When the image is selected, prompt for a log destination.
-#       Drop other file handler from validation logger, and add this handler.
+#   1.) Log to scrolltext widget.
+#       Option on the file menu to save log output to a file.
 
-# logger = logging.getLogger("validation")
-# handler = logging.FileHandler("output.log")  # save a reference to this, for removal
-# logger.addHandler(handler)
-##
-# logger.removeHandler(handler)
+#   2.) button - Perform sicd.is_valid(recursive=True, stack=True) (or stack=False, try them out)
 
-#   2.) Perform sicd.is_valid(recursive=True, stack=True) (or False, try them out)
+#   3.) button - Local frequency support analysis - open FrequencySupportTool.
 
-#   3.) the contents of fs_vis_test...MATLAB_SAR/IO/sicd/validation/fs_vis_test.m line 1625
+#   4.) button - Full frequency support analysis? line 1677.
 
-#   4.) Create a kmz overlay - can we automatically open somehow? line 1630
+#   5.) button - Sign verification - open ApertureTool. line 1656.
 
-#   5.) How to do sign verification? line 1656
+#   6.) button - Noise comparison - open RCSTool? line 1914.
 
-#   6.) Frequency support analysis? line 1677. Does it really need to be "full"?
-
-#   7.) Noise comparison? line 1914 - Just open rcs tool.
-
-
+#   7.) button - Geolocation comparison - create a kmz overlay somewhere. line 1630.
