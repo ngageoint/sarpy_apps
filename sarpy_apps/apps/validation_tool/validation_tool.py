@@ -14,10 +14,10 @@ __author__ = "Thomas McCullough"
 
 #   3.) button - Local frequency support analysis - open FrequencySupportTool.
 
-#   4.) button - Full frequency support analysis? line 1677.
+#   TODO: 4.) button - Full frequency support analysis? line 1677.
 
 #   5.) button - Sign verification - open ApertureTool. line 1656.
 
-#   6.) button - Noise comparison - open RCSTool? line 1914.
+#   6.) button - Noise comparison - open RCSTool. line 1914.
 
 #   7.) button - Geolocation comparison - create a kmz overlay somewhere. line 1630.

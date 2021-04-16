@@ -120,6 +120,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel = ImagePanel(primary_frame)  # type: ImagePanel
         self.side_panel = SidePanel(primary_frame)  # type: SidePanel
         self.variables = AppVariables()
+        self.set_title()
 
         self.image_panel.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=tkinter.TRUE)
         self.side_panel.pack(expand=tkinter.FALSE)
@@ -163,6 +164,20 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
     # callbacks for direct use
     def exit(self):
         self.quit()
+
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "Wake Tool"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "Wake Tool, Multiple Files"
+        else:
+            the_title = "Wake Tool for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
@@ -288,6 +303,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         self.variables.point_id = None
         self.variables.arrow_id = None
         self.variables.horizontal_line_id = None
+        self.set_title()
 
     def my_populate_metaicon(self):
         """

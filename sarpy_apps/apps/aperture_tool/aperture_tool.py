@@ -1064,11 +1064,11 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         primary_frame = basic_widgets.Frame(parent)
         WidgetPanel.__init__(self, primary_frame)
         WidgetWithMetadata.__init__(self, parent)
-        self.winfo_toplevel().title("Region Selection")  # TODO: is this right?
 
         self.variables = AppVariables()
 
         self.init_w_vertical_layout()
+        self.set_title()
         # adjust packing so the image panel takes all the space
         self.instructions.master.pack(side='top', expand=tkinter.NO)
         self.image_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
@@ -1109,6 +1109,20 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
     # callbacks
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "Aperture Tool"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "Aperture Tool, Multiple Files"
+        else:
+            the_title = "Aperture for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
+
     def exit(self):
         self.quit()
 
@@ -1231,6 +1245,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        self.set_title()
         # refresh appropriate GUI elements
         self.my_populate_metaicon()
         self.my_populate_metaviewer()

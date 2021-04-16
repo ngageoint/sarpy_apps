@@ -401,7 +401,7 @@ def main():
     the_style.theme_use('classic')
 
     app = FrequencySupportTool(root)
-    root.geometry("1000x800")
+    root.geometry("1000x1000")
 
     root.mainloop()
 
