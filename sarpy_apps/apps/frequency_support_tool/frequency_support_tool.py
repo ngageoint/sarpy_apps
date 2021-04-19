@@ -73,8 +73,8 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
     frequency_panel = widget_descriptors.ImagePanelDescriptor("frequency_panel")   # type: ImagePanel
 
     def __init__(self, primary):
-        primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, primary_frame)
+        self.primary_frame = basic_widgets.Frame(primary)
+        WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
@@ -98,7 +98,7 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         # handle packing
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         primary.config(menu=menubar)
 
         # hide extraneous tool elements

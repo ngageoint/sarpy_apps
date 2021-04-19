@@ -114,17 +114,17 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
     """
 
     def __init__(self, primary):
-        primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, primary_frame)
+        self.primary_frame = basic_widgets.Frame(primary)
+        WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, primary)
-        self.image_panel = ImagePanel(primary_frame)  # type: ImagePanel
-        self.side_panel = SidePanel(primary_frame)  # type: SidePanel
+        self.image_panel = ImagePanel(self.primary_frame)  # type: ImagePanel
+        self.side_panel = SidePanel(self.primary_frame)  # type: SidePanel
         self.variables = AppVariables()
         self.set_title()
 
         self.image_panel.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=tkinter.TRUE)
         self.side_panel.pack(expand=tkinter.FALSE)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # set up event listeners
         self.side_panel.buttons.line_draw.config(command=self.arrow_draw_command)

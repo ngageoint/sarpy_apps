@@ -380,8 +380,8 @@ class ApertureTool(WidgetPanel):
         self._update_on_changed = True
         self._skip_update = False
 
-        primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, primary_frame)
+        self.primary_frame = basic_widgets.Frame(primary)
+        WidgetPanel.__init__(self, self.primary_frame)
         self.init_w_horizontal_layout()
 
         # define some informational popups
@@ -405,7 +405,7 @@ class ApertureTool(WidgetPanel):
         menubar.add_cascade(label="Details", menu=popups_menu)
 
         primary.config(menu=menubar)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.phase_history_panel.master.pack(side='left', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.master.pack(side='right', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.canvas.set_canvas_size(300, 400)
@@ -1061,8 +1061,8 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         """
 
         # set the parent frame
-        primary_frame = basic_widgets.Frame(parent)
-        WidgetPanel.__init__(self, primary_frame)
+        self.primary_frame = basic_widgets.Frame(parent)
+        WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, parent)
 
         self.variables = AppVariables()
@@ -1101,7 +1101,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
 
         # handle packing
         parent.config(menu=menubar)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # define the callbacks
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
