@@ -579,7 +579,7 @@ class ApertureTool(WidgetPanel):
             self.update_filtered_image()
 
     def exit(self):
-        self.quit()
+        self.primary.destroy()
 
     # various methods used in the callbacks
     def make_blank(self):
@@ -1061,6 +1061,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         """
 
         # set the parent frame
+        self.root = parent
         self.primary_frame = basic_widgets.Frame(parent)
         WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, parent)
@@ -1124,7 +1125,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        self.quit()
+        self.root.destroy()
 
     def aperture_tool_popup(self):
         """
