@@ -320,6 +320,8 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         # refresh appropriate GUI elements
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+        self.log_handler.clear()
+        # perform the initial validation
         self.logger.info('Preparing validation for file {}\n'.format(os.path.abspath(self.variables.image_reader.file_name)))
         self.perform_basic_validation()
 
