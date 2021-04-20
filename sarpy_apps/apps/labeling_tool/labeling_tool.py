@@ -196,9 +196,6 @@ class LabelingPopup(object):
         except:
             pass
 
-    def __del__(self):
-        self.destroy()
-
 
 ##############
 # Annotation List Viewer and panel
@@ -399,6 +396,9 @@ class AppVariables(object):
     unsaved_changes = BooleanDescriptor(
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
+    image_reader = TypedDescriptor(
+        'image_reader', ComplexImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexImageReader
     label_schema = TypedDescriptor(
         'label_schema', LabelSchema,
         docstring='The label schema object.')  # type: LabelSchema
@@ -742,6 +742,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         primary : tkinter.Tk|tkinter.Toplevel
         """
 
+        self.root = primary
         self._schema_browse_directory = os.path.expanduser('~')
         self._image_browse_directory = os.path.expanduser('~')
         self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
@@ -1290,7 +1291,20 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         return y_max-y_min, x_max-x_min
 
     # main callback functions
-    #####
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "Labeling Tool"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "Labeling Tool, Multiple Files"
+        else:
+            the_title = "Labeling Tool for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
+
     def exit(self):
         """
         The tool exit function
@@ -1298,7 +1312,24 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
         response = self._prompt_unsaved()
         if response:
-            self.quit()
+            self.root.destroy()
+
+    def set_image_reader(self, reader):
+        """
+        Sets the image reader object.
+
+        Parameters
+        ----------
+        reader : ComplexImageReader
+        """
+
+        self.variables.image_reader = reader
+        self.context_panel.set_image_reader(reader)
+
+        self.set_title()
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
+        self.context_panel.enable_tools()
 
     def select_image_file(self):
         """
@@ -1331,10 +1362,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
                              'Aborting'.format(image_reader.file_name, image_reader.image_count))
             return
 
-        self.context_panel.set_image_reader(image_reader)
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
-        self.context_panel.enable_tools()
+        self.set_image_reader(image_reader)
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
@@ -1532,7 +1560,6 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
 
     # event listeners
-    #####
     #noinspection PyUnusedLocal
     def sync_image_index_changed(self, event):
         """

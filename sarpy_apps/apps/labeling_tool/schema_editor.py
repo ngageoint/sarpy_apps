@@ -258,9 +258,6 @@ class _SchemaSelectionWidget(object):
         except:
             pass
 
-    def __del__(self):
-        self.destroy()
-
 
 def select_schema_entry(label_schema, start_id=None):
     """
@@ -451,9 +448,6 @@ class LabelEntryWidget(object):
         except:
             pass
 
-    def __del__(self):
-        self.destroy()
-
 
 class SchemaEditor(WidgetPanel):
     _widget_list = (
@@ -513,6 +507,14 @@ class SchemaEditor(WidgetPanel):
         docstring='The viewer widget for the label schema.')  # type: SchemaViewer
 
     def __init__(self, root):
+        """
+
+        Parameters
+        ----------
+        root : tkinter.Toplevel|tkinter.Tk
+        """
+
+        self.root = root
         self.browse_directory = os.path.expanduser('~')
         self._file_name = None
         self.label_schema = LabelSchema()  # type: LabelSchema
@@ -846,7 +848,7 @@ class SchemaEditor(WidgetPanel):
             save_state = askyesno('Save Progress', message='There are unsaved edits. Save?')
             if save_state is True:
                 self.save()
-        self.quit()
+        self.root.destroy()
 
 
 def main():

@@ -380,8 +380,8 @@ class ApertureTool(WidgetPanel):
         self._update_on_changed = True
         self._skip_update = False
 
-        primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, primary_frame)
+        self.primary_frame = basic_widgets.Frame(primary)
+        WidgetPanel.__init__(self, self.primary_frame)
         self.init_w_horizontal_layout()
 
         # define some informational popups
@@ -405,7 +405,7 @@ class ApertureTool(WidgetPanel):
         menubar.add_cascade(label="Details", menu=popups_menu)
 
         primary.config(menu=menubar)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.phase_history_panel.master.pack(side='left', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.master.pack(side='right', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.canvas.set_canvas_size(300, 400)
@@ -579,7 +579,7 @@ class ApertureTool(WidgetPanel):
             self.update_filtered_image()
 
     def exit(self):
-        self.quit()
+        self.primary.destroy()
 
     # various methods used in the callbacks
     def make_blank(self):
@@ -1061,14 +1061,15 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         """
 
         # set the parent frame
-        primary_frame = basic_widgets.Frame(parent)
-        WidgetPanel.__init__(self, primary_frame)
+        self.root = parent
+        self.primary_frame = basic_widgets.Frame(parent)
+        WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, parent)
-        self.winfo_toplevel().title("Region Selection")  # TODO: is this right?
 
         self.variables = AppVariables()
 
         self.init_w_vertical_layout()
+        self.set_title()
         # adjust packing so the image panel takes all the space
         self.instructions.master.pack(side='top', expand=tkinter.NO)
         self.image_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
@@ -1101,7 +1102,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
 
         # handle packing
         parent.config(menu=menubar)
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # define the callbacks
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
@@ -1109,8 +1110,22 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
     # callbacks
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "Aperture Tool"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "Aperture Tool, Multiple Files"
+        else:
+            the_title = "Aperture for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
+
     def exit(self):
-        self.quit()
+        self.root.destroy()
 
     def aperture_tool_popup(self):
         """
@@ -1231,6 +1246,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        self.set_title()
         # refresh appropriate GUI elements
         self.my_populate_metaicon()
         self.my_populate_metaviewer()

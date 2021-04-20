@@ -438,6 +438,9 @@ class AppVariables(object):
     unsaved_changes = BooleanDescriptor(
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
+    image_reader = TypedDescriptor(
+        'image_reader', ComplexImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexImageReader
     file_rcs_collection = TypedDescriptor(
         'file_rcs_collection', FileRCSCollection,
         docstring='The rcs annotation collection object.')  # type: FileRCSCollection
@@ -827,6 +830,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         primary : tkinter.Tk|tkinter.Toplevel
         """
 
+        self.root = primary
+        self.variables = AppVariables()
         self._schema_browse_directory = os.path.expanduser('~')
         self._image_browse_directory = os.path.expanduser('~')
         self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
@@ -835,6 +840,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
+        self.set_title()
 
         self.label_panel = RCSCollectionPanel(self.primary)  # type: RCSCollectionPanel
         self.label_panel.config(borderwidth=0)
@@ -847,7 +853,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-        self.variables = AppVariables()
 
         # menu_bar items
         menu_bar = tkinter.Menu()
@@ -1520,7 +1525,38 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         response = self._prompt_unsaved()
         if response:
-            self.quit()
+            self.root.destroy()
+
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "RCS Tool"
+        elif isinstance(file_name, (list, tuple)):
+            the_title = "RCS Tool, Multiple Files"
+        else:
+            the_title = "RCS Tool for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
+
+    def update_reader(self, reader):
+        """
+        Sets the image reader object.
+
+        Parameters
+        ----------
+        reader : ComplexImageReader
+        """
+
+        self.variables.image_reader = reader
+        self.context_panel.set_image_reader(reader)
+
+        self.set_title()
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
+        self.context_panel.enable_tools()
 
     def select_image_file(self):
         """
@@ -1544,7 +1580,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        self._image_browse_directory = os.path.split(fname)[0]
         image_reader = ComplexImageReader(fname)
         # check that there is only a single partition
         partitions = image_reader.base_reader.get_sicd_partitions()
@@ -1556,10 +1591,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                              'Aborting'.format(image_reader.file_name, len(partitions)))
             return
 
-        self.context_panel.set_image_reader(image_reader)
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
-        self.context_panel.enable_tools()
+        self._image_browse_directory = os.path.split(fname)[0]
+        self.update_reader(image_reader)
 
     def select_directory(self):
         # prompt for any unsaved changes
@@ -1582,13 +1615,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                              'Aborting'.format(image_reader.file_name, len(partitions)))
             return
 
-        # update the default directory for browsing
         self._image_browse_directory = os.path.split(dirname)[0]
-
-        self.context_panel.set_image_reader(image_reader)
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
-        self.context_panel.enable_tools()
+        self.update_reader(image_reader)
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
