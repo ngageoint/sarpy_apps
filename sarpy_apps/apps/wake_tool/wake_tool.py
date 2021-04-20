@@ -114,6 +114,14 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
     """
 
     def __init__(self, primary):
+        """
+
+        Parameters
+        ----------
+        primary : tkinter.Toplevel|tkinter.Tk
+        """
+
+        self.root = primary
         self.primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, primary)
@@ -163,7 +171,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
 
     # callbacks for direct use
     def exit(self):
-        self.quit()
+        self.root.destroy()
 
     def set_title(self):
         """

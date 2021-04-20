@@ -42,6 +42,14 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
     pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
 
     def __init__(self, primary):
+        """
+
+        Parameters
+        ----------
+        primary : tkinter.Toplevel|tkinter.Tk
+        """
+
+        self.root = primary
         self.primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, primary)
@@ -96,7 +104,7 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        self.quit()
+        self.root.destroy()
 
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):

@@ -73,6 +73,7 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
     frequency_panel = widget_descriptors.ImagePanelDescriptor("frequency_panel")   # type: ImagePanel
 
     def __init__(self, primary):
+        self.root = primary
         self.primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, primary)
@@ -128,7 +129,7 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        self.quit()
+        self.root.destroy()
 
     def set_default_selection(self):
         """

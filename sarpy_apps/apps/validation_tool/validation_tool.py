@@ -7,7 +7,6 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Thomas McCullough"
 
 import logging
-from logging import Handler
 import os
 
 import tkinter
@@ -20,12 +19,147 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.file_filters import create_filter_entry, all_files
 from tk_builder.image_reader import ImageReader
 from tk_builder.logger import TextHandler
-from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets import basic_widgets
+from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
+from tk_builder.widgets import basic_widgets, widget_descriptors
 
+from sarpy_apps.apps.aperture_tool.aperture_tool import RegionSelection
+from sarpy_apps.apps.frequency_support_tool.frequency_support_tool import FrequencySupportTool
+from sarpy_apps.apps.rcs_tool.rcs_tool import RCSTool
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+
+from sarpy.io.product.kmz_product_creation import create_kmz_view
+
+
+class _Feedback(WidgetPanel):
+    _widget_list = (
+        ('title_label', ),
+        ('acceptable_label', 'acceptable_button'),
+        ('feedback_label', 'feedback_text'),
+        ('cancel_button', 'submit_button'))
+
+    title_label = widget_descriptors.LabelDescriptor(
+        'title_label', default_text='',
+        docstring='The overall title')  # type: basic_widgets.Label
+    acceptable_label = widget_descriptors.LabelDescriptor(
+        'acceptable_label', default_text='acceptable?', docstring='')  # type: basic_widgets.Label
+    acceptable_button = widget_descriptors.RadioButtonDescriptor(
+        'acceptable_button', docstring='')  # type: basic_widgets.RadioButton
+    feedback_label = widget_descriptors.LabelDescriptor(
+        'feedback_label', default_text='feedback', docstring='')  # type: basic_widgets.Label
+    feedback_text = widget_descriptors.TextDescriptor(
+        'feedback_text', docstring='The widget to provide log information')  # type: basic_widgets.Text
+    cancel_button = widget_descriptors.ButtonDescriptor(
+        'cancel_button', default_text='Cancel', docstring='')  # type: basic_widgets.Button
+    submit_button = widget_descriptors.ButtonDescriptor(
+        'submit_button', default_text='Submit', docstring='')  # type: basic_widgets.Button
+
+    def __init__(self, root, title_text):
+        """
+
+        Parameters
+        ----------
+        root : tkinter.Toplevel
+        title_text : str
+        """
+
+        WidgetPanel.__init__(self, root)
+        self.init_w_rows()
+        self.title_label.set_text(title_text)
+
+
+class FeedbackPopup(object):
+    """
+    Class enabling feedback from validation steps
+    """
+
+    def __init__(self, primary, title_text):
+        self.use_feedback = True  # type: bool
+        self.acceptable = False  # type: bool
+        self.feedback_text = ''  # type: str
+
+        self.root = tkinter.Toplevel(primary)
+        self.widget = _Feedback(self.root, title_text)
+        self.widget.set_text('Feedback')
+
+        # label appearance
+        self.widget.title_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.widget.acceptable_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.widget.feedback_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+
+        # set up callbacks
+        self.widget.cancel_button.config(command=self.callback_cancel)
+        self.widget.submit_button.config(command=self.callback_submit)
+
+    def callback_cancel(self):
+        self.use_feedback = False
+        self.root.destroy()
+
+    def callback_submit(self):
+        self.use_feedback = True
+        self.acceptable = self.widget.acceptable_button.instate(['selected'])
+        self.feedback_text = self.widget.feedback_text.get('1.0', 'end-1c')
+        self.root.destroy()
+
+
+class _Buttons(WidgetPanelNoLabel):
+    """
+    The panel of buttons for validation tasks.
+    """
+
+    _widget_list = (
+        ('local_fs_label', 'local_fs_button'),
+        ('full_fs_label', 'full_fs_button'),
+        ('sign_label', 'sign_button'),
+        ('noise_label', 'noise_button'),
+        ('geolocation_label', 'geolocation_button'))
+
+    local_fs_label = widget_descriptors.LabelDescriptor(
+        'local_fs_label', default_text='Perform local frequency support analysis',
+        docstring='')  # type: basic_widgets.Label
+    local_fs_button = widget_descriptors.ButtonDescriptor(
+        'local_fs_button', default_text='Frequency Support Tool',
+        docstring='')  # type: basic_widgets.Button
+
+    full_fs_label = widget_descriptors.LabelDescriptor(
+        'full_fs_label', default_text='Perform full image frequency analysis',
+        docstring='')  # type: basic_widgets.Label
+    full_fs_button = widget_descriptors.ButtonDescriptor(
+        'full_fs_button', default_text='Frequency Analysis Tool',
+        docstring='')  # type: basic_widgets.Button
+
+    sign_label = widget_descriptors.LabelDescriptor(
+        'sign_label', default_text='Perform Fourier analysis',
+        docstring='')  # type: basic_widgets.Label
+    sign_button = widget_descriptors.ButtonDescriptor(
+        'sign_button', default_text='Aperture Tool',
+        docstring='')  # type: basic_widgets.Button
+
+    noise_label = widget_descriptors.LabelDescriptor(
+        'noise_label', default_text='Perform noise analysis',
+        docstring='')  # type: basic_widgets.Label
+    noise_button = widget_descriptors.ButtonDescriptor(
+        'noise_button', default_text='RCS Tool',
+        docstring='')  # type: basic_widgets.Button
+
+    geolocation_label = widget_descriptors.LabelDescriptor(
+        'geolocation_label', default_text='Perform basic geolocation analysis',
+        docstring='')  # type: basic_widgets.Label
+    geolocation_button = widget_descriptors.ButtonDescriptor(
+        'geolocation_button', default_text='Create kmz',
+        docstring='')  # type: basic_widgets.Button
+
+    def __init__(self, parent):
+        """
+
+        Parameters
+        ----------
+        parent
+        """
+
+        WidgetPanel.__init__(self, parent)
+        self.init_w_rows()
 
 
 class AppVariables(object):
@@ -37,31 +171,43 @@ class AppVariables(object):
 
 
 class ValidationTool(WidgetPanel, WidgetWithMetadata):
-    _widget_list = ("image_panel", "pyplot_panel")  # TODO: fix this up...
+    _widget_list = ("button_panel", "text_log_widget")
+    button_panel = widget_descriptors.TypedDescriptor(
+        'button_panel', _Buttons, docstring='the button panel')  # type: _Buttons
+    text_log_widget = widget_descriptors.TypedDescriptor(
+        'text_log_widget', ScrolledText, docstring='the log display')  # type: ScrolledText
 
     def __init__(self, primary):
-        self.primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, self.primary_frame)
+        """
+
+        Parameters
+        ----------
+        primary : tkinter.Toplevel|tkinter.Tk
+        """
+
+        self.root = primary
+        self.primary_frame = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.VERTICAL)
+        WidgetPanel.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
-        # create the scrolled text widget for logging output, and corresponding logger handler
-        self.text_log_widget = ScrolledText(self.primary_frame)  # type: ScrolledText
-        # TODO: any other configuration for the log?
+        # handle packing manually
+        self.button_panel = _Buttons(self.primary_frame)
+        self.primary_frame.add(self.button_panel, width=700, height=300, padx=5, pady=5, sticky=tkinter.NSEW)
+
+        # create the scrolled text widget for logging output
+        self.text_log_widget = ScrolledText(self.primary_frame) # TODO: other configuration?
+        self.primary_frame.add(self.text_log_widget, width=700, height=400, padx=5, pady=5, sticky=tkinter.NSEW)
+
+        # set the logging handler for the validation logger to log to our widget
         self.log_handler = TextHandler(self.text_log_widget)  # type: TextHandler
+        self.log_handler.setFormatter(logging.Formatter('%(levelname)s:%(asctime)s - %(message)s', '%Y-%m-%dT%H:%M:%S'))
         # attach this handler to the validation logger
         self.logger = logging.getLogger('validation')
+        self.logger.setLevel('INFO')
         self.logger.addHandler(self.log_handler)
 
-        self.init_w_horizontal_layout()  # TODO: handle packing manually...
         self.set_title()
-
-        # TODO: here are the GUI elements to
-        #   3.) button - Local frequency support analysis - open FrequencySupportTool.
-        #   4.) button - Full frequency support analysis - this is still remaining. line 1677.
-        #   5.) button - Sign verification - open ApertureTool. line 1656.
-        #   6.) button - Noise comparison - open RCSTool. line 1914.
-        #   7.) button - Geolocation comparison - create a kmz overlay somewhere. line 1630.
 
         # define menus
         menubar = tkinter.Menu()
@@ -82,7 +228,38 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
         # handle packing
         self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        primary.config(menu=menubar)
+        self.root.config(menu=menubar)
+
+        # set the callbacks for the button panel
+        self.button_panel.local_fs_button.config(command=self.callback_local_fs)
+        self.button_panel.full_fs_button.config(command=self.callback_full_fs)
+        self.button_panel.sign_button.config(command=self.callback_sign)
+        self.button_panel.noise_button.config(command=self.callback_noise)
+        self.button_panel.geolocation_button.config(command=self.callback_geolocation)
+
+    def _verify_reader(self):
+        # type: () -> bool
+        if self.variables.image_reader is not None:
+            return True
+
+        showinfo('No complex image selected', message='First, select a complex image for this functionality.')
+        return False
+
+    def _get_and_log_feedback(self, title_text):
+        # type: (str) -> None
+        feedback = FeedbackPopup(self.root, title_text)
+        feedback.root.grab_set()
+        feedback.root.wait_window()
+        if not feedback.use_feedback:
+            return
+
+        feedback_text = feedback.feedback_text.strip()
+        if feedback_text != '':
+            feedback_text += '\n'
+        if feedback.acceptable:
+            self.logger.info('{} acceptable\n{}'.format(title_text, feedback_text))
+        else:
+            self.logger.error('{} unacceptable\n{}'.format(title_text, feedback_text))
 
     def set_title(self):
         """
@@ -97,9 +274,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        # prompt to save any old log
-        self.save_log()
-        self.quit()
+        self.root.destroy()
 
     def save_log(self):
         if self.variables.image_reader is None or self.log_handler is None:
@@ -120,11 +295,10 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         if self.variables.image_reader is None:
             return
 
-        self.logger.info('Starting validation of sicd structure(s)')
         the_reader = self.variables.image_reader.base_reader
         the_sicds = the_reader.get_sicds_as_tuple()
         for the_index, the_sicd in enumerate(the_sicds):
-            msg_id = 'SICD structure at index {}'.format(the_index) if len(the_sicds) else 'SICD structure'
+            msg_id = 'SICD structure at index {}'.format(the_index) if len(the_sicds) > 1 else 'SICD structure'
             self.logger.info('Starting validation of {}'.format(msg_id))
             result = the_sicd.is_valid(recursive=True, stack=False)  # this implicitly logs things of note
             if result:
@@ -140,8 +314,6 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         the_reader : ImageReader
         """
 
-        # prompt to save any old log
-        self.save_log()
         # update the reader
         self.variables.image_reader = the_reader
         self.set_title()
@@ -188,6 +360,105 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
         self.update_reader(the_reader)
 
+    def callback_local_fs(self):
+        """
+        Enable the local frequency support analysis
+        """
+
+        if not self._verify_reader():
+            return
+
+        # create a complex image reader - don't pass the same one around, so no hidden state
+        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        # open the frequency support tool based on this reader
+        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = FrequencySupportTool(root)
+        tool.update_reader(reader)
+        root.grab_set()
+        root.wait_window()
+
+        self._get_and_log_feedback('Local Frequency Support (DeltaKCOAPoly)')
+
+    def callback_full_fs(self):
+        """
+        Enable the full image frequency analysis
+        """
+
+        if not self._verify_reader():
+            return
+
+        showinfo('Work in Progress', message='This element is not yet implemented.')
+
+        # TODO: complete this
+        # self._get_and_log_feedback('Full Image Support')
+
+    def callback_sign(self):
+        """
+        Enable Fourier sign analysis
+        """
+
+        if not self._verify_reader():
+            return
+
+        # create a complex image reader - don't pass the same one around, so no hidden state
+        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        # open the aperture tool based on this reader
+        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = RegionSelection(root)
+        tool.update_reader(reader)
+        root.grab_set()
+        root.wait_window()
+
+        self._get_and_log_feedback('Fourier Sign')
+
+    def callback_noise(self):
+        """
+        Enable noise analysis
+        """
+
+        if not self._verify_reader():
+            return
+
+        # create a complex image reader - don't pass the same one around, so no hidden state
+        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        # open the rcs tool based on this reader
+        root = tkinter.Toplevel()  # create a new toplevel with its own mainloop, so it's blocking
+        tool = RCSTool(root)
+        tool.update_reader(reader)
+        root.grab_set()
+        root.wait_window()
+
+        self._get_and_log_feedback('Noise Value')
+
+    def callback_geolocation(self):
+        """
+        Enable basic geolocation comparison
+        """
+
+        if not self._verify_reader():
+            return
+
+        # find a place to save the overlay, then produce it
+        initialdir, fstem = os.path.split(os.path.abspath(self.variables.image_reader.file_name))
+        dirname = askdirectory(initialdir=initialdir, mustexist=True)
+        if dirname is None or dirname in [(), '']:
+            return
+
+        fstem_part = os.path.splitext(fstem)[0]
+        kmz_file_stem = 'View-{}'.format(fstem_part)
+        showinfo('KMZ creation',
+                 message='This may be somewhat time consuming.\n'
+                         'KMZ file(s) being created in directory {}\n'
+                         'The created filename will begin with {}\n'
+                         'Once the file(s) are created, review and provide feedback.'.format(dirname, kmz_file_stem))
+        create_kmz_view(self.variables.image_reader.base_reader, dirname, file_stem=kmz_file_stem, pixel_limit=3072)
+        showinfo('KMZ creation complete',
+                 message='KMZ file(s) created in directory {}\n'
+                         'The created filename(s) begin with {}\n'
+                         'Review and provide feedback.'.format(dirname, kmz_file_stem))
+
+        self._get_and_log_feedback('Geolocation')
+
     def my_populate_metaicon(self):
         """
         Populate the metaicon.
@@ -208,9 +479,6 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             super(ValidationTool, self).destroy()
         except Exception:
             pass
-
-    def __del__(self):
-        self.destroy()
 
 
 def main():

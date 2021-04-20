@@ -830,6 +830,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         primary : tkinter.Tk|tkinter.Toplevel
         """
 
+        self.root = primary
+        self.variables = AppVariables()
         self._schema_browse_directory = os.path.expanduser('~')
         self._image_browse_directory = os.path.expanduser('~')
         self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
@@ -851,7 +853,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-        self.variables = AppVariables()
 
         # menu_bar items
         menu_bar = tkinter.Menu()
@@ -1524,7 +1525,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         response = self._prompt_unsaved()
         if response:
-            self.quit()
+            self.root.destroy()
 
     def set_title(self):
         """
@@ -1540,7 +1541,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             the_title = "RCS Tool for {}".format(os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
-    def set_image_reader(self, reader):
+    def update_reader(self, reader):
         """
         Sets the image reader object.
 
@@ -1579,7 +1580,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        self._image_browse_directory = os.path.split(fname)[0]
         image_reader = ComplexImageReader(fname)
         # check that there is only a single partition
         partitions = image_reader.base_reader.get_sicd_partitions()
@@ -1591,7 +1591,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                              'Aborting'.format(image_reader.file_name, len(partitions)))
             return
 
-        self.set_image_reader(image_reader)
+        self._image_browse_directory = os.path.split(fname)[0]
+        self.update_reader(image_reader)
 
     def select_directory(self):
         # prompt for any unsaved changes
@@ -1614,13 +1615,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                              'Aborting'.format(image_reader.file_name, len(partitions)))
             return
 
-        # update the default directory for browsing
         self._image_browse_directory = os.path.split(dirname)[0]
-
-        self.context_panel.set_image_reader(image_reader)
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
-        self.context_panel.enable_tools()
+        self.update_reader(image_reader)
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():

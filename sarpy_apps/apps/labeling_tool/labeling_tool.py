@@ -196,9 +196,6 @@ class LabelingPopup(object):
         except:
             pass
 
-    def __del__(self):
-        self.destroy()
-
 
 ##############
 # Annotation List Viewer and panel
@@ -745,6 +742,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         primary : tkinter.Tk|tkinter.Toplevel
         """
 
+        self.root = primary
         self._schema_browse_directory = os.path.expanduser('~')
         self._image_browse_directory = os.path.expanduser('~')
         self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
@@ -1314,7 +1312,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
         response = self._prompt_unsaved()
         if response:
-            self.quit()
+            self.root.destroy()
 
     def set_image_reader(self, reader):
         """
