@@ -29,7 +29,7 @@ setup(name=parameters['__title__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
       install_requires=[
-          'numpy', 'matplotlib', 'sarpy>=1.1.67', 'tk_builder>=1.0.8', 'Pillow',
+          'numpy', 'matplotlib', 'sarpy>=1.1.67', 'tk_builder>=1.0.9', 'Pillow',
           'typing;python_version<"3.4"', 'future;python_version<"3.4"'],
       zip_safe=True,
       test_suite="tests",
