@@ -862,7 +862,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
         file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
         file_menu.add_separator()
-        file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
+        file_menu.add_command(label="Save (json Annotation File)", command=self.save_annotation_file)
+        file_menu.add_command(label="Save As (json Annotation File)", command=self.save_as_annotation_file)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.exit)
 
@@ -1472,21 +1473,21 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return False # cancel
         return True
 
-    def _choose_annotation_file(self, new=False):
-        # type: (bool) -> Union[None, str]
+    def _choose_annotation_file(self, new=False, require_new=False, require_exist=False):
+        # type: (bool, bool, bool) -> Union[None, str]
         if not self._verify_image_selected(popup=True):
             return None
 
         browse_dir, image_fname = os.path.split(self.image_file_name)
 
         init_file = '{}.rcs.json'.format(os.path.splitext(image_fname)[0])
-        if new:
+        if new or require_new:
             annotation_fname = asksaveasfilename(
                 title='Select annotation file for image file {}'.format(image_fname),
                 initialdir=browse_dir,
                 initialfile=init_file,
                 filetypes=[json_files, all_files])
-            if os.path.exists(annotation_fname):
+            if require_new and os.path.exists(annotation_fname):
                 showinfo('File already exists', message='Annotation file {} already exists'.format(annotation_fname))
                 return None
         else:
@@ -1495,7 +1496,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                 initialdir=browse_dir,
                 initialfile=init_file,
                 filetypes=[json_files, all_files])
-            if not os.path.exists(annotation_fname):
+            if require_exist and not os.path.exists(annotation_fname):
                 showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_fname))
                 return None
 
@@ -1640,7 +1641,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not response:
             return
 
-        annotation_fname = self._choose_annotation_file(new=True)
+        annotation_fname = self._choose_annotation_file(new=True, require_new=True, require_exist=False)
         if annotation_fname is None:
             return  # the choice was not successful
 
@@ -1657,7 +1658,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not response:
             return
 
-        annotation_fname = self._choose_annotation_file(new=False)
+        annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
         if annotation_fname is None:
             return  # the choice was not successful
 
@@ -1694,11 +1695,29 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         if self.variables.annotation_file_name is None:
-            annotation_fname = self._choose_annotation_file()
+            annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
             if annotation_fname is None:
                 return # the choice was not completed
             else:
                 self.variables.annotation_file_name = annotation_fname
+
+        self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
+        self.variables.unsaved_changes = False
+
+    def save_as_annotation_file(self):
+        """
+        Save the annotation file as a potentially new file.
+        """
+
+        if not self._verify_image_selected(popup=True):
+            self.variables.unsaved_changes = False
+            return
+
+        annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
+        if annotation_fname is None:
+            return # the choice was not completed
+        else:
+            self.variables.annotation_file_name = annotation_fname
 
         self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
         self.variables.unsaved_changes = False
