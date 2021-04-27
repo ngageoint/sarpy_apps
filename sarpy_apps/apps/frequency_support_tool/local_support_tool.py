@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module provides a frequency support visualization tool, intended primarily
+This module provides a local frequency support visualization tool, intended primarily
 for use in the validation tool.
 """
 
@@ -67,7 +67,7 @@ class AppVariables(object):
         docstring='The id of the frequency_panel of the column deltak2.')  # type: Union[None, int]
 
 
-class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
+class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
     _widget_list = ("image_panel", "frequency_panel")
     image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
     frequency_panel = widget_descriptors.ImagePanelDescriptor("frequency_panel")   # type: ImagePanel
@@ -374,13 +374,13 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
+        if self.variables.image_reader is None:
             image_reader = None
             the_index = 0
         else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-            the_index = self.image_panel.canvas.get_image_index()
+
+            image_reader = self.variables.image_reader
+            the_index = self.variables.image_reader.index
         self.populate_metaicon(image_reader, the_index)
 
     def my_populate_metaviewer(self):
@@ -388,11 +388,7 @@ class FrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None:
-            image_reader = None
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-        self.populate_metaviewer(image_reader)
+        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main():
@@ -401,7 +397,7 @@ def main():
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = FrequencySupportTool(root)
+    app = LocalFrequencySupportTool(root)
     root.geometry("1000x1000")
 
     root.mainloop()
