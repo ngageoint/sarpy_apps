@@ -1,6 +1,9 @@
 # This details the important differences introduced in sarpy_apps 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .11 - Introduction of full image frequency analysis tool
+        Simplification of RCS tool state
+        Completion of missing elements of the validation tool
 * .10 - Adding sicd validation and frequency support tools
 * .9 - Fix bug in rcs tool for using the primary feature, when set
 * .8 - Complete refactoring of all tools and completion of labeling (formerly annotation) and rcs tools

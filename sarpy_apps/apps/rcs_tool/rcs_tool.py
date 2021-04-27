@@ -862,7 +862,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
         file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
         file_menu.add_separator()
-        file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
+        file_menu.add_command(label="Save (json Annotation File)", command=self.save_annotation_file)
+        file_menu.add_command(label="Save As (json Annotation File)", command=self.save_as_annotation_file)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.exit)
 
@@ -964,10 +965,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         None|str: The image file name.
         """
 
-        if self.context_panel.canvas.variables.canvas_image_object is None or \
-                self.context_panel.canvas.variables.canvas_image_object.image_reader is None:
+        if self.variables.image_reader is None:
             return None
-        return self.context_panel.canvas.variables.canvas_image_object.image_reader.file_name
+        return self.variables.image_reader.file_name
 
     # utility functions
     ####
@@ -1345,7 +1345,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        annotation_file_name : str
+        annotation_file_name : None|str
         annotation_collection : FileRCSCollection
 
         Returns
@@ -1377,7 +1377,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        annotation_fname : str
+        annotation_fname : None|str
         annotation_collection : FileRCSCollection
         """
 
@@ -1453,29 +1453,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return False
         return True
 
-    def _verify_file_annotation_selected(self, popup=True):
-        """
-        Verify that a file annotation has been selected. Deploy helpful popup if not.
-
-        Parameters
-        ----------
-        popup : bool
-            Should we deploy the popup?
-
-        Returns
-        -------
-        bool
-        """
-
-        if not self._verify_image_selected(popup=popup):
-            return False
-
-        if self.variables.file_rcs_collection is None:
-            if popup:
-                showinfo('No Annotation file set up.', message='Please define an Annotation file, using the file menu.')
-            return False
-        return True
-
     def _prompt_unsaved(self):
         """
         Check for any unsaved changes, and prompt for action.
@@ -1486,15 +1463,47 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             True if underlying action to continue, False if it should not.
         """
 
-        if not self.variables.unsaved_changes:
+        if not self.variables.unsaved_changes or self.variables.annotation_file_name is None:
             return True
 
         response = askyesnocancel('Save Changes?', message='There are unsaved changes for your annotations. Do you want to save them?')
         if response is True:
             self.save_annotation_file()
         elif response is None:
-            return  False # cancel
+            return False # cancel
         return True
+
+    def _choose_annotation_file(self, new=False, require_new=False, require_exist=False):
+        # type: (bool, bool, bool) -> Union[None, str]
+        if not self._verify_image_selected(popup=True):
+            return None
+
+        browse_dir, image_fname = os.path.split(self.image_file_name)
+
+        init_file = '{}.rcs.json'.format(os.path.splitext(image_fname)[0])
+        if new or require_new:
+            annotation_fname = asksaveasfilename(
+                title='Select annotation file for image file {}'.format(image_fname),
+                initialdir=browse_dir,
+                initialfile=init_file,
+                filetypes=[json_files, all_files])
+            if require_new and os.path.exists(annotation_fname):
+                showinfo('File already exists', message='Annotation file {} already exists'.format(annotation_fname))
+                return None
+        else:
+            annotation_fname = askopenfilename(
+                title='Select annotation file for image file {}'.format(image_fname),
+                initialdir=browse_dir,
+                initialfile=init_file,
+                filetypes=[json_files, all_files])
+            if require_exist and not os.path.exists(annotation_fname):
+                showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_fname))
+                return None
+
+        if annotation_fname is None or annotation_fname in ['', ()]:
+            return None
+        else:
+            return annotation_fname
 
     @staticmethod
     def _get_side_lengths(coords):
@@ -1557,6 +1566,11 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
         self.context_panel.enable_tools()
+
+        # set up a placeholder FileRCSCollection
+        _, image_fname = os.path.split(self.image_file_name)
+        annotation_collection = FileRCSCollection(image_file_name=image_fname)
+        self._initialize_annotation_file(None, annotation_collection)
 
     def select_image_file(self):
         """
@@ -1627,30 +1641,11 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not response:
             return
 
-        browse_dir, image_fname = os.path.split(self.image_file_name)
-
-        annotation_fname = None
-        while annotation_fname is None:
-            annotation_fname = asksaveasfilename(
-                title='Select annotation file for image file {}'.format(image_fname),
-                initialdir=browse_dir,
-                initialfile='{}.rcs.json'.format(image_fname),
-                filetypes=[json_files, all_files])
-            if annotation_fname in ['', ()]:
-                annotation_fname = None
-
-                response = askyesnocancel(
-                    'No annotation selected?',
-                    message='No annotation was selected, and the creation of new annotation file is incomplete. '
-                            'Should the effort be continued?')
-                if response is not True:
-                    # we've cancelled the effort
-                    break
-                # all other cases, annotation_fname is defined appropriately
-
+        annotation_fname = self._choose_annotation_file(new=True, require_new=True, require_exist=False)
         if annotation_fname is None:
-            return
+            return  # the choice was not successful
 
+        _, image_fname = os.path.split(self.image_file_name)
         annotation_collection = FileRCSCollection(image_file_name=image_fname)
         self._initialize_annotation_file(annotation_fname, annotation_collection)
 
@@ -1663,22 +1658,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not response:
             return
 
-        browse_dir, image_fname = os.path.split(self.image_file_name)
-        # guess at a sensible initial file name
-        init_file = '{}.rcs.json'.format(image_fname)
-        if not os.path.exists(os.path.join(browse_dir, init_file)):
-            init_file = ''
-
-        annotation_fname = askopenfilename(
-            title='Select annotation file for image file {}'.format(image_fname),
-            initialdir=browse_dir,
-            initialfile=init_file,
-            filetypes=[json_files, all_files])
-        if annotation_fname in ['', ()]:
-            return
-        if not os.path.exists(annotation_fname):
-            showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_fname))
-            return
+        annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
+        if annotation_fname is None:
+            return  # the choice was not successful
 
         try:
             annotation_collection = FileRCSCollection.from_file(annotation_fname)
@@ -1687,6 +1669,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                      message='Opening annotation file {} failed with error {}. Aborting.'.format(annotation_fname, e))
             return
 
+        _, image_fname = os.path.split(self.image_file_name)
         # validate the the image selected matches the annotation image name
         if annotation_collection.image_file_name != image_fname:
             showinfo('Image File Mismatch',
@@ -1707,9 +1690,34 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Save the annotation file.
         """
 
-        if not self._verify_file_annotation_selected(popup=True):
+        if not self._verify_image_selected(popup=True):
             self.variables.unsaved_changes = False
             return
+
+        if self.variables.annotation_file_name is None:
+            annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
+            if annotation_fname is None:
+                return # the choice was not completed
+            else:
+                self.variables.annotation_file_name = annotation_fname
+
+        self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
+        self.variables.unsaved_changes = False
+
+    def save_as_annotation_file(self):
+        """
+        Save the annotation file as a potentially new file.
+        """
+
+        if not self._verify_image_selected(popup=True):
+            self.variables.unsaved_changes = False
+            return
+
+        annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
+        if annotation_fname is None:
+            return # the choice was not completed
+        else:
+            self.variables.annotation_file_name = annotation_fname
 
         self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
         self.variables.unsaved_changes = False
@@ -1719,7 +1727,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Remove the given shape from the current annotation.
         """
 
-        if not self._verify_file_annotation_selected(popup=True):
+        if not self._verify_image_selected(popup=True):
             return # nothing to be done
 
         shape_id = self.variables.current_canvas_id
@@ -1753,7 +1761,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Deletes the currently selected feature.
         """
 
-        if not self._verify_file_annotation_selected(popup=True):
+        if not self._verify_image_selected(popup=True):
             return # nothing to be done
 
         feature_id = self.variables.current_feature_id
@@ -1772,7 +1780,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Open an annotation popup window.
         """
 
-        self._verify_file_annotation_selected()
+        if not self._verify_image_selected(popup=True):
+            return
 
         if self.variables.current_feature_id is None:
             showinfo('No feature is selected', message="Please select the feature to view.")
@@ -1790,7 +1799,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Handles pressing the zoom to feature button.
         """
 
-        self._verify_file_annotation_selected()
+        if not self._verify_image_selected(popup=True):
+            return
 
         if self.variables.current_feature_id is None:
             showinfo('No feature is selected', message="Please select the feature to view.")
@@ -1803,7 +1813,8 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Handles setting the primary element.
         """
 
-        self._verify_file_annotation_selected()
+        if not self._verify_image_selected(popup=True):
+            return
 
         if self.variables.current_feature_id is None:
             showinfo('No feature is selected', message="Please select the feature to make primary.")

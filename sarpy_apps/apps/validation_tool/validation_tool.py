@@ -23,7 +23,8 @@ from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 
 from sarpy_apps.apps.aperture_tool.aperture_tool import RegionSelection
-from sarpy_apps.apps.frequency_support_tool.frequency_support_tool import FrequencySupportTool
+from sarpy_apps.apps.frequency_support_tool.local_support_tool import LocalFrequencySupportTool
+from sarpy_apps.apps.frequency_support_tool.full_support_tool import FullFrequencySupportTool
 from sarpy_apps.apps.rcs_tool.rcs_tool import RCSTool
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
@@ -158,7 +159,7 @@ class _Buttons(WidgetPanelNoLabel):
         parent
         """
 
-        WidgetPanel.__init__(self, parent)
+        WidgetPanelNoLabel.__init__(self, parent)
         self.init_w_rows()
 
 
@@ -320,6 +321,8 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         # refresh appropriate GUI elements
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+        self.log_handler.clear()
+        # perform the initial validation
         self.logger.info('Preparing validation for file {}\n'.format(os.path.abspath(self.variables.image_reader.file_name)))
         self.perform_basic_validation()
 
@@ -372,7 +375,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         reader = ComplexImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = FrequencySupportTool(root)
+        tool = LocalFrequencySupportTool(root)
         tool.update_reader(reader)
         root.grab_set()
         root.wait_window()
@@ -387,10 +390,16 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         if not self._verify_reader():
             return
 
-        showinfo('Work in Progress', message='This element is not yet implemented.')
+        # create a complex image reader - don't pass the same one around, so no hidden state
+        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        # open the frequency support tool based on this reader
+        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = FullFrequencySupportTool(root)
+        tool.update_reader(reader)
+        root.grab_set()
+        root.wait_window()
 
-        # TODO: complete this
-        # self._get_and_log_feedback('Full Image Support')
+        self._get_and_log_feedback('Full Image Frequency Support')
 
     def callback_sign(self):
         """
