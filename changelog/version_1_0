@@ -1,6 +1,7 @@
 # This details the important differences introduced in sarpy_apps 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .12 - Including a schema check in the validation tool, where possible
 * .11 - Introduction of full image frequency analysis tool
         Simplification of RCS tool state
         Completion of missing elements of the validation tool

@@ -31,6 +31,8 @@ from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.product.kmz_product_creation import create_kmz_view
+from sarpy.io.complex.sicd import SICDReader
+from sarpy.consistency.sicd_consistency import check_file
 
 
 class _Feedback(WidgetPanel):
@@ -297,14 +299,22 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         the_reader = self.variables.image_reader.base_reader
-        the_sicds = the_reader.get_sicds_as_tuple()
-        for the_index, the_sicd in enumerate(the_sicds):
-            msg_id = 'SICD structure at index {}'.format(the_index) if len(the_sicds) > 1 else 'SICD structure'
+        if isinstance(the_reader, SICDReader):
+            msg_id = 'SICD structure for file {}'.format(the_reader.file_name)
             self.logger.info('Starting validation of {}'.format(msg_id))
-            result = the_sicd.is_valid(recursive=True, stack=False)  # this implicitly logs things of note
+            result = check_file(the_reader.nitf_details)
             if result:
                 self.logger.info('***{} appears to be valid***'.format(msg_id))
             self.logger.info('Completed validation for {}\n'.format(msg_id))
+        else:
+            the_sicds = the_reader.get_sicds_as_tuple()
+            for the_index, the_sicd in enumerate(the_sicds):
+                msg_id = 'SICD structure at index {}'.format(the_index) if len(the_sicds) > 1 else 'SICD structure'
+                self.logger.info('Starting validation of {}'.format(msg_id))
+                result = the_sicd.is_valid(recursive=True, stack=False)  # this implicitly logs things of note
+                if result:
+                    self.logger.info('***{} appears to be valid***'.format(msg_id))
+                self.logger.info('Completed validation for {}\n'.format(msg_id))
 
     def update_reader(self, the_reader):
         """
