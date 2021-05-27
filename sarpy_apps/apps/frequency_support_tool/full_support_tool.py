@@ -33,7 +33,7 @@ from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.compliance import int_func
-from sarpy.io.general.base import FlatReader
+from sarpy.io.complex.base import FlatSICDReader
 from sarpy.processing.fft_base import fft_sicd, fft2_sicd, fftshift
 from sarpy.processing.normalize_sicd import DeskewCalculator
 
@@ -265,7 +265,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             row_file, row_memmap, row_mean_value = create_deskewed_transform(self.variables.image_reader, dimension=0)
             self.variables.row_fourier_file = row_file
             self.variables.row_fourier_reader = ComplexImageReader(
-                FlatReader(self.variables.image_reader.get_sicd(), row_memmap, reader_type='SICD'))
+                FlatSICDReader(self.variables.image_reader.get_sicd(), row_memmap))
             self.row_centered_image_panel.set_image_reader(self.variables.row_fourier_reader)
 
             draw_deltak_lines(self.row_centered_image_panel.canvas)
@@ -287,7 +287,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             col_file, col_memmap, col_mean_value = create_deskewed_transform(self.variables.image_reader, dimension=1)
             self.variables.column_fourier_file = col_file
             self.variables.column_fourier_reader = ComplexImageReader(
-                FlatReader(self.variables.image_reader.get_sicd(), col_memmap, reader_type='SICD'))
+                FlatSICDReader(self.variables.image_reader.get_sicd(), col_memmap))
             self.column_centered_image_panel.set_image_reader(self.variables.column_fourier_reader)
 
             draw_deltak_lines(self.column_centered_image_panel.canvas)

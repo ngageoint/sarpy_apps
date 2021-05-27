@@ -12,6 +12,7 @@ from typing import Union, List, Tuple
 
 from sarpy.compliance import string_types, int_func
 from sarpy.io.general.base import BaseReader
+from sarpy.io.complex.base import SICDTypeReader
 from tk_builder.image_reader import ImageReader
 import sarpy.visualization.remap as remap
 
@@ -64,8 +65,8 @@ class ComplexImageReader(ImageReader):
 
         if not isinstance(value, BaseReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
-        if value.reader_type != "SICD":
-            raise ValueError('base_reader.reader_type must be "SICD", got {}'.format(value.reader_type))
+        if value.reader_type not in ["SICD", "CPHD"]:
+            raise ValueError('base_reader.reader_type must be "SICD" or "CPHD", got {}'.format(value.reader_type))
         self._base_reader = value
         # noinspection PyProtectedMember
         self._chippers = value._get_chippers_as_tuple()
@@ -142,7 +143,7 @@ class ComplexImageReader(ImageReader):
         None|SICDType
         """
 
-        if self._index is None:
+        if self._index is None or not isinstance(self.base_reader, SICDTypeReader):
             return None
         return self.base_reader.get_sicds_as_tuple()[self._index]
 
