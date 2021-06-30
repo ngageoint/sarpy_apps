@@ -470,7 +470,10 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
                          'KMZ file(s) being created in directory {}\n'
                          'The created filename will begin with {}\n'
                          'Once the file(s) are created, review and provide feedback.'.format(dirname, kmz_file_stem))
-        create_kmz_view(self.variables.image_reader.base_reader, dirname, file_stem=kmz_file_stem, pixel_limit=3072)
+        create_kmz_view(
+            self.variables.image_reader.base_reader, dirname,
+            inc_scp=True, inc_collection_wedge=True,
+            file_stem=kmz_file_stem, pixel_limit=3072)
         showinfo('KMZ creation complete',
                  message='KMZ file(s) created in directory {}\n'
                          'The created filename(s) begin with {}\n'
