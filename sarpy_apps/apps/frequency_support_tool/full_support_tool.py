@@ -36,6 +36,8 @@ from sarpy.compliance import int_func
 from sarpy.io.complex.base import FlatSICDReader
 from sarpy.processing.fft_base import fft_sicd, fft2_sicd, fftshift
 from sarpy.processing.normalize_sicd import DeskewCalculator
+from sarpy.io.general.base import BaseReader
+from sarpy.compliance import string_types
 
 logger = logging.getLogger('full_support_tool')
 
@@ -440,14 +442,31 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.my_populate_metaicon()
         self._calculate_fourier_data()
 
-    def update_reader(self, the_reader):
+    def update_reader(self, the_reader, update_browse=None):
         """
         Update the reader.
 
         Parameters
         ----------
-        the_reader : ImageReader
+        the_reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(the_reader, string_types):
+            self.variables.browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, string_types):
+            the_reader = ComplexImageReader(the_reader)
+
+        if isinstance(the_reader, BaseReader):
+            if the_reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            the_reader = ComplexImageReader(the_reader)
+
+        if not isinstance(the_reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
         self.row_centered_image_panel.canvas.set_current_tool_to_view()
@@ -465,10 +484,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None or fnames in ['', ()]:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(fnames[0])[0]
 
-        the_reader = None
         if len(fnames) == 1:
             the_reader = ComplexImageReader(fnames[0])
         else:
@@ -479,16 +495,15 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                      message='File {} was not successfully opened as a SICD type '
                              'file.'.format(fnames))
             return
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(dirname)[0]
+
         the_reader = ComplexImageReader(dirname)
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def my_populate_metaicon(self):
         """
@@ -508,7 +523,15 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self._delete_files()
 
 
-def main():
+def main(reader=None):
+    """
+    Main method for initializing the tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    """
+
     logger.setLevel('DEBUG')
 
     root = tkinter.Tk()
@@ -518,9 +541,20 @@ def main():
 
     app = FullFrequencySupportTool(root)
     root.geometry("1000x1000")
+    if reader is not None:
+        app.update_reader(reader)
 
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the full support frequency analysis tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+    args = parser.parse_args()
+
+    main(reader=args.input)

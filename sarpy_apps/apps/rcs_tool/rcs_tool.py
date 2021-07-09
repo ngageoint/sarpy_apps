@@ -38,6 +38,7 @@ from sarpy.annotation.rcs import RCSStatistics, RCSValue, RCSValueCollection, \
 from sarpy.geometry.geometry_elements import Geometry, LinearRing, Polygon, \
     MultiPolygon
 from sarpy.io.complex.utils import get_im_physical_coords
+from sarpy.io.general.base import BaseReader
 
 
 ###############
@@ -1550,14 +1551,40 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             the_title = "RCS Tool for {}".format(os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
-    def update_reader(self, reader):
+    def update_reader(self, reader, update_browse=None):
         """
         Sets the image reader object.
 
         Parameters
         ----------
-        reader : ComplexImageReader
+        reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(reader, string_types):
+            self.variables.browse_directory = os.path.split(reader)[0]
+
+        if isinstance(reader, string_types):
+            reader = ComplexImageReader(reader)
+
+        if isinstance(reader, BaseReader):
+            if reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            reader = ComplexImageReader(reader)
+
+        if not isinstance(reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
+
+        partitions = reader.base_reader.get_sicd_partitions()
+        if len(partitions) > 1:
+            showinfo('Single Image Footprint Required',
+                     message='The given image reader for file {} has {} distinct partitions. '
+                             'RCS annotation is only permitted for image readers with a single '
+                             'partition (image footprint). '
+                             'Aborting'.format(reader.file_name, len(partitions)))
+            return
 
         self.variables.image_reader = reader
         self.context_panel.set_image_reader(reader)
@@ -1595,18 +1622,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         image_reader = ComplexImageReader(fname)
-        # check that there is only a single partition
-        partitions = image_reader.base_reader.get_sicd_partitions()
-        if len(partitions) > 1:
-            showinfo('Single Image Footprint Required',
-                     message='The given image reader for file {} has {} distinct partitions. '
-                             'RCS annotation is only permitted for image readers with a single '
-                             'partition (image footprint). '
-                             'Aborting'.format(image_reader.file_name, len(partitions)))
-            return
-
-        self._image_browse_directory = os.path.split(fname)[0]
-        self.update_reader(image_reader)
+        self.update_reader(image_reader, update_browse=os.path.split(fname)[0])
 
     def select_directory(self):
         # prompt for any unsaved changes
@@ -1619,18 +1635,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         image_reader = ComplexImageReader(dirname)
-        # check that there is only a single partition
-        partitions = image_reader.base_reader.get_sicd_partitions()
-        if len(partitions) > 1:
-            showinfo('Single Image Footprint Required',
-                     message='The given image reader for file {} has {} distinct partitions. '
-                             'RCS annotation is only permitted for image readers with a single '
-                             'partition (image footprint). '
-                             'Aborting'.format(image_reader.file_name, len(partitions)))
-            return
-
-        self._image_browse_directory = os.path.split(dirname)[0]
-        self.update_reader(image_reader)
+        self.update_reader(image_reader, update_browse=os.path.split(dirname)[0])
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
@@ -1661,6 +1666,18 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
         if annotation_fname is None:
             return  # the choice was not successful
+
+        self.set_existing_annotation_file(annotation_fname)
+
+    def set_existing_annotation_file(self, annotation_fname):
+        """
+        Try to set the annotation file as an existing file.
+
+        Parameters
+        ----------
+        annotation_fname : str
+            The path to the annotation file.
+        """
 
         try:
             annotation_collection = FileRCSCollection.from_file(annotation_fname)
@@ -1970,7 +1987,16 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         self.set_current_feature_id(feature_id)
 
 
-def main():
+def main(reader=None, annotation=None):
+    """
+    Main method for initializing the tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    annotation : None|str
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
@@ -1978,8 +2004,28 @@ def main():
 
     # noinspection PyUnusedLocal
     app = RCSTool(root)
+    if reader is not None:
+        app.update_reader(reader)
+        if annotation is not None:
+            app.set_existing_annotation_file(annotation)
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the rcs tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None,
+        help='The path to the optional image file for opening.')
+    parser.add_argument(
+        '-a', '--annotation', metavar='annotation', default=None,
+        help='The path to the optional annotation file. '
+             'If the image input is not specified, then this has no effect. '
+             'If both are specified, then a check will be performed that the '
+             'annotation actually applies to the provided image.')
+    args = parser.parse_args()
+
+    main(reader=args.input, annotation=args.annotation)

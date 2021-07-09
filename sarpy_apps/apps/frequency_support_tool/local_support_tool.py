@@ -31,6 +31,8 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 from sarpy.io.complex.utils import get_physical_coordinates
 from sarpy.visualization import remap
 from sarpy.processing.fft_base import fft2_sicd, fftshift
+from sarpy.compliance import string_types
+from sarpy.io.general.base import BaseReader
 
 
 class AppVariables(object):
@@ -189,14 +191,31 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.my_populate_metaicon()
         self.set_default_selection()
 
-    def update_reader(self, the_reader):
+    def update_reader(self, the_reader, update_browse=None):
         """
         Update the reader.
 
         Parameters
         ----------
-        the_reader : ImageReader
+        the_reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(the_reader, string_types):
+            self.variables.browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, string_types):
+            the_reader = ComplexImageReader(the_reader)
+
+        if isinstance(the_reader, BaseReader):
+            if the_reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            the_reader = ComplexImageReader(the_reader)
+
+        if not isinstance(the_reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
         self.image_panel.canvas.set_current_tool_to_view()
@@ -214,10 +233,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None or fnames in ['', ()]:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(fnames[0])[0]
 
-        the_reader = None
         if len(fnames) == 1:
             the_reader = ComplexImageReader(fnames[0])
         else:
@@ -228,7 +244,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                      message='File {} was not successfully opened as a SICD type '
                              'file.'.format(fnames))
             return
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
@@ -237,7 +253,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
         the_reader = ComplexImageReader(dirname)
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def _initialize_bandwidth_lines(self):
         if self.variables.row_line_low is None or \
@@ -391,7 +407,15 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.populate_metaviewer(self.variables.image_reader)
 
 
-def main():
+def main(reader=None):
+    """
+    Main method for initializing the tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
@@ -400,8 +424,20 @@ def main():
     app = LocalFrequencySupportTool(root)
     root.geometry("1000x1000")
 
+    if reader is not None:
+        app.update_reader(reader)
+
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the local support frequency analysis tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+    args = parser.parse_args()
+
+    main(reader=args.input)
