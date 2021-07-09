@@ -1653,6 +1653,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         _, image_fname = os.path.split(self.image_file_name)
         annotation_collection = FileRCSCollection(image_file_name=image_fname)
         self._initialize_annotation_file(annotation_fname, annotation_collection)
+        self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
 
     def select_annotation_file(self):
         if not self._verify_image_selected():
