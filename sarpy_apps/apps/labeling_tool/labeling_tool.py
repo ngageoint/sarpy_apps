@@ -1325,9 +1325,9 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if update_browse is not None:
-            self.variables.browse_directory = update_browse
+            self._image_browse_directory = update_browse
         elif isinstance(the_reader, string_types):
-            self.variables.browse_directory = os.path.split(the_reader)[0]
+            self._image_browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
             the_reader = ComplexImageReader(the_reader)
