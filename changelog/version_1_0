@@ -2,7 +2,7 @@
 # NB: bump the version number in __about__.py to reflect the below.
 
 * .14 - Introducing better command line usage for the apps
-        Making RCSTool report expected results
+        RCSTool now reports results in expected units and format
 * .13 - Compatibility with sarpy 1.2.0 reader change
 * .12 - Including a schema check in the validation tool, where possible
 * .11 - Introduction of full image frequency analysis tool
