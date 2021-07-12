@@ -27,7 +27,7 @@ from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, \
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.compliance import string_types
-from sarpy.io.general.base import BaseReader
+from sarpy.io.general.base import BaseReader, SarpyIOError
 from sarpy.io.general.converter import open_general
 
 
@@ -172,12 +172,10 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
             the_reader = open_general(the_reader)
 
         if isinstance(the_reader, BaseReader):
-            if the_reader.reader_type == 'SICD':
+            if the_reader.reader_type in ['SICD', 'CPHD']:
                 the_reader = ComplexImageReader(the_reader)
             elif the_reader.reader_type == 'SIDD':
                 the_reader = DerivedImageReader(the_reader)
-            elif the_reader.reader_type == 'CPHD':
-                raise ValueError('Viewing CPHD files is currently unsupported')
             else:
                 the_reader = GeneralImageReader(the_reader)
 
@@ -207,8 +205,9 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         if the_reader is None:
             try:
                 the_reader = ComplexImageReader(fnames[0])
-            except IOError:
+            except SarpyIOError:
                 the_reader = None
+
         if the_reader is None:
             the_reader = DerivedImageReader(fnames[0])
         if the_reader is None:

@@ -11,7 +11,7 @@ import numpy
 from typing import Union, List, Tuple
 
 from sarpy.compliance import string_types, int_func
-from sarpy.io.general.base import BaseReader
+from sarpy.io.general.base import BaseReader, SarpyIOError
 from sarpy.io.complex.base import SICDTypeReader
 from tk_builder.image_reader import ImageReader
 import sarpy.visualization.remap as remap
@@ -20,6 +20,7 @@ from sarpy.io.complex.converter import open_complex
 from sarpy.io.complex.aggregate import AggregateComplexReader
 from sarpy.io.complex.sicd_elements.SICD import SICDType
 from sarpy.io.product.converter import open_product
+from sarpy.io.phase_history.converter import open_phase_history
 from sarpy.io.general.converter import open_general
 
 
@@ -60,7 +61,19 @@ class ComplexImageReader(ImageReader):
     @base_reader.setter
     def base_reader(self, value):
         if isinstance(value, string_types):
-            value = open_complex(value)
+            reader = None
+            try:
+                reader = open_complex(value)
+            except SarpyIOError:
+                pass
+            if reader is None:
+                try:
+                    reader = open_phase_history(value)
+                except SarpyIOError:
+                    pass
+            if reader is None:
+                raise ValueError('Could not open file {} as a SICD or CPHD type reader'.format(value))
+            value = reader
         elif isinstance(value, (tuple, list)):
             value = AggregateComplexReader(value)
 
