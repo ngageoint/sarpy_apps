@@ -41,6 +41,25 @@ from sarpy.io.complex.utils import get_im_physical_coords
 from sarpy.io.general.base import BaseReader
 
 
+def _power_to_db(value):
+    """
+    Helper function for converting single value in power units to decibel units.
+
+    Parameters
+    ----------
+    value : float
+
+    Returns
+    -------
+    float
+    """
+
+    if value <= 0:
+        return float('NaN')
+    else:
+        return float(10*numpy.log10(value))
+
+
 ###############
 # RCSValueCollectionPanel
 
@@ -58,11 +77,12 @@ class StatsViewer(basic_widgets.Frame):
         self._rcs_feature = rcs_feature
         self._primary_feature = primary_feature
         basic_widgets.Frame.__init__(self, master)
-        self.treeview = basic_widgets.Treeview(self, columns=('Mean', 'Std'))
+        self.treeview = basic_widgets.Treeview(self, columns=('MeanDB', 'Mean', 'Std'))
         # define the column headings
         self.treeview.heading('#0', text='Name')
         self.treeview.heading('#1', text='Mean (db)')
-        self.treeview.heading('#2', text='Std (power)')
+        self.treeview.heading('#2', text='Mean (power)')
+        self.treeview.heading('#3', text='Std (power)')
         # instantiate the scroll bar and bind commands
         self.vert_scroll_bar = basic_widgets.Scrollbar(
             self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
@@ -104,12 +124,14 @@ class StatsViewer(basic_widgets.Frame):
                 if primary_entry is not None:
                     prim_stats = primary_entry.statistics[j]
                     sid += '*'
-                    mean_str = frm_str.format(stats.mean)+', '+frm_str.format(stats.mean - prim_stats.mean)
+                    mean_db_str = frm_str.format(_power_to_db(stats.mean)) + \
+                                  ', ' + \
+                                  frm_str.format(_power_to_db(stats.mean) - _power_to_db(prim_stats.mean))
                 else:
-                    mean_str = frm_str.format(stats.mean)
+                    mean_db_str = frm_str.format(_power_to_db(stats.mean))
                 self.treeview.insert(
                     the_id, 'end', iid=sid, text=stats.name,
-                    values=(mean_str, frm_str.format(stats.std)))
+                    values=(mean_db_str, frm_str.format(stats.mean), frm_str.format(stats.std)))
 
 
 class RCSValueCollectionPanel(basic_widgets.Frame):
@@ -1043,24 +1065,20 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             pixel_power_stats = the_stats['PixelPower']
             the_std = float('NaN')
             if rcs_stats['count'] > 0:
-                the_mean = float(10*numpy.log10(rcs_stats['total']/oversample_constant)) if rcs_stats['total'] > 0 \
-                    else float('NaN')
-                the_list.append(RCSStatistics(name='RCS_Total', mean=the_mean, std=the_std))
+                the_list.append(RCSStatistics(name='RCS_Total', mean=cs_stats['total']/oversample_constant, std=the_std))
             else:
-                the_mean = float(10 * numpy.log10(pixel_power_stats['total'])) if pixel_power_stats['total'] > 0 \
-                    else float('NaN')
-                the_list.append(RCSStatistics(name='PixelTotal', mean=the_mean, std=the_std))
+                the_list.append(RCSStatistics(name='PixelTotal', mean=pixel_power_stats['total'], std=the_std))
 
         def create_rcs_stat(the_entry, the_name, the_list):
             the_count = the_entry['count']
             if the_count == 0:
                 return
-            the_mean = float(10*numpy.log10(the_entry['total']/float(the_count)))
+            the_mean = the_entry['total']/float(the_count)
             the_std = float(numpy.sqrt(the_entry['total2']/float(the_count) - the_mean*the_mean))
             the_list.append(
                 RCSStatistics(
                     name=the_name,
-                    mean=the_mean,  # in db
+                    mean=the_mean,  # in power
                     std=the_std  # in power
                 )
             )
@@ -1582,9 +1600,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if update_browse is not None:
-            self.variables.browse_directory = update_browse
+            self._image_browse_directory = update_browse
         elif isinstance(reader, string_types):
-            self.variables.browse_directory = os.path.split(reader)[0]
+            self._image_browse_directory = os.path.split(reader)[0]
 
         if isinstance(reader, string_types):
             reader = ComplexImageReader(reader)
