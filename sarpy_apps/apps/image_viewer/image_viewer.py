@@ -22,8 +22,13 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, DerivedImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, \
+    DerivedImageReader, GeneralImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+
+from sarpy.compliance import string_types
+from sarpy.io.general.base import BaseReader, SarpyIOError
+from sarpy.io.general.converter import open_general
 
 
 class AppVariables(object):
@@ -148,14 +153,34 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
 
         self.my_populate_metaicon()
 
-    def update_reader(self, the_reader):
+    def update_reader(self, the_reader, update_browse=None):
         """
         Update the reader.
 
         Parameters
         ----------
-        the_reader : ImageReader
+        the_reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(the_reader, string_types):
+            self.variables.browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, string_types):
+            the_reader = open_general(the_reader)
+
+        if isinstance(the_reader, BaseReader):
+            if the_reader.reader_type in ['SICD', 'CPHD']:
+                the_reader = ComplexImageReader(the_reader)
+            elif the_reader.reader_type == 'SIDD':
+                the_reader = DerivedImageReader(the_reader)
+            else:
+                the_reader = GeneralImageReader(the_reader)
+
+        if not isinstance(the_reader, ImageReader):
+            raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
         self.image_panel.canvas.set_current_tool_to_view()
@@ -173,8 +198,6 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None or fnames in ['', ()]:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(fnames[0])[0]
 
         the_reader = None
         if len(fnames) > 1:
@@ -182,8 +205,9 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         if the_reader is None:
             try:
                 the_reader = ComplexImageReader(fnames[0])
-            except IOError:
+            except SarpyIOError:
                 the_reader = None
+
         if the_reader is None:
             the_reader = DerivedImageReader(fnames[0])
         if the_reader is None:
@@ -191,17 +215,15 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
                      message='File {} was not successfully opened as a SICD type '
                              'or SIDD type file.'.format(fnames))
             return
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(dirname)[0]
         # TODO: handle non-complex data possibilities here?
         the_reader = ComplexImageReader(dirname)
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         def get_extent(coords):
@@ -252,15 +274,36 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         self.populate_metaviewer(image_reader)
 
 
-def main():
+def main(reader=None):
+    """
+    Main method for initializing the aperture tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ImageReader
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
     app = ImageViewer(root)
+    root.geometry("1000x800")
+    if reader is not None:
+        app.update_reader(reader)
+
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the image viewer with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+    args = parser.parse_args()
+
+    main(reader=args.input)

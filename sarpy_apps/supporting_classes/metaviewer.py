@@ -11,7 +11,7 @@ from tk_builder.widgets import basic_widgets
 
 from sarpy.compliance import integer_types, string_types
 from sarpy.io.general.base import BaseReader
-from sarpy.io.general.nitf import NITFDetails
+from sarpy.io.general.nitf import NITFDetails, NITFReader
 
 
 def _primitive_list(the_list):
@@ -118,14 +118,17 @@ class Metaviewer(basic_widgets.Treeview):
         """
 
         def do_sicds():
-            sicds = reader.get_sicds_as_tuple()
-            if sicds is None:
-                return
-            elif len(sicds) == 1:
-                self.add_node("", "SICD", sicds[0].to_dict())
-            else:
-                for i, entry in enumerate(sicds):
-                    self.add_node("", "SICD_{}".format(i), entry.to_dict())
+            try:
+                sicds = reader.get_sicds_as_tuple()
+                if sicds is None:
+                    return
+                elif len(sicds) == 1:
+                    self.add_node("", "SICD", sicds[0].to_dict())
+                else:
+                    for i, entry in enumerate(sicds):
+                        self.add_node("", "SICD_{}".format(i), entry.to_dict())
+            except AttributeError:
+                pass
 
         def do_sidds():
             try:
@@ -151,11 +154,9 @@ class Metaviewer(basic_widgets.Treeview):
                 pass
 
         def do_nitf():
-            try:
+            if isinstance(reader, NITFReader):
                 nitf_details = reader.nitf_details  # type: NITFDetails
                 self.add_node("", "NITF", nitf_details.get_headers_json())
-            except AttributeError:
-                pass
 
         # empty any present entries
         self.empty_entries()

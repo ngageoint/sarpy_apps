@@ -30,11 +30,12 @@ from tk_builder.widgets import widget_descriptors, basic_widgets
 
 import sarpy.visualization.remap as remap
 from sarpy.processing.aperture_filter import ApertureFilter
+from sarpy.io.general.base import BaseReader
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
-
+from sarpy.compliance import string_types
 
 ##################
 # Animation panel
@@ -1212,33 +1213,45 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fnames is None or fnames in ['', ()]:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(fnames[0])[0]
 
         if len(fnames) == 1:
             the_reader = ComplexImageReader(fnames[0])
         else:
             the_reader = ComplexImageReader(fnames)
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(dirname)[0]
-        the_reader = ComplexImageReader(dirname)
-        self.update_reader(the_reader)
+        self.update_reader(dirname, update_browse=os.path.split(dirname)[0])
 
     # methods used in callbacks
-    def update_reader(self, the_reader):
+    def update_reader(self, the_reader, update_browse=None):
         """
         Update the reader.
 
         Parameters
         ----------
-        the_reader : ImageReader
+        the_reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(the_reader, string_types):
+            self.variables.browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, string_types):
+            the_reader = ComplexImageReader(the_reader)
+
+        if isinstance(the_reader, BaseReader):
+            if the_reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            the_reader = ComplexImageReader(the_reader)
+
+        if not isinstance(the_reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
         self.image_panel.canvas.set_current_tool_to_view()
@@ -1277,7 +1290,15 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         self.populate_metaviewer(image_reader)
 
 
-def main():
+def main(reader=None):
+    """
+    Main method for initializing the aperture tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
@@ -1285,9 +1306,20 @@ def main():
 
     app = RegionSelection(root)
     root.geometry("1000x800")
+    if reader is not None:
+        app.update_reader(reader)
 
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the aperture tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+    args = parser.parse_args()
+
+    main(reader=args.input)

@@ -36,6 +36,7 @@ from sarpy.annotation.label import FileLabelCollection, LabelFeature, \
     LabelMetadata, LabelMetadataList, LabelSchema
 from sarpy.geometry.geometry_elements import Geometry, GeometryCollection, \
     Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
+from sarpy.io.general.base import BaseReader
 
 
 ##############
@@ -852,10 +853,9 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         None|str: The image file name.
         """
 
-        if self.context_panel.canvas.variables.canvas_image_object is None or \
-                self.context_panel.canvas.variables.canvas_image_object.image_reader is None:
+        if self.variables.image_reader is None:
             return None
-        return self.context_panel.canvas.variables.canvas_image_object.image_reader.file_name
+        return self.variables.image_reader.file_name
 
     # utility functions
     ####
@@ -1267,7 +1267,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         if response is True:
             self.save_annotation_file()
         elif response is None:
-            return  False # cancel
+            return False # cancel
         return True
 
     @staticmethod
@@ -1314,17 +1314,34 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         if response:
             self.root.destroy()
 
-    def set_image_reader(self, reader):
+    def update_reader(self, the_reader, update_browse=None):
         """
-        Sets the image reader object.
+        Update the reader.
 
         Parameters
         ----------
-        reader : ComplexImageReader
+        the_reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
 
-        self.variables.image_reader = reader
-        self.context_panel.set_image_reader(reader)
+        if update_browse is not None:
+            self._image_browse_directory = update_browse
+        elif isinstance(the_reader, string_types):
+            self._image_browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, string_types):
+            the_reader = ComplexImageReader(the_reader)
+
+        if isinstance(the_reader, BaseReader):
+            if the_reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            the_reader = ComplexImageReader(the_reader)
+
+        if not isinstance(the_reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
+
+        self.variables.image_reader = the_reader
+        self.context_panel.set_image_reader(the_reader)
 
         self.set_title()
         self.my_populate_metaicon()
@@ -1353,7 +1370,6 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        self._image_browse_directory = os.path.split(fname)[0]
         image_reader = ComplexImageReader(fname)
         if image_reader.image_count != 1:
             showinfo('Single Image Required',
@@ -1362,7 +1378,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
                              'Aborting'.format(image_reader.file_name, image_reader.image_count))
             return
 
-        self.set_image_reader(image_reader)
+        self.update_reader(image_reader, update_browse=os.path.split(fname)[0])
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
@@ -1416,7 +1432,9 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
         annotation_collection = FileLabelCollection(
             label_schema=label_schema, image_file_name=image_fname)
+
         self._initialize_annotation_file(annotation_fname, annotation_collection)
+        self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
 
     def select_annotation_file(self):
         if not self._verify_image_selected():
@@ -1440,6 +1458,20 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
             filetypes=[json_files, all_files])
         if annotation_fname in ['', ()]:
             return
+
+        self.set_existing_annotation_file(annotation_fname)
+
+    def set_existing_annotation_file(self, annotation_fname):
+        """
+        Try to set the annotation file as an existing file.
+
+        Parameters
+        ----------
+        annotation_fname : str
+            The path to the annotation file.
+        """
+
+        _, image_fname = os.path.split(self.image_file_name)
         if not os.path.exists(annotation_fname):
             showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_fname))
             return
@@ -1557,7 +1589,6 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         self.zoom_to_feature(self.variables.current_feature_id)
-
 
     # event listeners
     #noinspection PyUnusedLocal
@@ -1702,7 +1733,16 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         self.set_current_feature_id(feature_id)
 
 
-def main():
+def main(reader=None, annotation=None):
+    """
+    Main method for initializing the tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    annotation : None|str
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
@@ -1710,8 +1750,28 @@ def main():
 
     # noinspection PyUnusedLocal
     app = LabelingTool(root)
+    if reader is not None:
+        app.update_reader(reader)
+        if annotation is not None:
+            app.set_existing_annotation_file(annotation)
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the labeling tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None,
+        help='The path to the optional image file for opening.')
+    parser.add_argument(
+        '-a', '--annotation', metavar='annotation', default=None,
+        help='The path to the optional annotation file. '
+             'If the image input is not specified, then this has no effect. '
+             'If both are specified, then a check will be performed that the '
+             'annotation actually applies to the provided image.')
+    args = parser.parse_args()
+
+    main(reader=args.input, annotation=args.annotation)

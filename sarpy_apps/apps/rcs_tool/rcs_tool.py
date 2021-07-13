@@ -38,6 +38,26 @@ from sarpy.annotation.rcs import RCSStatistics, RCSValue, RCSValueCollection, \
 from sarpy.geometry.geometry_elements import Geometry, LinearRing, Polygon, \
     MultiPolygon
 from sarpy.io.complex.utils import get_im_physical_coords
+from sarpy.io.general.base import BaseReader
+
+
+def _power_to_db(value):
+    """
+    Helper function for converting single value in power units to decibel units.
+
+    Parameters
+    ----------
+    value : float
+
+    Returns
+    -------
+    float
+    """
+
+    if value <= 0:
+        return float('NaN')
+    else:
+        return float(10*numpy.log10(value))
 
 
 ###############
@@ -57,13 +77,12 @@ class StatsViewer(basic_widgets.Frame):
         self._rcs_feature = rcs_feature
         self._primary_feature = primary_feature
         basic_widgets.Frame.__init__(self, master)
-        self.treeview = basic_widgets.Treeview(self, columns=('Mean', 'Std', 'Max', 'Min'))
+        self.treeview = basic_widgets.Treeview(self, columns=('MeanDB', 'Mean', 'Std'))
         # define the column headings
         self.treeview.heading('#0', text='Name')
-        self.treeview.heading('#1', text='Mean')
-        self.treeview.heading('#2', text='Std')
-        self.treeview.heading('#3', text='Max')
-        self.treeview.heading('#4', text='Min')
+        self.treeview.heading('#1', text='Mean (db)')
+        self.treeview.heading('#2', text='Mean (power)')
+        self.treeview.heading('#3', text='Std (power)')
         # instantiate the scroll bar and bind commands
         self.vert_scroll_bar = basic_widgets.Scrollbar(
             self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
@@ -98,19 +117,21 @@ class StatsViewer(basic_widgets.Frame):
                 primary_entry = self._primary_feature.properties.elements[i]
             else:
                 primary_entry = None
-            self.treeview.insert('', 'end', iid=the_id, text=the_text, values=('', '', '', ''))
+            self.treeview.insert('', 'end', iid=the_id, text=the_text, values=('', ''))
 
             for j, stats in enumerate(entry.statistics):
                 sid = '{}-{}'.format(i, j)
                 if primary_entry is not None:
                     prim_stats = primary_entry.statistics[j]
                     sid += '*'
-                    mean_str = frm_str.format(stats.mean)+', '+frm_str.format(stats.mean/prim_stats.mean)
+                    mean_db_str = frm_str.format(_power_to_db(stats.mean)) + \
+                                  ', ' + \
+                                  frm_str.format(_power_to_db(stats.mean) - _power_to_db(prim_stats.mean))
                 else:
-                    mean_str = frm_str.format(stats.mean)
+                    mean_db_str = frm_str.format(_power_to_db(stats.mean))
                 self.treeview.insert(
                     the_id, 'end', iid=sid, text=stats.name,
-                    values=(mean_str, frm_str.format(stats.std), frm_str.format(stats.max), frm_str.format(stats.min)))
+                    values=(mean_db_str, frm_str.format(stats.mean), frm_str.format(stats.std)))
 
 
 class RCSValueCollectionPanel(basic_widgets.Frame):
@@ -1019,32 +1040,48 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         RCSValueCollection
         """
 
-        def do_the_entry(array, the_entry):
+        def calculate_statistics(array, the_entry):
             # type: (numpy.ndarray, dict) -> None
             the_entry['total'] += numpy.sum(array)
             the_entry['total2'] += numpy.sum(array*array)
             the_entry['count'] += array.size
-            the_entry['max'] = max(the_entry['max'], numpy.max(array))
-            the_entry['min'] = min(the_entry['min'], numpy.min(array))
 
         def do_noise(t_sicd, t_x_array, t_y_array, the_entry):
-            noise = t_sicd.Radiometric.NoiseLevel.NoisePoly(t_x_array, t_y_array)  # this is in db...
-            noise = numpy.exp(numpy.log(10) * noise / 10.)  # convert to pixel power
-            do_the_entry(noise, the_entry)
+            # this should be in db according to the standard
+            noise = t_sicd.Radiometric.NoiseLevel.NoisePoly(t_x_array, t_y_array)
+            # convert to pixel power
+            noise = numpy.exp(numpy.log(10)*noise/10.)
+            calculate_statistics(noise, the_entry)
 
         def do_poly(t_sicd, t_attribute, t_x_array, t_y_array, t_pp, the_entry):
+            # this extracts the radiometric polynomial from the sicd Radiometric structure
+            # and evaluates it at our given row/column location array
             value = getattr(t_sicd.Radiometric, t_attribute)(t_x_array, t_y_array)*t_pp
-            do_the_entry(value, the_entry)
+            # this value is power here
+            calculate_statistics(value, the_entry)
+
+        def create_total_rcs(the_stats, the_list):
+            rcs_stats = the_stats['RCS']
+            pixel_power_stats = the_stats['PixelPower']
+            the_std = float('NaN')
+            if rcs_stats['count'] > 0:
+                the_list.append(RCSStatistics(name='RCS_Total', mean=cs_stats['total']/oversample_constant, std=the_std))
+            else:
+                the_list.append(RCSStatistics(name='PixelTotal', mean=pixel_power_stats['total'], std=the_std))
 
         def create_rcs_stat(the_entry, the_name, the_list):
             the_count = the_entry['count']
             if the_count == 0:
                 return
             the_mean = the_entry['total']/float(the_count)
+            the_std = float(numpy.sqrt(the_entry['total2']/float(the_count) - the_mean*the_mean))
             the_list.append(
                 RCSStatistics(
-                    name=the_name, mean=the_mean, std=numpy.sqrt(the_entry['total2']/float(the_count) - the_mean*the_mean),
-                    max=the_entry['max'], min=the_entry['min']))
+                    name=the_name,
+                    mean=the_mean,  # in power
+                    std=the_std  # in power
+                )
+            )
 
         if geometry is None:
             return RCSValueCollection(name=name, description=description)
@@ -1059,7 +1096,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         the_sicds = reader.get_sicds_as_tuple()
         # NB: it is assumed that this is of sicd type, and that there is only one partition
         stat_values = [{
-            key : {'total': 0.0, 'total2': 0.0, 'count': int_func(0), 'max': float('-inf'), 'min': float('inf')}
+            key : {'total': 0.0, 'total2': 0.0, 'count': int_func(0)}
             for key in ['PixelPower', 'NoisePower', 'RCS', 'Beta0', 'Gamma0', 'Sigma0']} for _ in the_sicds]
 
         for polygon in polygons:
@@ -1070,7 +1107,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             for i, the_sicd in enumerate(reader.get_sicds_as_tuple()):
                 data = reader[row_bounds[0]:row_bounds[1], col_bounds[0]:col_bounds[1], i][mask]
                 data = data.real*data.real + data.imag*data.imag  # get pixel power
-                do_the_entry(data, stat_values[i]['PixelPower'])
+                calculate_statistics(data, stat_values[i]['PixelPower'])
+                oversample_constant = 1./((the_sicd.Grid.Col.SS*the_sicd.Grid.Col.ImpRespBW)*
+                                          (the_sicd.Grid.Row.SS*the_sicd.Grid.Row.ImpRespBW))
 
                 if the_sicd.Radiometric is not None:
                     row_array = numpy.arange(row_bounds[0], row_bounds[1], 1, dtype=numpy.int32)
@@ -1095,6 +1134,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         pixel_count = None
         for i, the_sicd in enumerate(the_sicds):
             stats = []
+            create_total_rcs(stat_values[i], stats)
             for key in ['PixelPower', 'NoisePower', 'RCS', 'Beta0', 'Gamma0', 'Sigma0']:
                 t_entry = stat_values[i][key]
                 create_rcs_stat(t_entry, key, stats)
@@ -1104,7 +1144,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                 elif t_entry['count'] > 0 and pixel_count != t_entry['count']:
                     logging.warning('Got differing pixel_counts {} and {}'.format(pixel_count, t_entry['count']))
             values.append(RCSValue(polarization=the_sicd.get_processed_polarization(), statistics=stats))
-        # print(stat_values)
         return RCSValueCollection(name=name, description=description, pixel_count=pixel_count, elements=values)
 
     def _ensure_color_for_shapes(self, feature_id):
@@ -1550,14 +1589,40 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             the_title = "RCS Tool for {}".format(os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
-    def update_reader(self, reader):
+    def update_reader(self, reader, update_browse=None):
         """
         Sets the image reader object.
 
         Parameters
         ----------
-        reader : ComplexImageReader
+        reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self._image_browse_directory = update_browse
+        elif isinstance(reader, string_types):
+            self._image_browse_directory = os.path.split(reader)[0]
+
+        if isinstance(reader, string_types):
+            reader = ComplexImageReader(reader)
+
+        if isinstance(reader, BaseReader):
+            if reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            reader = ComplexImageReader(reader)
+
+        if not isinstance(reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
+
+        partitions = reader.base_reader.get_sicd_partitions()
+        if len(partitions) > 1:
+            showinfo('Single Image Footprint Required',
+                     message='The given image reader for file {} has {} distinct partitions. '
+                             'RCS annotation is only permitted for image readers with a single '
+                             'partition (image footprint). '
+                             'Aborting'.format(reader.file_name, len(partitions)))
+            return
 
         self.variables.image_reader = reader
         self.context_panel.set_image_reader(reader)
@@ -1595,18 +1660,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         image_reader = ComplexImageReader(fname)
-        # check that there is only a single partition
-        partitions = image_reader.base_reader.get_sicd_partitions()
-        if len(partitions) > 1:
-            showinfo('Single Image Footprint Required',
-                     message='The given image reader for file {} has {} distinct partitions. '
-                             'RCS annotation is only permitted for image readers with a single '
-                             'partition (image footprint). '
-                             'Aborting'.format(image_reader.file_name, len(partitions)))
-            return
-
-        self._image_browse_directory = os.path.split(fname)[0]
-        self.update_reader(image_reader)
+        self.update_reader(image_reader, update_browse=os.path.split(fname)[0])
 
     def select_directory(self):
         # prompt for any unsaved changes
@@ -1619,18 +1673,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         image_reader = ComplexImageReader(dirname)
-        # check that there is only a single partition
-        partitions = image_reader.base_reader.get_sicd_partitions()
-        if len(partitions) > 1:
-            showinfo('Single Image Footprint Required',
-                     message='The given image reader for file {} has {} distinct partitions. '
-                             'RCS annotation is only permitted for image readers with a single '
-                             'partition (image footprint). '
-                             'Aborting'.format(image_reader.file_name, len(partitions)))
-            return
-
-        self._image_browse_directory = os.path.split(dirname)[0]
-        self.update_reader(image_reader)
+        self.update_reader(image_reader, update_browse=os.path.split(dirname)[0])
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
@@ -1648,6 +1691,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         _, image_fname = os.path.split(self.image_file_name)
         annotation_collection = FileRCSCollection(image_file_name=image_fname)
         self._initialize_annotation_file(annotation_fname, annotation_collection)
+        self.variables.file_rcs_collection.to_file(self.variables.annotation_file_name)
 
     def select_annotation_file(self):
         if not self._verify_image_selected():
@@ -1661,6 +1705,18 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
         if annotation_fname is None:
             return  # the choice was not successful
+
+        self.set_existing_annotation_file(annotation_fname)
+
+    def set_existing_annotation_file(self, annotation_fname):
+        """
+        Try to set the annotation file as an existing file.
+
+        Parameters
+        ----------
+        annotation_fname : str
+            The path to the annotation file.
+        """
 
         try:
             annotation_collection = FileRCSCollection.from_file(annotation_fname)
@@ -1970,7 +2026,16 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         self.set_current_feature_id(feature_id)
 
 
-def main():
+def main(reader=None, annotation=None):
+    """
+    Main method for initializing the tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    annotation : None|str
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
@@ -1978,8 +2043,28 @@ def main():
 
     # noinspection PyUnusedLocal
     app = RCSTool(root)
+    if reader is not None:
+        app.update_reader(reader)
+        if annotation is not None:
+            app.set_existing_annotation_file(annotation)
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the rcs tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None,
+        help='The path to the optional image file for opening.')
+    parser.add_argument(
+        '-a', '--annotation', metavar='annotation', default=None,
+        help='The path to the optional annotation file. '
+             'If the image input is not specified, then this has no effect. '
+             'If both are specified, then a check will be performed that the '
+             'annotation actually applies to the provided image.')
+    args = parser.parse_args()
+
+    main(reader=args.input, annotation=args.annotation)

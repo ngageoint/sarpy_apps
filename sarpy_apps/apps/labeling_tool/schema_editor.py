@@ -518,7 +518,6 @@ class SchemaEditor(WidgetPanel):
         self.browse_directory = os.path.expanduser('~')
         self._file_name = None
         self.label_schema = LabelSchema()  # type: LabelSchema
-        self._new_file = None
         self._unsaved_edits = None
 
         self.primary = basic_widgets.Frame(root)
@@ -572,12 +571,6 @@ class SchemaEditor(WidgetPanel):
             self.label_schema = LabelSchema.from_file(file_name)
         else:
             self.label_schema = LabelSchema()
-
-        # TODO: set our entries as appropriate
-        if self._new_file:
-            pass
-        else:
-            pass
 
     # main schema element edit callbacks - piggyback on validation methods
     def _version_entry_validate(self):
@@ -761,6 +754,29 @@ class SchemaEditor(WidgetPanel):
             self.schema_viewer.rerender_entry(selected)
             self._unsaved_edits = True
 
+    def _check_save_state(self):
+        """
+        Checks the save state.
+
+        Returns
+        -------
+        bool
+            Continue (True) or abort (False)
+        """
+
+        if self._file_name is None or (not self._unsaved_edits):
+            return True
+
+        result = askyesnocancel(
+            title="Unsaved Edits",
+            message="There are unsaved edits. Save before opening a new file?")
+        if result is None:
+            return False
+
+        if result is True:
+            self.save()
+        return True
+
     def new_schema(self):
         """
         Create a new schema.
@@ -770,6 +786,9 @@ class SchemaEditor(WidgetPanel):
         None
         """
 
+        if not self._check_save_state():
+            return
+
         schema_file = asksaveasfilename(
             initialdir=self.browse_directory,
             filetypes=[file_filters.json_files, file_filters.all_files])
@@ -777,14 +796,9 @@ class SchemaEditor(WidgetPanel):
         if schema_file == '' or schema_file == ():
             # closed or cancelled
             return
-
-        self.browse_directory = os.path.split(schema_file)[0]
-        self._file_name = schema_file
-        self._new_file = True
-        self._unsaved_edits = True
-        self.label_schema = LabelSchema()
-        self.schema_viewer.fill_from_label_schema(self.label_schema)
-        self._populate_fields_schema()
+        schema = LabelSchema()
+        schema.to_file(schema_file)
+        self.set_schema_file(schema_file)
 
     def open_schema(self):
         """
@@ -795,26 +809,30 @@ class SchemaEditor(WidgetPanel):
         None
         """
 
-        if self._file_name is not None and self._unsaved_edits:
-            result = askyesnocancel(
-                title="Unsaved Edits",
-                message="There are unsaved edits. Save before opening a new file?")
-            if result is True:
-                self.save()
-            elif result is None:
-                return
+        if not self._check_save_state():
+            return
 
         schema_file = askopenfilename(initialdir=self.browse_directory, filetypes=[file_filters.json_files, file_filters.all_files])
         if schema_file == '' or schema_file == ():
             # closed or cancelled
             return
 
+        self.set_schema_file(schema_file)
+
+    def set_schema_file(self, schema_file):
+        """
+        Updates to the new file.
+
+        Parameters
+        ----------
+        schema_file : str
+        """
+
+        self.label_schema = LabelSchema.from_file(schema_file)
         self.browse_directory = os.path.split(schema_file)[0]
         self._file_name = schema_file
 
-        self._new_file = False
         self._unsaved_edits = False
-        self.label_schema = LabelSchema.from_file(schema_file)
         self.schema_viewer.fill_from_label_schema(self.label_schema)
         self._populate_fields_schema()
 
@@ -851,13 +869,13 @@ class SchemaEditor(WidgetPanel):
         self.root.destroy()
 
 
-def main():
+def main(schema_file=None):
     """
-    Creates a Tk() and runs the SchemaEditor tool.
+    Main method for initializing the tool
 
-    Returns
-    -------
-    None
+    Parameters
+    ----------
+    schema_file : None|str
     """
 
     root = tkinter.Tk()
@@ -867,8 +885,23 @@ def main():
 
     # noinspection PyUnusedLocal
     app = SchemaEditor(root)
+    if schema_file is not None:
+        app.set_schema_file(schema_file)
+
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    if __name__ == '__main__':
+        import argparse
+
+        parser = argparse.ArgumentParser(
+            description="Open the labeling schema editing tool with optional input file.",
+            formatter_class=argparse.RawTextHelpFormatter)
+
+        parser.add_argument(
+            '-i', '--input', metavar='input', default=None,
+            help='The path to the existing schema file for opening.')
+        args = parser.parse_args()
+
+        main(schema_file=args.input)
