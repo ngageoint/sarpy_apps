@@ -12,7 +12,7 @@ from typing import List, Tuple
 import gc
 
 from sarpy.compliance import string_types, int_func
-from sarpy.io.general.base import BaseReader
+from sarpy.io.general.base import BaseReader, SarpyIOError
 from sarpy.io.complex.base import SICDTypeReader
 from tk_builder.image_reader import ImageReader
 import sarpy.visualization.remap as remap
@@ -21,6 +21,8 @@ from sarpy.io.complex.converter import open_complex
 from sarpy.io.complex.aggregate import AggregateComplexReader
 from sarpy.io.complex.sicd_elements.SICD import SICDType
 from sarpy.io.product.converter import open_product
+from sarpy.io.phase_history.converter import open_phase_history
+from sarpy.io.general.converter import open_general
 
 
 class ComplexImageReader(ImageReader):
@@ -60,7 +62,19 @@ class ComplexImageReader(ImageReader):
     @base_reader.setter
     def base_reader(self, value):
         if isinstance(value, string_types):
-            value = open_complex(value)
+            reader = None
+            try:
+                reader = open_complex(value)
+            except SarpyIOError:
+                pass
+            if reader is None:
+                try:
+                    reader = open_phase_history(value)
+                except SarpyIOError:
+                    pass
+            if reader is None:
+                raise ValueError('Could not open file {} as a SICD or CPHD type reader'.format(value))
+            value = reader
         elif isinstance(value, (tuple, list)):
             value = AggregateComplexReader(value)
 
@@ -406,6 +420,100 @@ class DerivedImageReader(ImageReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type != "SIDD":
             raise ValueError('base_reader.reader_type must be "SIDD", got {}'.format(value.reader_type))
+        self._base_reader = value
+        # noinspection PyProtectedMember
+        self._chippers = value._get_chippers_as_tuple()
+        self._index = 0
+        self._data_size = value.get_data_size_as_tuple()[0]
+
+    @property
+    def index(self):
+        """
+        int: The reader index.
+        """
+
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        value = int(value)
+        data_sizes = self.base_reader.get_data_size_as_tuple()
+        if not (0 <= value < len(data_sizes)):
+            logging.error(
+                'The index property for DerivedImageReader must be 0 <= index < {}, '
+                'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
+            value = 0
+        self._index = value
+        self._data_size = data_sizes[value]
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
+
+    @property
+    def remapable(self):
+        return False
+
+    @property
+    def remap_function(self):
+        return None
+
+    @property
+    def image_count(self):
+        return 0 if self._chippers is None else len(self._chippers)
+
+    def __getitem__(self, item):
+        return self._chippers[self.index].__getitem__(item)
+
+    def __del__(self):
+        # noinspection PyBroadException
+        try:
+            del self._chippers
+            gc.collect()
+        except Exception:
+            pass
+
+
+class GeneralImageReader(ImageReader):
+    """
+    This is a general image reader of unknown type. There may be trouble
+    with the image segments of unexpected type.
+    """
+
+    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
+
+    def __init__(self, reader):
+        """
+
+        Parameters
+        ----------
+        reader : str|BaseReader
+            The sidd based reader, or path to appropriate data file.
+        """
+
+        # initialize
+        self._base_reader = None
+        self._chippers = None
+        self._data_size = None
+        self._index = None
+        # set the reader
+        self.base_reader = reader
+
+    @property
+    def base_reader(self):
+        # type: () -> BaseReader
+        """
+        BaseReader: The SIDD based reader object
+        """
+
+        return self._base_reader
+
+    @base_reader.setter
+    def base_reader(self, value):
+        if isinstance(value, string_types):
+            value = open_general(value)
+        if not isinstance(value, BaseReader):
+            raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         self._base_reader = value
         # noinspection PyProtectedMember
         self._chippers = value._get_chippers_as_tuple()

@@ -33,7 +33,8 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 from sarpy.io.product.kmz_product_creation import create_kmz_view
 from sarpy.io.complex.sicd import SICDReader
 from sarpy.consistency.sicd_consistency import check_file
-from sarpy.io.general.base import SarpyIOError
+from sarpy.io.general.base import SarpyIOError, BaseReader
+from sarpy.compliance import string_types
 
 
 class _Feedback(WidgetPanel):
@@ -317,14 +318,31 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
                     self.logger.info('***{} appears to be valid***'.format(msg_id))
                 self.logger.info('Completed validation for {}\n'.format(msg_id))
 
-    def update_reader(self, the_reader):
+    def update_reader(self, the_reader, update_browse=None):
         """
         Update the reader.
 
         Parameters
         ----------
-        the_reader : ImageReader
+        the_reader : str|BaseReader|ImageReader
+        update_browse : None|str
         """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(the_reader, string_types):
+            self.variables.browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, string_types):
+            the_reader = ComplexImageReader(the_reader)
+
+        if isinstance(the_reader, BaseReader):
+            if the_reader.reader_type != 'SICD':
+                raise ValueError('reader for the aperture tool is expected to be complex')
+            the_reader = ComplexImageReader(the_reader)
+
+        if not isinstance(the_reader, ComplexImageReader):
+            raise TypeError('Got unexpected input for the reader')
 
         # update the reader
         self.variables.image_reader = the_reader
@@ -349,8 +367,6 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         fname = askopenfilename(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
         if fname is None or fname in ['', ()]:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(fname)[0]
 
         try:
             the_reader = ComplexImageReader(fname)
@@ -358,21 +374,20 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type.'.format(fname))
             return
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-        # update the default directory for browsing
-        self.variables.browse_directory = os.path.split(dirname)[0]
+
         try:
             the_reader = ComplexImageReader(dirname)
         except SarpyIOError:
             showinfo('Opener not found',
                      message='Directory {} was not successfully opened as a SICD type.'.format(dirname))
             return
-        self.update_reader(the_reader)
+        self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def callback_local_fs(self):
         """
@@ -504,15 +519,35 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             pass
 
 
-def main():
+def main(reader=None):
+    """
+    Main method for initializing the tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|ComplexImageReader
+    """
+
     root = tkinter.Tk()
 
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
     app = ValidationTool(root)
+    if reader is not None:
+        app.update_reader(reader)
+
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the validation tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+    args = parser.parse_args()
+
+    main(reader=args.input)
