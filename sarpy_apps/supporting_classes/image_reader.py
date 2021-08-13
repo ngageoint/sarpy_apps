@@ -73,7 +73,7 @@ class ComplexImageReader(ImageReader):
                 except SarpyIOError:
                     pass
             if reader is None:
-                raise ValueError('Could not open file {} as a SICD or CPHD type reader'.format(value))
+                raise SarpyIOError('Could not open file {} as a SICD or CPHD type reader'.format(value))
             value = reader
         elif isinstance(value, (tuple, list)):
             value = AggregateComplexReader(value)
@@ -81,7 +81,7 @@ class ComplexImageReader(ImageReader):
         if not isinstance(value, BaseReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type not in ["SICD", "CPHD"]:
-            raise ValueError('base_reader.reader_type must be "SICD" or "CPHD", got {}'.format(value.reader_type))
+            raise SarpyIOError('base_reader.reader_type must be "SICD" or "CPHD", got {}'.format(value.reader_type))
         self._base_reader = value
         # noinspection PyProtectedMember
         self._chippers = value._get_chippers_as_tuple()
@@ -210,7 +210,7 @@ class QuadPolImageReader(ImageReader):
         if not isinstance(value, BaseReader):
             raise TypeError('Requires that the input is a reader object. Got type {}'.format(type(value)))
         if value.reader_type != 'SICD':
-            raise ValueError('Requires that the reader.reader_type == "SICD", got {}'.format(value.reader_type))
+            raise SarpyIOError('Requires that the reader.reader_type == "SICD", got {}'.format(value.reader_type))
 
         self._base_reader = value
         # noinspection PyProtectedMember
@@ -419,7 +419,7 @@ class DerivedImageReader(ImageReader):
         if not isinstance(value, BaseReader):
             raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type != "SIDD":
-            raise ValueError('base_reader.reader_type must be "SIDD", got {}'.format(value.reader_type))
+            raise SarpyIOError('base_reader.reader_type must be "SIDD", got {}'.format(value.reader_type))
         self._base_reader = value
         # noinspection PyProtectedMember
         self._chippers = value._get_chippers_as_tuple()
