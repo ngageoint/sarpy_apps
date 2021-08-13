@@ -12,9 +12,9 @@ import tkinter
 
 import numpy
 
+from sarpy.compliance import string_types
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.general.base import BaseReader
-from sarpy.io.general.utils import string_types
 
 from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
@@ -28,6 +28,7 @@ class Colors:
     multipath = color_converter.rgb_to_hex((1, 0, 0))
     north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
     flight_direction = color_converter.rgb_to_hex((1, 1, 0))
+
 
 class ArrowWidths:
     layover_width = 2

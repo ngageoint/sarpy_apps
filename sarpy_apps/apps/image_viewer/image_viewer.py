@@ -6,7 +6,6 @@ This module provides a general SAR image viewer tool.
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
-
 import os
 
 import tkinter
@@ -24,6 +23,8 @@ from tk_builder.widgets import widget_descriptors, basic_widgets
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, DerivedImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+
+from sarpy.io.general.base import SarpyIOError
 
 
 class AppVariables(object):
@@ -182,7 +183,7 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         if the_reader is None:
             try:
                 the_reader = ComplexImageReader(fnames[0])
-            except IOError:
+            except SarpyIOError:
                 the_reader = None
         if the_reader is None:
             the_reader = DerivedImageReader(fnames[0])
@@ -263,4 +264,9 @@ def main():
 
 
 if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level='INFO')
+    # logger = logging.getLogger('sarpy')
+    # logger.setLevel(logging.INFO)
+
     main()

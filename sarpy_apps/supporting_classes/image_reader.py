@@ -8,7 +8,8 @@ __author__ = ("Jason Casey", "Thomas McCullough")
 
 import logging
 import numpy
-from typing import Union, List, Tuple
+from typing import List, Tuple
+import gc
 
 from sarpy.compliance import string_types, int_func
 from sarpy.io.general.base import BaseReader
@@ -146,6 +147,14 @@ class ComplexImageReader(ImageReader):
         if self._index is None or not isinstance(self.base_reader, SICDTypeReader):
             return None
         return self.base_reader.get_sicds_as_tuple()[self._index]
+
+    def __del__(self):
+        # noinspection PyBroadException
+        try:
+            del self._chippers
+            gc.collect()
+        except Exception:
+            pass
 
 
 class QuadPolImageReader(ImageReader):
@@ -351,6 +360,14 @@ class QuadPolImageReader(ImageReader):
             logging.error('Got unexpected value for remap {}'.format(remap_type))
             self._remap_function = remap.density
 
+    def __del__(self):
+        # noinspection PyBroadException
+        try:
+            del self._chippers
+            gc.collect()
+        except Exception:
+            pass
+
 
 class DerivedImageReader(ImageReader):
     __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
@@ -433,3 +450,11 @@ class DerivedImageReader(ImageReader):
 
     def __getitem__(self, item):
         return self._chippers[self.index].__getitem__(item)
+
+    def __del__(self):
+        # noinspection PyBroadException
+        try:
+            del self._chippers
+            gc.collect()
+        except Exception:
+            pass
