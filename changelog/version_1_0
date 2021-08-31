@@ -1,6 +1,7 @@
 # This details the important differences introduced in sarpy_apps 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .15 - Adding a GFF file filter and bug fixes for file type handling
 * .14 - Introducing better command line usage for the apps
         RCSTool now reports results in expected units and format
 * .13 - Compatibility with sarpy 1.2.0 reader change

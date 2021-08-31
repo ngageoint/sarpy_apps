@@ -6,7 +6,6 @@ This module provides a general SAR image viewer tool.
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
-
 import os
 
 import tkinter

@@ -32,8 +32,9 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 
 from sarpy.io.product.kmz_product_creation import create_kmz_view
 from sarpy.io.complex.sicd import SICDReader
-from sarpy.consistency.sicd_consistency import check_file, string_types
-from sarpy.io.general.base import BaseReader
+from sarpy.consistency.sicd_consistency import check_file
+from sarpy.io.general.base import SarpyIOError, BaseReader
+from sarpy.compliance import string_types
 
 
 class _Feedback(WidgetPanel):
@@ -369,7 +370,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
         try:
             the_reader = ComplexImageReader(fname)
-        except IOError:
+        except SarpyIOError:
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type.'.format(fname))
             return
@@ -382,7 +383,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
         try:
             the_reader = ComplexImageReader(dirname)
-        except IOError:
+        except SarpyIOError:
             showinfo('Opener not found',
                      message='Directory {} was not successfully opened as a SICD type.'.format(dirname))
             return
