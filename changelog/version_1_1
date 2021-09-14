@@ -1,0 +1,4 @@
+# This details the important differences introduced in sarpy_apps 1.1
+# NB: bump the version number in __about__.py to reflect the below.
+
+* .0 - Syncing for the base tk_builder 1.1 changes

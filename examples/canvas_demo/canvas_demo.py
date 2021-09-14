@@ -181,7 +181,7 @@ class CanvasDemo(WidgetPanel):
         self.canvas_demo_image_panel.canvas.set_current_tool_to_draw_point()
 
     def callback_set_to_select(self):
-        self.canvas_demo_image_panel.canvas.set_current_tool_to_select()
+        self.canvas_demo_image_panel.canvas.current_tool = 'SELECT'
 
     # define custom callbacks here
     def callback_remap(self):

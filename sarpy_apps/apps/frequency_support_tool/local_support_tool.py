@@ -9,11 +9,11 @@ __author__ = "Thomas McCullough"
 
 
 import os
+from typing import Union
 import numpy
 
 import tkinter
 from tkinter import ttk
-
 from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
@@ -21,7 +21,6 @@ from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, StringD
 from tk_builder.image_reader import NumpyImageReader
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
@@ -152,7 +151,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             min(full_cols, int(0.5*(full_cols + default_size))))
         self.image_panel.canvas.zoom_to_full_image_selection((0, 0, full_rows, full_cols))
         # set selection rectangle
-        self.image_panel.canvas.set_current_tool_to_select()
+        self.image_panel.canvas.current_tool = 'SELECT'
         self.image_panel.canvas.modify_existing_shape_using_image_coords(
             self.image_panel.canvas.variables.select_rect.uid, middle)
         self.image_panel.canvas.show_shape(self.image_panel.canvas.variables.select_rect.uid)
@@ -218,8 +217,8 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
-        self.image_panel.canvas.set_current_tool_to_view()
-        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.current_tool = 'VIEW'
+        self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)

@@ -758,9 +758,9 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         self.primary.add(self.label_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.context_panel = ImagePanel(self.primary)  # type: ImagePanel
-        self.context_panel.canvas.set_canvas_size(400, 500)
+        self.context_panel.canvas.set_canvas_size(200, 500)
         self.context_panel.config(borderwidth=0)
-        self.primary.add(self.context_panel, width=600, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(self.context_panel, width=200, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 

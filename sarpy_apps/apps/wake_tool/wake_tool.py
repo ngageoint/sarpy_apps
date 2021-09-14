@@ -316,8 +316,8 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
-        self.image_panel.canvas.set_current_tool_to_view()
-        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.current_tool = 'VIEW'
+        self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)

@@ -17,8 +17,7 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import ImageReader
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets import widget_descriptors, basic_widgets
+from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, \
@@ -40,11 +39,7 @@ class AppVariables(object):
         'image_reader', ImageReader, docstring='')  # type: ImageReader
 
 
-class ImageViewer(WidgetPanel, WidgetWithMetadata):
-    _widget_list = ("image_panel", "pyplot_panel")
-    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
-    pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
-
+class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
     def __init__(self, primary):
         """
 
@@ -54,12 +49,21 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         """
 
         self.root = primary
-        self.primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, self.primary_frame)
+        self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
+
+        basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
-        self.init_w_horizontal_layout()
+        self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
+        self.image_panel.config(borderwidth=0)
+        self.primary.add(self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+
+        self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
+        self.primary.add(self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+
+        self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
         self.set_title()
 
         # define menus
@@ -78,8 +82,6 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
-        # handle packing
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
@@ -182,8 +184,8 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
-        self.image_panel.canvas.set_current_tool_to_view()
-        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.current_tool = 'VIEW'
+        self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
