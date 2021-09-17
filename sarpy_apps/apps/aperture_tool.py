@@ -40,6 +40,7 @@ from sarpy.compliance import string_types
 ##################
 # Animation panel
 
+
 class ModeSelections(RadioButtonPanel):
     _widget_list = ("slow_time",
                     "fast_time",
@@ -258,40 +259,68 @@ class PhaseHistoryPanel(WidgetPanel):
     r4c3 = widget_descriptors.LabelDescriptor("r4c3", default_text="")
     r4c5 = widget_descriptors.LabelDescriptor("r4c5", default_text="")
 
-    cross_range_label = widget_descriptors.LabelDescriptor("cross_range_label", default_text="Cross-Range")
-    range_label = widget_descriptors.LabelDescriptor("range_label", default_text="Range")
+    cross_range_label = widget_descriptors.LabelDescriptor(
+        "cross_range_label", default_text="Cross-Range")
+    range_label = widget_descriptors.LabelDescriptor(
+        "range_label", default_text="Range")
 
-    start_percent_label = widget_descriptors.LabelDescriptor("start_percent_label", default_text="Start %")
-    stop_percent_label = widget_descriptors.LabelDescriptor("stop_percent_label", default_text="Stop %")
-    fraction_label = widget_descriptors.LabelDescriptor("fraction_label", default_text="Fraction")
-    resolution_label = widget_descriptors.LabelDescriptor("resolution_label", default_text="Resolution")
-    sample_spacing_label = widget_descriptors.LabelDescriptor("sample_spacing_label", default_text="Sample Spacing")
-    ground_resolution_label = widget_descriptors.LabelDescriptor("ground_resolution_label", default_text="Ground Resolution")
+    start_percent_label = widget_descriptors.LabelDescriptor(
+        "start_percent_label", default_text="Start %")
+    stop_percent_label = widget_descriptors.LabelDescriptor(
+        "stop_percent_label", default_text="Stop %")
+    fraction_label = widget_descriptors.LabelDescriptor(
+        "fraction_label", default_text="Fraction")
+    resolution_label = widget_descriptors.LabelDescriptor(
+        "resolution_label", default_text="Resolution")
+    sample_spacing_label = widget_descriptors.LabelDescriptor(
+        "sample_spacing_label", default_text="Sample Spacing")
+    ground_resolution_label = widget_descriptors.LabelDescriptor(
+        "ground_resolution_label", default_text="Ground Resolution")
 
-    start_percent_cross = widget_descriptors.EntryDescriptor("start_percent_cross")  # type: basic_widgets.Entry
-    stop_percent_cross = widget_descriptors.EntryDescriptor("stop_percent_cross")  # type: basic_widgets.Entry
-    fraction_cross = widget_descriptors.EntryDescriptor("fraction_cross")  # type: basic_widgets.Entry
-    resolution_cross = widget_descriptors.EntryDescriptor("resolution_cross")  # type: basic_widgets.Entry
-    sample_spacing_cross = widget_descriptors.EntryDescriptor("sample_spacing_cross")  # type: basic_widgets.Entry
-    ground_resolution_cross = widget_descriptors.EntryDescriptor("ground_resolution_cross")  # type: basic_widgets.Entry
+    start_percent_cross = widget_descriptors.EntryDescriptor(
+        "start_percent_cross")  # type: basic_widgets.Entry
+    stop_percent_cross = widget_descriptors.EntryDescriptor(
+        "stop_percent_cross")  # type: basic_widgets.Entry
+    fraction_cross = widget_descriptors.EntryDescriptor(
+        "fraction_cross")  # type: basic_widgets.Entry
+    resolution_cross = widget_descriptors.EntryDescriptor(
+        "resolution_cross")  # type: basic_widgets.Entry
+    sample_spacing_cross = widget_descriptors.EntryDescriptor(
+        "sample_spacing_cross")  # type: basic_widgets.Entry
+    ground_resolution_cross = widget_descriptors.EntryDescriptor(
+        "ground_resolution_cross")  # type: basic_widgets.Entry
 
-    start_percent_range = widget_descriptors.EntryDescriptor("start_percent_range")  # type: basic_widgets.Entry
-    stop_percent_range = widget_descriptors.EntryDescriptor("stop_percent_range")  # type: basic_widgets.Entry
-    fraction_range = widget_descriptors.EntryDescriptor("fraction_range")  # type: basic_widgets.Entry
-    resolution_range = widget_descriptors.EntryDescriptor("resolution_range")  # type: basic_widgets.Entry
-    sample_spacing_range = widget_descriptors.EntryDescriptor("sample_spacing_range")  # type: basic_widgets.Entry
-    ground_resolution_range = widget_descriptors.EntryDescriptor("ground_resolution_range")  # type: basic_widgets.Entry
+    start_percent_range = widget_descriptors.EntryDescriptor(
+        "start_percent_range")  # type: basic_widgets.Entry
+    stop_percent_range = widget_descriptors.EntryDescriptor(
+        "stop_percent_range")  # type: basic_widgets.Entry
+    fraction_range = widget_descriptors.EntryDescriptor(
+        "fraction_range")  # type: basic_widgets.Entry
+    resolution_range = widget_descriptors.EntryDescriptor(
+        "resolution_range")  # type: basic_widgets.Entry
+    sample_spacing_range = widget_descriptors.EntryDescriptor(
+        "sample_spacing_range")  # type: basic_widgets.Entry
+    ground_resolution_range = widget_descriptors.EntryDescriptor(
+        "ground_resolution_range")  # type: basic_widgets.Entry
 
-    resolution_cross_units = widget_descriptors.LabelDescriptor("resolution_cross_units")  # type: basic_widgets.Label
-    sample_spacing_cross_units = widget_descriptors.LabelDescriptor("sample_spacing_cross_units")  # type: basic_widgets.Label
-    ground_resolution_cross_units = widget_descriptors.LabelDescriptor("ground_resolution_cross_units")  # type: basic_widgets.Label
+    resolution_cross_units = widget_descriptors.LabelDescriptor(
+        "resolution_cross_units")  # type: basic_widgets.Label
+    sample_spacing_cross_units = widget_descriptors.LabelDescriptor(
+        "sample_spacing_cross_units")  # type: basic_widgets.Label
+    ground_resolution_cross_units = widget_descriptors.LabelDescriptor(
+        "ground_resolution_cross_units")  # type: basic_widgets.Label
 
-    resolution_range_units = widget_descriptors.LabelDescriptor("resolution_range_units")  # type: basic_widgets.Label
-    sample_spacing_range_units = widget_descriptors.LabelDescriptor("sample_spacing_range_units")  # type: basic_widgets.Label
-    ground_resolution_range_units = widget_descriptors.LabelDescriptor("ground_resolution_range_units")  # type: basic_widgets.Label
+    resolution_range_units = widget_descriptors.LabelDescriptor(
+        "resolution_range_units")  # type: basic_widgets.Label
+    sample_spacing_range_units = widget_descriptors.LabelDescriptor(
+        "sample_spacing_range_units")  # type: basic_widgets.Label
+    ground_resolution_range_units = widget_descriptors.LabelDescriptor(
+        "ground_resolution_range_units")  # type: basic_widgets.Label
 
-    full_aperture_button = widget_descriptors.ButtonDescriptor("full_aperture_button")  # type: basic_widgets.Button
-    english_units_checkbox = widget_descriptors.CheckButtonDescriptor("english_units_checkbox")  # type: basic_widgets.CheckButton
+    full_aperture_button = widget_descriptors.ButtonDescriptor(
+        "full_aperture_button")  # type: basic_widgets.Button
+    english_units_checkbox = widget_descriptors.CheckButtonDescriptor(
+        "english_units_checkbox")  # type: basic_widgets.CheckButton
 
     def __init__(self, parent):
         self.parent = parent
@@ -443,7 +472,8 @@ class ApertureTool(WidgetPanel):
         self.primary.withdraw()
 
     def callback_update_deskew_direction(self):
-        if self.image_info_panel.phd_options.deskew_fast_slow.selection() == self.image_info_panel.phd_options.deskew_fast_slow.slow:
+        if self.image_info_panel.phd_options.deskew_fast_slow.selection() == \
+                self.image_info_panel.phd_options.deskew_fast_slow.slow:
             self.app_variables.aperture_filter.dimension = 1
         else:
             self.app_variables.aperture_filter.dimension = 0
@@ -620,7 +650,9 @@ class ApertureTool(WidgetPanel):
         # handle the case of no deskew:
         if the_sicd.Grid.Row.DeltaKCOAPoly is None or the_sicd.Grid.Col.DeltaKCOAPoly is None:
             self._can_use_tool = False
-            showinfo('DeltaKCOAPolys not populated', message='At least one of the DeltaKCOAPolys is unpopulated. There is nothing to do.')
+            showinfo(
+                'DeltaKCOAPolys not populated',
+                message='At least one of the DeltaKCOAPolys is unpopulated. There is nothing to do.')
             self.app_variables.aperture_filter = None
             self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
             self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
@@ -732,7 +764,7 @@ class ApertureTool(WidgetPanel):
 
             if mode == self.animation_panel.mode_panel.mode_selections.full_range_bandwidth:
                 canvas_yul_start, canvas_ylr_start = yul, ylr
-                canvas_yul_stop, canvas_ylr_stop  = yul, ylr
+                canvas_yul_stop, canvas_ylr_stop = yul, ylr
             else:
                 canvas_yul_start, canvas_ylr_start = mid_y - max_y_width, mid_y + max_y_width
                 canvas_yul_stop, canvas_ylr_stop = mid_y - min_y_width, mid_y + min_y_width
@@ -781,7 +813,7 @@ class ApertureTool(WidgetPanel):
             display_phase_history = numpy.fliplr(display_phase_history)
         fft_reader = NumpyCanvasImageReader(display_phase_history)
 
-        self._skip_update = True # begin short circuiting a stupid canvas update
+        self._skip_update = True  # begin short circuiting a stupid canvas update
         self.phase_history_panel.set_image_reader(fft_reader)
 
         # set up the selection rectangle properties
@@ -791,8 +823,7 @@ class ApertureTool(WidgetPanel):
         vector_object.image_drag_limits = rect_bounds
         self.phase_history_panel.canvas.modify_existing_shape_using_image_coords(select_rect_id, rect_bounds)
         self.phase_history_panel.canvas.show_shape(select_rect_id)
-        # set the phase_history_panel.canvas tool to edit
-        self.phase_history_panel.canvas.set_current_tool_to_edit_shape(select_rect_id)
+        self.phase_history_panel.canvas.current_tool = "SELECT"
         self._skip_update = False  # short circuiting a stupid canvas update
 
         # update the information about the phase history area selection
@@ -1075,7 +1106,9 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         self.instructions.master.pack(side='top', expand=tkinter.NO)
         self.image_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
         # jazz up the instruction a little
-        self.instructions.config(font=('Arial', '12'), anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.CENTER, padding=5)
+        self.instructions.config(
+            font=('Arial', '12'), anchor=tkinter.CENTER, relief=tkinter.RIDGE,
+            justify=tkinter.CENTER, padding=5)
         # hide some extraneous image panel elements
         self.image_panel.hide_tools('shape_drawing')
         self.image_panel.hide_shapes()
@@ -1196,7 +1229,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
         if self.variables.image_reader is not None:
             self.aperture_tool.update_filtered_image()
 
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.

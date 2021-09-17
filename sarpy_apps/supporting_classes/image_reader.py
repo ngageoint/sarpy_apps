@@ -347,7 +347,7 @@ class QuadPolCanvasImageReader(CanvasImageReader):
             try:
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0], data_mean=data_mean)
                 rgb_image[:, :, 2] = self._remap_function(complex_data[1], data_mean=data_mean)
-            except:
+            except Exception:
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0])
                 rgb_image[:, :, 2] = self._remap_function(complex_data[1])
         elif len(self._index_ordering) == 4:
@@ -356,7 +356,7 @@ class QuadPolCanvasImageReader(CanvasImageReader):
                 rgb_image[:, :, 1] = self._remap_function(complex_data[1], data_mean=data_mean)/2 + \
                                      self._remap_function(complex_data[2], data_mean=data_mean)/2
                 rgb_image[:, :, 2] = self._remap_function(complex_data[3], data_mean=data_mean)
-            except:
+            except Exception:
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0])
                 rgb_image[:, :, 1] = self._remap_function(complex_data[1])/2 + \
                                      self._remap_function(complex_data[2])/2

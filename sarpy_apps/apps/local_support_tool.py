@@ -154,10 +154,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.current_tool = 'SELECT'
         self.image_panel.canvas.modify_existing_shape_using_image_coords(
             self.image_panel.canvas.variables.select_rect.uid, middle)
-        self.image_panel.canvas.show_shape(self.image_panel.canvas.variables.select_rect.uid)
-        # we need to set some drawing state here...this is ugly, but not worth
-        anchor = self.image_panel.canvas.get_shape_canvas_coords(self.image_panel.canvas.variables.select_rect.uid)[:2]
-        self.image_panel.canvas.set_select_initial_state(anchor)
+        self.image_panel.canvas.emit_select_finalized()
 
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):
@@ -177,7 +174,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
         self.update_displayed_selection()
 
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -317,6 +314,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 self.variables.col_deltak2, (0, deltak2, row_count, deltak2))
 
         def draw_row_bandwidth_lines():
+            # noinspection PyBroadException
             try:
                 delta_kcoa_center = the_sicd.Grid.Row.DeltaKCOAPoly(row_phys, col_phys)
             except Exception:
@@ -336,6 +334,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 self.variables.row_line_high, (row_bw_high, 0, row_bw_high, col_count))
 
         def draw_col_bandwidth_lines():
+            # noinspection PyBroadException
             try:
                 delta_kcoa_center = the_sicd.Grid.Col.DeltaKCOAPoly(row_phys, col_phys)
             except Exception:

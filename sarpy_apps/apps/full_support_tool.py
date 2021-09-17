@@ -8,7 +8,7 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Thomas McCullough"
 
 import logging
-
+from typing import Optional
 from tempfile import mkstemp
 import os
 
@@ -39,7 +39,7 @@ from sarpy.processing.normalize_sicd import DeskewCalculator
 from sarpy.io.general.base import BaseReader
 from sarpy.compliance import string_types
 
-logger = logging.getLogger('full_support_tool')
+logger = logging.getLogger(__name__)
 
 
 def create_deskewed_transform(reader, dimension=0, suffix='.sarpy.cache'):
@@ -77,7 +77,7 @@ def create_deskewed_transform(reader, dimension=0, suffix='.sarpy.cache'):
     calculator = DeskewCalculator(
         reader.base_reader, dimension=dimension, index=reader.index,
         apply_deskew=True, apply_deweighting=False, apply_off_axis=False)
-    mean_value = numpy.zeros((data_size[0], ), dtype='float64')  if dimension == 0 else \
+    mean_value = numpy.zeros((data_size[0], ), dtype='float64') if dimension == 0 else \
         numpy.zeros((data_size[1],), dtype='float64')
 
     # we'll proceed in blocks of approximately this number of pixels
@@ -131,14 +131,14 @@ class AppVariables(object):
         docstring='The row deskewed fourier transformed reader')  # type: ComplexCanvasImageReader
     row_fourier_file = StringDescriptor(
         'row_fourier_file',
-        docstring='The row deskewed fourier transformed reader file')  # type: str
+        docstring='The row deskewed fourier transformed reader file')  # type: Optional[str]
     # NB: we are saving this state in order to properly clean up
     column_fourier_reader = TypedDescriptor(
         'column_fourier_reader', ComplexCanvasImageReader,
         docstring='The column deskewed fourier transformed reader')  # type: ComplexCanvasImageReader
     column_fourier_file = StringDescriptor(
         'row_fourier_file',
-        docstring='The column deskewed fourier transformed reader file')  # type: str
+        docstring='The column deskewed fourier transformed reader file')  # type: Optional[str]
     # NB: we are saving this state in order to properly clean up
 
     derived_row_weights = None  # the derived weights for the row
@@ -159,6 +159,7 @@ class AppVariables(object):
             os.remove(self.column_fourier_file)
             logger.debug('(variables)  Removing temp file % s' % self.column_fourier_file)
             self.column_fourier_file = None
+
 
 class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
     _widget_list = ("row_centered_image_panel", "column_centered_image_panel")
@@ -277,7 +278,9 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 the_max = numpy.amax(row_mean_value)
             else:
                 the_size = int(numpy.ceil(row_mean_value.size/200.))
-                smoothed = numpy.convolve(row_mean_value, numpy.full((the_size, ), 1./the_size, dtype='float64'), mode='valid')
+                smoothed = numpy.convolve(
+                    row_mean_value, numpy.full((the_size, ), 1./the_size, dtype='float64'),
+                    mode='valid')
                 the_max = numpy.amax(smoothed)
             row_mean_value /= the_max
             self.variables.scaled_row_mean = row_mean_value

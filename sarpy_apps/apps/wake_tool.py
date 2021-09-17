@@ -32,8 +32,10 @@ from sarpy.io.general.base import BaseReader
 
 class ButtonPanel(WidgetPanel):
     _widget_list = ("line_draw", "point_draw")
-    line_draw = widget_descriptors.ButtonDescriptor("line_draw", default_text="line")  # type: basic_widgets.Button
-    point_draw = widget_descriptors.ButtonDescriptor("point_draw", default_text="point")  # type:  basic_widgets.Button
+    line_draw = widget_descriptors.ButtonDescriptor(
+        "line_draw", default_text="line")  # type: basic_widgets.Button
+    point_draw = widget_descriptors.ButtonDescriptor(
+        "point_draw", default_text="point")  # type:  basic_widgets.Button
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -166,11 +168,20 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         primary.config(menu=menubar)
 
         # bind useful events from our canvas
-        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.callback_index_changed)  # has the effect of refreshing the canvas
-        self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.callback_shape_edited)  # has the effect that the shape is finished drawing (i.e. changed)
-        self.image_panel.canvas.bind('<<ShapeCoordsEdit>>', self.callback_shape_edited)  # has the effect that the shape is edited
-        self.image_panel.canvas.bind('<<ShapeCreate>>', self.callback_shape_create)  # has the effect that a new shape is created
-        self.image_panel.canvas.bind('<<ShapeDelete>>', self.callback_shape_delete)  # has the effect that a shape is deleted
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.callback_index_changed)
+        # refreshed the canvas
+
+        self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.callback_shape_edited)
+        # a shape is finished drawing (i.e. changed)
+
+        self.image_panel.canvas.bind('<<ShapeCoordsEdit>>', self.callback_shape_edited)
+        # a shape is edited
+
+        self.image_panel.canvas.bind('<<ShapeCreate>>', self.callback_shape_create)
+        # a new shape is created
+
+        self.image_panel.canvas.bind('<<ShapeDelete>>', self.callback_shape_delete)
+        # a shape is deleted
 
     # callbacks for direct use
     def exit(self):

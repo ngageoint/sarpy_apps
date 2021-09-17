@@ -22,10 +22,10 @@ from tk_builder.logger import TextHandler
 from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 
-from sarpy_apps.apps.aperture_tool.aperture_tool import RegionSelection
-from sarpy_apps.apps.frequency_support_tool.local_support_tool import LocalFrequencySupportTool
-from sarpy_apps.apps.frequency_support_tool.full_support_tool import FullFrequencySupportTool
-from sarpy_apps.apps.rcs_tool.rcs_tool import RCSTool
+from sarpy_apps.apps.aperture_tool import RegionSelection
+from sarpy_apps.apps.local_support_tool import LocalFrequencySupportTool
+from sarpy_apps.apps.full_support_tool import FullFrequencySupportTool
+from sarpy_apps.apps.rcs_tool import RCSTool
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
@@ -201,7 +201,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.primary_frame.add(self.button_panel, width=700, height=300, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # create the scrolled text widget for logging output
-        self.text_log_widget = ScrolledText(self.primary_frame) # TODO: other configuration?
+        self.text_log_widget = ScrolledText(self.primary_frame)  # TODO: other configuration?
         self.primary_frame.add(self.text_log_widget, width=700, height=400, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # set the logging handler for the validation logger to log to our widget
@@ -304,11 +304,13 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         if isinstance(the_reader, SICDReader):
             msg_id = 'SICD structure for file {}'.format(the_reader.file_name)
             self.logger.info('Starting validation of {}'.format(msg_id))
+            # noinspection PyUnresolvedReferences
             result = check_file(the_reader.nitf_details)
             if result:
                 self.logger.info('***{} appears to be valid***'.format(msg_id))
             self.logger.info('Completed validation for {}\n'.format(msg_id))
         else:
+            # noinspection PyUnresolvedReferences
             the_sicds = the_reader.get_sicds_as_tuple()
             for the_index, the_sicd in enumerate(the_sicds):
                 msg_id = 'SICD structure at index {}'.format(the_index) if len(the_sicds) > 1 else 'SICD structure'
@@ -352,7 +354,9 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.my_populate_metaviewer()
         self.log_handler.clear()
         # perform the initial validation
-        self.logger.info('Preparing validation for file {}\n'.format(os.path.abspath(self.variables.image_reader.file_name)))
+        self.logger.info(
+            'Preparing validation for file {}\n'.format(
+                os.path.abspath(self.variables.image_reader.file_name)))
         self.perform_basic_validation()
 
     def _disconnect_logging(self):
@@ -513,6 +517,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
     def destroy(self):
         self._disconnect_logging()
+        # noinspection PyBroadException
         try:
             super(ValidationTool, self).destroy()
         except Exception:

@@ -125,8 +125,8 @@ class StatsViewer(basic_widgets.Frame):
                     prim_stats = primary_entry.statistics[j]
                     sid += '*'
                     mean_db_str = frm_str.format(_power_to_db(stats.mean)) + \
-                                  ', ' + \
-                                  frm_str.format(_power_to_db(stats.mean) - _power_to_db(prim_stats.mean))
+                        ', ' + \
+                        frm_str.format(_power_to_db(stats.mean) - _power_to_db(prim_stats.mean))
                 else:
                     mean_db_str = frm_str.format(_power_to_db(stats.mean))
                 self.treeview.insert(
@@ -156,16 +156,19 @@ class RCSValueCollectionPanel(basic_widgets.Frame):
         self.name_label = basic_widgets.Label(
             self, text='Name:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         self.name_entry = basic_widgets.Entry(self, text='')
-        self.name_entry.set_text('' if rcs_feature.properties.name is None else rcs_feature.properties.name)
+        self.name_entry.set_text('' if rcs_feature.properties.name is None
+                                 else rcs_feature.properties.name)
         self.description_label = basic_widgets.Label(
             self, text='Description:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         self.description_text = tkinter.Text(self, height=4, width=40)
         self.description_text.insert(
-            tkinter.INSERT, '' if rcs_feature.properties.description is None else rcs_feature.properties.description)
+            tkinter.INSERT, '' if rcs_feature.properties.description is None
+            else rcs_feature.properties.description)
 
         self.pixel_count_label = basic_widgets.Label(
             self, text='Pixel Count:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        the_pixel_count_text = '' if rcs_feature.properties.pixel_count is None else '{0:d}'.format(rcs_feature.properties.pixel_count)
+        the_pixel_count_text = '' if rcs_feature.properties.pixel_count is None \
+            else '{0:d}'.format(rcs_feature.properties.pixel_count)
         self.pixel_count_entry = basic_widgets.Label(
             self, text=the_pixel_count_text, anchor=tkinter.CENTER, relief=tkinter.RIDGE)
 
@@ -251,7 +254,7 @@ class RCSValueCollectionPopup(object):
         # noinspection PyBroadException
         try:
             self.root.destroy()
-        except:
+        except Exception:
             pass
 
     def __del__(self):
@@ -336,8 +339,9 @@ class RCSCollectionViewer(basic_widgets.Frame):
         """
 
         the_index = self._annotation_list.annotations.get_integer_index(annotation.uid)
-        the_name = '<{}>'.format(annotation.uid) if (annotation.properties is None or annotation.properties.name is None) \
-            else annotation.properties.name
+        the_name = '<{}>'.format(annotation.uid) if \
+            (annotation.properties is None or annotation.properties.name is None) else \
+            annotation.properties.name
         if annotation.uid == self._primary_element:
             the_name += '*'
         self.treeview.insert('', the_index, annotation.uid, text=the_name)
@@ -365,7 +369,7 @@ class RCSCollectionViewer(basic_widgets.Frame):
         # noinspection PyBroadException
         try:
             self.treeview.delete(the_id)  # try to delete, and just skip if it fails
-        except:
+        except Exception:
             pass
 
         if the_id in self._annotation_list.annotations:
@@ -390,7 +394,7 @@ class RCSCollectionViewer(basic_widgets.Frame):
             # noinspection PyBroadException
             try:
                 self.treeview.delete(the_id)
-            except:
+            except Exception:
                 pass
 
             self._render_entry(self._annotation_list.annotations[the_id])
@@ -874,7 +878,6 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-
         # menu_bar items
         menu_bar = tkinter.Menu()
         file_menu = tkinter.Menu(menu_bar, tearoff=0)
@@ -1065,9 +1068,11 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             pixel_power_stats = the_stats['PixelPower']
             the_std = float('NaN')
             if rcs_stats['count'] > 0:
-                the_list.append(RCSStatistics(name='RCS_Total', mean=cs_stats['total']/oversample_constant, std=the_std))
+                the_list.append(
+                    RCSStatistics(name='RCS_Total', mean=rcs_stats['total']/oversample_constant, std=the_std))
             else:
-                the_list.append(RCSStatistics(name='PixelTotal', mean=pixel_power_stats['total'], std=the_std))
+                the_list.append(
+                    RCSStatistics(name='PixelTotal', mean=pixel_power_stats['total'], std=the_std))
 
         def create_rcs_stat(the_entry, the_name, the_list):
             the_count = the_entry['count']
@@ -1096,7 +1101,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         the_sicds = reader.get_sicds_as_tuple()
         # NB: it is assumed that this is of sicd type, and that there is only one partition
         stat_values = [{
-            key : {'total': 0.0, 'total2': 0.0, 'count': int_func(0)}
+            key: {'total': 0.0, 'total2': 0.0, 'count': int_func(0)}
             for key in ['PixelPower', 'NoisePower', 'RCS', 'Beta0', 'Gamma0', 'Sigma0']} for _ in the_sicds]
 
         for polygon in polygons:
@@ -1108,8 +1113,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                 data = reader[row_bounds[0]:row_bounds[1], col_bounds[0]:col_bounds[1], i][mask]
                 data = data.real*data.real + data.imag*data.imag  # get pixel power
                 calculate_statistics(data, stat_values[i]['PixelPower'])
-                oversample_constant = 1./((the_sicd.Grid.Col.SS*the_sicd.Grid.Col.ImpRespBW)*
-                                          (the_sicd.Grid.Row.SS*the_sicd.Grid.Row.ImpRespBW))
+                oversample_constant = 1./(
+                        (the_sicd.Grid.Col.SS*the_sicd.Grid.Col.ImpRespBW) *
+                        (the_sicd.Grid.Row.SS*the_sicd.Grid.Row.ImpRespBW))
 
                 if the_sicd.Radiometric is not None:
                     row_array = numpy.arange(row_bounds[0], row_bounds[1], 1, dtype=numpy.int32)
@@ -1138,11 +1144,12 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             for key in ['PixelPower', 'NoisePower', 'RCS', 'Beta0', 'Gamma0', 'Sigma0']:
                 t_entry = stat_values[i][key]
                 create_rcs_stat(t_entry, key, stats)
-                if pixel_count is None:
-                    if t_entry['count'] > 0:
+                if t_entry['count'] > 0:
+                    if pixel_count is None:
                         pixel_count = t_entry['count']
-                elif t_entry['count'] > 0 and pixel_count != t_entry['count']:
-                    logging.warning('Got differing pixel_counts {} and {}'.format(pixel_count, t_entry['count']))
+                    elif pixel_count != t_entry['count']:
+                        logging.warning(
+                            'Got differing pixel_counts {} and {}'.format(pixel_count, t_entry['count']))
             values.append(RCSValue(polarization=the_sicd.get_processed_polarization(), statistics=stats))
         return RCSValueCollection(name=name, description=description, pixel_count=pixel_count, elements=values)
 
@@ -1467,7 +1474,11 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         bounding_box = feature.geometry.get_bbox()
         y_diff = max(bounding_box[2] - bounding_box[0], 100)
         x_diff = max(bounding_box[3] - bounding_box[1], 100)
-        zoom_box = [bounding_box[0] - 0.5*y_diff, bounding_box[1] - 0.5*x_diff, bounding_box[2] + 0.5*y_diff, bounding_box[3] + 0.5*x_diff]
+        zoom_box = [
+            bounding_box[0] - 0.5*y_diff,
+            bounding_box[1] - 0.5*x_diff,
+            bounding_box[2] + 0.5*y_diff,
+            bounding_box[3] + 0.5*x_diff]
         self.context_panel.canvas.zoom_to_full_image_selection(zoom_box)
 
     # helper functions for callbacks
@@ -1505,11 +1516,13 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not self.variables.unsaved_changes or self.variables.annotation_file_name is None:
             return True
 
-        response = askyesnocancel('Save Changes?', message='There are unsaved changes for your annotations. Do you want to save them?')
+        response = askyesnocancel(
+            'Save Changes?',
+            message='There are unsaved changes for your annotations. Do you want to save them?')
         if response is True:
             self.save_annotation_file()
         elif response is None:
-            return False # cancel
+            return False  # cancel
         return True
 
     def _choose_annotation_file(self, new=False, require_new=False, require_exist=False):
@@ -1527,7 +1540,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                 initialfile=init_file,
                 filetypes=[json_files, all_files])
             if require_new and os.path.exists(annotation_fname):
-                showinfo('File already exists', message='Annotation file {} already exists'.format(annotation_fname))
+                showinfo(
+                    'File already exists',
+                    message='Annotation file {} already exists'.format(annotation_fname))
                 return None
         else:
             annotation_fname = askopenfilename(
@@ -1536,7 +1551,9 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                 initialfile=init_file,
                 filetypes=[json_files, all_files])
             if require_exist and not os.path.exists(annotation_fname):
-                showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_fname))
+                showinfo(
+                    'File does not exist',
+                    message='Annotation file {} does not exist'.format(annotation_fname))
                 return None
 
         if annotation_fname is None or annotation_fname in ['', ()]:
@@ -1615,6 +1632,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if not isinstance(reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
+        # noinspection PyUnresolvedReferences
         partitions = reader.base_reader.get_sicd_partitions()
         if len(partitions) > 1:
             showinfo('Single Image Footprint Required',
@@ -1753,7 +1771,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if self.variables.annotation_file_name is None:
             annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
             if annotation_fname is None:
-                return # the choice was not completed
+                return  # the choice was not completed
             else:
                 self.variables.annotation_file_name = annotation_fname
 
@@ -1771,7 +1789,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         annotation_fname = self._choose_annotation_file(new=False, require_new=False, require_exist=False)
         if annotation_fname is None:
-            return # the choice was not completed
+            return  # the choice was not completed
         else:
             self.variables.annotation_file_name = annotation_fname
 
@@ -1784,7 +1802,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if not self._verify_image_selected(popup=True):
-            return # nothing to be done
+            return  # nothing to be done
 
         shape_id = self.variables.current_canvas_id
         feature_id = self.variables.current_feature_id
@@ -1818,7 +1836,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if not self._verify_image_selected(popup=True):
-            return # nothing to be done
+            return  # nothing to be done
 
         feature_id = self.variables.current_feature_id
         if feature_id is None:
@@ -1884,7 +1902,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
     # event listeners
     #####
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def sync_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -1921,7 +1939,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                 self._add_shape_to_feature(self.variables.current_feature_id, event.x)
                 return
 
-        the_id = self._create_feature_from_shape(event.x)
+        _ = self._create_feature_from_shape(event.x)
         self.set_current_canvas_id(event.x, check_feature=True)
 
     def shape_finalized_on_canvas(self, event):
@@ -1976,7 +1994,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if self.variables.current_canvas_id == event.x:
-            return # nothing needs to be done
+            return  # nothing needs to be done
         self.set_current_canvas_id(event.x, check_feature=True)
         if self.variables.current_feature_id is not None:
             self.label_panel.viewer.treeview.focus(self.variables.current_feature_id)
@@ -2065,6 +2083,6 @@ if __name__ == '__main__':
              'If the image input is not specified, then this has no effect. '
              'If both are specified, then a check will be performed that the '
              'annotation actually applies to the provided image.')
-    args = parser.parse_args()
+    this_args = parser.parse_args()
 
-    main(reader=args.input, annotation=args.annotation)
+    main(reader=this_args.input, annotation=this_args.annotation)

@@ -142,7 +142,7 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         if self.variables.image_reader is not None:
             self.display_canvas_rect_selection_in_pyplot_frame()
 
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -222,7 +222,7 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-        # TODO: handle non-complex data possibilities here?
+        # NB: handle non-complex data possibilities here?
         the_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
