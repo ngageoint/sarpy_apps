@@ -22,7 +22,7 @@ from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, \
     BooleanDescriptor, FloatDescriptor, StringDescriptor
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.image_utils import frame_sequence_utils
@@ -33,7 +33,7 @@ from sarpy.processing.aperture_filter import ApertureFilter
 from sarpy.io.general.base import BaseReader
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 from sarpy.compliance import string_types
 
@@ -585,8 +585,8 @@ class ApertureTool(WidgetPanel):
     # various methods used in the callbacks
     def make_blank(self):
         junk_data = numpy.zeros((100, 100), dtype='uint8')
-        self.phase_history_panel.set_image_reader(NumpyImageReader(junk_data))
-        self.filtered_panel.set_image_reader(NumpyImageReader(junk_data))
+        self.phase_history_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
+        self.filtered_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
 
     def handle_main_selection_update(self):
         """
@@ -779,7 +779,7 @@ class ApertureTool(WidgetPanel):
 
         if not self.app_variables.aperture_filter.flip_x_axis:
             display_phase_history = numpy.fliplr(display_phase_history)
-        fft_reader = NumpyImageReader(display_phase_history)
+        fft_reader = NumpyCanvasImageReader(display_phase_history)
 
         self._skip_update = True # begin short circuiting a stupid canvas update
         self.phase_history_panel.set_image_reader(fft_reader)
@@ -841,7 +841,7 @@ class ApertureTool(WidgetPanel):
             full_n_rows = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny
             full_n_cols = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx
             filter_image = numpy.zeros((full_n_rows, full_n_cols), dtype='uint8')
-        self.filtered_panel.set_image_reader(NumpyImageReader(filter_image))
+        self.filtered_panel.set_image_reader(NumpyCanvasImageReader(filter_image))
 
     def get_filtered_image(self):
         """
@@ -1018,8 +1018,8 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader,
-        docstring='The complex type image reader object.')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexCanvasImageReader
     aperture_filter = TypedDescriptor(
         'aperture_filter', ApertureFilter,
         docstring='The aperture filter calculator.')  # type: ApertureFilter
@@ -1215,9 +1215,9 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexImageReader(fnames[0])
+            the_reader = ComplexCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexImageReader(fnames)
+            the_reader = ComplexCanvasImageReader(fnames)
         self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
@@ -1233,7 +1233,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -1243,14 +1243,14 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -1296,7 +1296,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     """
 
     root = tkinter.Tk()

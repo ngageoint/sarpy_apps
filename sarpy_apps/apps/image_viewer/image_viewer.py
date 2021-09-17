@@ -14,14 +14,14 @@ from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, \
-    DerivedImageReader, GeneralImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
+    DerivedCanvasImageReader, GeneralCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.compliance import string_types
@@ -36,7 +36,7 @@ class AppVariables(object):
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ImageReader, docstring='')  # type: ImageReader
+        'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
 
 
 class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
@@ -160,7 +160,7 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -174,13 +174,13 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type in ['SICD', 'CPHD']:
-                the_reader = ComplexImageReader(the_reader)
+                the_reader = ComplexCanvasImageReader(the_reader)
             elif the_reader.reader_type == 'SIDD':
-                the_reader = DerivedImageReader(the_reader)
+                the_reader = DerivedCanvasImageReader(the_reader)
             else:
-                the_reader = GeneralImageReader(the_reader)
+                the_reader = GeneralCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ImageReader):
+        if not isinstance(the_reader, CanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -202,15 +202,15 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
 
         the_reader = None
         if len(fnames) > 1:
-            the_reader = ComplexImageReader(fnames)
+            the_reader = ComplexCanvasImageReader(fnames)
         if the_reader is None:
             try:
-                the_reader = ComplexImageReader(fnames[0])
+                the_reader = ComplexCanvasImageReader(fnames[0])
             except SarpyIOError:
                 the_reader = None
 
         if the_reader is None:
-            the_reader = DerivedImageReader(fnames[0])
+            the_reader = DerivedCanvasImageReader(fnames[0])
         if the_reader is None:
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type '
@@ -223,7 +223,7 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         if dirname is None or dirname in [(), '']:
             return
         # TODO: handle non-complex data possibilities here?
-        the_reader = ComplexImageReader(dirname)
+        the_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
@@ -281,7 +281,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ImageReader
+    reader : None|str|BaseReader|CanvasImageReader
     """
 
     root = tkinter.Tk()

@@ -13,7 +13,7 @@ from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
@@ -72,7 +72,7 @@ class AppVariables(object):
     selection_rect_id = IntegerDescriptor(
         'selection_rect_id', docstring='')  # type: int
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
 
     def __init__(self):
         self.shapes_in_selector = []
@@ -80,7 +80,7 @@ class AppVariables(object):
 
 class CanvasDemo(WidgetPanel):
     _widget_list = ("button_panel", "canvas_demo_image_panel", "pyplot_panel")
-    button_panel = widget_descriptors.PanelDescriptor("button_panel", CanvasDemoButtonPanel)   # type: CanvasDemoButtonPanel
+    button_panel = widget_descriptors.PanelDescriptor("button_panel", CanvasDemoButtonPanel)  # type: CanvasDemoButtonPanel
     pyplot_panel = widget_descriptors.PyplotImagePanelDescriptor("pyplot_panel")   # type: PyplotImagePanel
     canvas_demo_image_panel = widget_descriptors.ImagePanelDescriptor("canvas_demo_image_panel")   # type: ImagePanel
 
@@ -205,7 +205,7 @@ class CanvasDemo(WidgetPanel):
         new_fname = askopenfilename(initialdir=self.variables.browse_directory, filetypes=ftypes)
         if new_fname:
             self.variables.browse_directory = os.path.split(new_fname)[0]
-            self.variables.image_reader = ComplexImageReader(new_fname)
+            self.variables.image_reader = ComplexCanvasImageReader(new_fname)
             self.canvas_demo_image_panel.set_image_reader(self.variables.image_reader)
 
 

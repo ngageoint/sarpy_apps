@@ -18,13 +18,13 @@ from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, StringDescriptor
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.complex.utils import get_physical_coordinates
@@ -41,7 +41,7 @@ class AppVariables(object):
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
     row_line_low = IntegerDescriptor(
         'row_line_low',
         docstring='The id of the frequency_panel of the lower row bandwidth line.')  # type: Union[None, int]
@@ -196,7 +196,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -206,14 +206,14 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -234,9 +234,9 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexImageReader(fnames[0])
+            the_reader = ComplexCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexImageReader(fnames)
+            the_reader = ComplexCanvasImageReader(fnames)
 
         if the_reader is None:
             showinfo('Opener not found',
@@ -251,7 +251,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
-        the_reader = ComplexImageReader(dirname)
+        the_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def _initialize_bandwidth_lines(self):
@@ -367,13 +367,13 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         if row_count < threshold or col_count < threshold:
             junk_data = numpy.zeros((100, 100), dtype='uint8')
-            self.frequency_panel.set_image_reader(NumpyImageReader(junk_data))
+            self.frequency_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
             self._initialize_bandwidth_lines()
         else:
             image_data = self.variables.image_reader.base_reader[extent[0]:extent[1], extent[2]:extent[3]]
             if image_data is not None:
                 self.frequency_panel.set_image_reader(
-                    NumpyImageReader(remap.density(fftshift(fft2_sicd(image_data, the_sicd)))))
+                    NumpyCanvasImageReader(remap.density(fftshift(fft2_sicd(image_data, the_sicd)))))
                 self._initialize_bandwidth_lines()
                 draw_row_delta_lines()
                 draw_col_delta_lines()
@@ -381,7 +381,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 draw_col_bandwidth_lines()
             else:
                 junk_data = numpy.zeros((100, 100), dtype='uint8')
-                self.frequency_panel.set_image_reader(NumpyImageReader(junk_data))
+                self.frequency_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
                 self._initialize_bandwidth_lines()
 
     def my_populate_metaicon(self):
@@ -412,7 +412,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     """
 
     root = tkinter.Tk()

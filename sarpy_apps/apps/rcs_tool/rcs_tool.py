@@ -24,7 +24,7 @@ import numpy
 
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
@@ -460,8 +460,8 @@ class AppVariables(object):
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader,
-        docstring='The complex type image reader object.')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexCanvasImageReader
     file_rcs_collection = TypedDescriptor(
         'file_rcs_collection', FileRCSCollection,
         docstring='The rcs annotation collection object.')  # type: FileRCSCollection
@@ -1595,7 +1595,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        reader : str|BaseReader|ImageReader
+        reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -1605,14 +1605,14 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             self._image_browse_directory = os.path.split(reader)[0]
 
         if isinstance(reader, string_types):
-            reader = ComplexImageReader(reader)
+            reader = ComplexCanvasImageReader(reader)
 
         if isinstance(reader, BaseReader):
             if reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            reader = ComplexImageReader(reader)
+            reader = ComplexCanvasImageReader(reader)
 
-        if not isinstance(reader, ComplexImageReader):
+        if not isinstance(reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         partitions = reader.base_reader.get_sicd_partitions()
@@ -1659,7 +1659,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        image_reader = ComplexImageReader(fname)
+        image_reader = ComplexCanvasImageReader(fname)
         self.update_reader(image_reader, update_browse=os.path.split(fname)[0])
 
     def select_directory(self):
@@ -1672,7 +1672,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if dirname is None or dirname in [(), '']:
             return
 
-        image_reader = ComplexImageReader(dirname)
+        image_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(image_reader, update_browse=os.path.split(dirname)[0])
 
     def create_new_annotation_file(self):
@@ -2032,7 +2032,7 @@ def main(reader=None, annotation=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     annotation : None|str
     """
 

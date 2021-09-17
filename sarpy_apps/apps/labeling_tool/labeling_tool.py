@@ -23,7 +23,7 @@ from sarpy_apps.apps.labeling_tool.schema_editor import select_schema_entry
 
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
@@ -398,8 +398,8 @@ class AppVariables(object):
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader,
-        docstring='The complex type image reader object.')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexCanvasImageReader
     label_schema = TypedDescriptor(
         'label_schema', LabelSchema,
         docstring='The label schema object.')  # type: LabelSchema
@@ -1320,7 +1320,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -1330,14 +1330,14 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
             self._image_browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         self.variables.image_reader = the_reader
@@ -1370,7 +1370,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        image_reader = ComplexImageReader(fname)
+        image_reader = ComplexCanvasImageReader(fname)
         if image_reader.image_count != 1:
             showinfo('Single Image Required',
                      message='The given image reader for file {} has {} distinct images. '
@@ -1739,7 +1739,7 @@ def main(reader=None, annotation=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     annotation : None|str
     """
 

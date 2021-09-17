@@ -18,7 +18,7 @@ from sarpy.io.general.base import BaseReader
 
 from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 
@@ -140,7 +140,7 @@ class MetaIcon(ImagePanel):
         metaicon_background = numpy.zeros(
             (self.canvas.variables.state.canvas_height, self.canvas.variables.state.canvas_width),
             dtype=numpy.uint8)
-        numpy_reader = NumpyImageReader(metaicon_background)
+        numpy_reader = NumpyCanvasImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
 
         line_positions = self.line_positions

@@ -23,13 +23,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
     NavigationToolbar2Tk
 
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.compliance import int_func
@@ -49,7 +49,7 @@ def create_deskewed_transform(reader, dimension=0, suffix='.sarpy.cache'):
 
     Parameters
     ----------
-    reader : ComplexImageReader
+    reader : ComplexCanvasImageReader
         The reader object.
     dimension : int
         One of [0, 1], which dimension to deskew along.
@@ -124,18 +124,18 @@ class AppVariables(object):
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
 
     row_fourier_reader = TypedDescriptor(
-        'row_fourier_reader', ComplexImageReader,
-        docstring='The row deskewed fourier transformed reader')  # type: ComplexImageReader
+        'row_fourier_reader', ComplexCanvasImageReader,
+        docstring='The row deskewed fourier transformed reader')  # type: ComplexCanvasImageReader
     row_fourier_file = StringDescriptor(
         'row_fourier_file',
         docstring='The row deskewed fourier transformed reader file')  # type: str
     # NB: we are saving this state in order to properly clean up
     column_fourier_reader = TypedDescriptor(
-        'column_fourier_reader', ComplexImageReader,
-        docstring='The column deskewed fourier transformed reader')  # type: ComplexImageReader
+        'column_fourier_reader', ComplexCanvasImageReader,
+        docstring='The column deskewed fourier transformed reader')  # type: ComplexCanvasImageReader
     column_fourier_file = StringDescriptor(
         'row_fourier_file',
         docstring='The column deskewed fourier transformed reader file')  # type: str
@@ -258,15 +258,15 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         self._delete_files()
         junk_data = numpy.zeros((100, 100), dtype='uint8')
-        self.row_centered_image_panel.set_image_reader(NumpyImageReader(junk_data))
-        self.column_centered_image_panel.set_image_reader(NumpyImageReader(junk_data))
+        self.row_centered_image_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
+        self.column_centered_image_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
 
     def _calculate_fourier_data(self):
         def set_row_data():
             # calculate the fourier transform with deskew in the row direction
             row_file, row_memmap, row_mean_value = create_deskewed_transform(self.variables.image_reader, dimension=0)
             self.variables.row_fourier_file = row_file
-            self.variables.row_fourier_reader = ComplexImageReader(
+            self.variables.row_fourier_reader = ComplexCanvasImageReader(
                 FlatSICDReader(self.variables.image_reader.get_sicd(), row_memmap))
             self.row_centered_image_panel.set_image_reader(self.variables.row_fourier_reader)
 
@@ -288,7 +288,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             # calculate the fourier transform with deskew in the column direction
             col_file, col_memmap, col_mean_value = create_deskewed_transform(self.variables.image_reader, dimension=1)
             self.variables.column_fourier_file = col_file
-            self.variables.column_fourier_reader = ComplexImageReader(
+            self.variables.column_fourier_reader = ComplexCanvasImageReader(
                 FlatSICDReader(self.variables.image_reader.get_sicd(), col_memmap))
             self.column_centered_image_panel.set_image_reader(self.variables.column_fourier_reader)
 
@@ -448,7 +448,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -458,14 +458,14 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -486,9 +486,9 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexImageReader(fnames[0])
+            the_reader = ComplexCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexImageReader(fnames)
+            the_reader = ComplexCanvasImageReader(fnames)
 
         if the_reader is None:
             showinfo('Opener not found',
@@ -502,7 +502,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         if dirname is None or dirname in [(), '']:
             return
 
-        the_reader = ComplexImageReader(dirname)
+        the_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def my_populate_metaicon(self):
@@ -529,7 +529,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     """
 
     logger.setLevel('DEBUG')

@@ -7,10 +7,10 @@ __classification__ = "UNCLASSIFIED"
 
 import tkinter
 
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, \
-    DerivedImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
+    DerivedCanvasImageReader
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 
@@ -50,16 +50,16 @@ class WidgetWithMetadata(object):
 
         Parameters
         ----------
-        image_reader : ImageReader
+        image_reader : CanvasImageReader
         the_index : int
         """
 
         if image_reader is None:
             self.metaicon.make_empty()
 
-        if isinstance(image_reader, ComplexImageReader):
+        if isinstance(image_reader, ComplexCanvasImageReader):
             self.metaicon.create_from_reader(image_reader.base_reader, index=the_index)
-        elif isinstance(image_reader, DerivedImageReader):
+        elif isinstance(image_reader, DerivedCanvasImageReader):
             self.metaicon.create_from_reader(image_reader.base_reader, index=the_index)
         else:
             self.metaicon.make_empty()
@@ -70,13 +70,13 @@ class WidgetWithMetadata(object):
 
         Parameters
         ----------
-        image_reader : ImageReader
+        image_reader : CanvasImageReader
         """
 
         if image_reader is None:
             self.metaviewer.empty_entries()
 
-        if isinstance(image_reader, (ComplexImageReader, DerivedImageReader)):
+        if isinstance(image_reader, (ComplexCanvasImageReader, DerivedCanvasImageReader)):
             self.metaviewer.populate_from_reader(image_reader.base_reader)
         else:
             self.metaviewer.empty_entries()

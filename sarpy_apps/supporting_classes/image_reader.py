@@ -1,5 +1,5 @@
 """
-Helper classes fulfilling the ImageReader pattern.
+Helper classes fulfilling the CanvasImageReader pattern.
 """
 
 __classification__ = "UNCLASSIFIED"
@@ -14,7 +14,7 @@ import gc
 from sarpy.compliance import string_types, int_func
 from sarpy.io.general.base import BaseReader, SarpyIOError
 from sarpy.io.complex.base import SICDTypeReader
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 import sarpy.visualization.remap as remap
 
 from sarpy.io.complex.converter import open_complex
@@ -25,7 +25,7 @@ from sarpy.io.phase_history.converter import open_phase_history
 from sarpy.io.general.converter import open_general
 
 
-class ComplexImageReader(ImageReader):
+class ComplexCanvasImageReader(CanvasImageReader):
     __slots__ = ('_base_reader', '_chippers', '_index', '_data_size', '_remap_function')
 
     def __init__(self, reader):
@@ -102,7 +102,7 @@ class ComplexImageReader(ImageReader):
         data_sizes = self.base_reader.get_data_size_as_tuple()
         if not (0 <= value < len(data_sizes)):
             logging.error(
-                'The index property for ComplexImageReader must be 0 <= index < {}, '
+                'The index property for ComplexCanvasImageReader must be 0 <= index < {}, '
                 'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
             value = 0
         self._index = value
@@ -171,7 +171,7 @@ class ComplexImageReader(ImageReader):
             pass
 
 
-class QuadPolImageReader(ImageReader):
+class QuadPolCanvasImageReader(CanvasImageReader):
     __slots__ = (
         '_base_reader', '_chippers', '_sicd_partitions', '_index', '_index_ordering',
         '_data_size', '_remap_function')
@@ -383,7 +383,7 @@ class QuadPolImageReader(ImageReader):
             pass
 
 
-class DerivedImageReader(ImageReader):
+class DerivedCanvasImageReader(CanvasImageReader):
     __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
 
     def __init__(self, reader):
@@ -440,7 +440,7 @@ class DerivedImageReader(ImageReader):
         data_sizes = self.base_reader.get_data_size_as_tuple()
         if not (0 <= value < len(data_sizes)):
             logging.error(
-                'The index property for DerivedImageReader must be 0 <= index < {}, '
+                'The index property for DerivedCanvasImageReader must be 0 <= index < {}, '
                 'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
             value = 0
         self._index = value
@@ -474,7 +474,7 @@ class DerivedImageReader(ImageReader):
             pass
 
 
-class GeneralImageReader(ImageReader):
+class GeneralCanvasImageReader(CanvasImageReader):
     """
     This is a general image reader of unknown type. There may be trouble
     with the image segments of unexpected type.
@@ -534,7 +534,7 @@ class GeneralImageReader(ImageReader):
         data_sizes = self.base_reader.get_data_size_as_tuple()
         if not (0 <= value < len(data_sizes)):
             logging.error(
-                'The index property for DerivedImageReader must be 0 <= index < {}, '
+                'The index property for DerivedCanvasImageReader must be 0 <= index < {}, '
                 'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
             value = 0
         self._index = value
