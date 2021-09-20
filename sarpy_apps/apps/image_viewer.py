@@ -14,15 +14,14 @@ from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets import widget_descriptors, basic_widgets
+from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader, \
-    DerivedImageReader, GeneralImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
+    DerivedCanvasImageReader, GeneralCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.compliance import string_types
@@ -37,14 +36,10 @@ class AppVariables(object):
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ImageReader, docstring='')  # type: ImageReader
+        'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
 
 
-class ImageViewer(WidgetPanel, WidgetWithMetadata):
-    _widget_list = ("image_panel", "pyplot_panel")
-    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
-    pyplot_panel = widget_descriptors.PanelDescriptor("pyplot_panel", PyplotImagePanel)   # type: PyplotImagePanel
-
+class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
     def __init__(self, primary):
         """
 
@@ -54,12 +49,21 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         """
 
         self.root = primary
-        self.primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, self.primary_frame)
+        self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
+
+        basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
-        self.init_w_horizontal_layout()
+        self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
+        self.image_panel.config(borderwidth=0)
+        self.primary.add(self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+
+        self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
+        self.primary.add(self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+
+        self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
         self.set_title()
 
         # define menus
@@ -78,8 +82,6 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
-        # handle packing
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
@@ -140,7 +142,7 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         if self.variables.image_reader is not None:
             self.display_canvas_rect_selection_in_pyplot_frame()
 
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -158,7 +160,7 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -172,18 +174,18 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type in ['SICD', 'CPHD']:
-                the_reader = ComplexImageReader(the_reader)
+                the_reader = ComplexCanvasImageReader(the_reader)
             elif the_reader.reader_type == 'SIDD':
-                the_reader = DerivedImageReader(the_reader)
+                the_reader = DerivedCanvasImageReader(the_reader)
             else:
-                the_reader = GeneralImageReader(the_reader)
+                the_reader = GeneralCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ImageReader):
+        if not isinstance(the_reader, CanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
-        self.image_panel.canvas.set_current_tool_to_view()
-        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.current_tool = 'VIEW'
+        self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
@@ -200,15 +202,15 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
 
         the_reader = None
         if len(fnames) > 1:
-            the_reader = ComplexImageReader(fnames)
+            the_reader = ComplexCanvasImageReader(fnames)
         if the_reader is None:
             try:
-                the_reader = ComplexImageReader(fnames[0])
+                the_reader = ComplexCanvasImageReader(fnames[0])
             except SarpyIOError:
                 the_reader = None
 
         if the_reader is None:
-            the_reader = DerivedImageReader(fnames[0])
+            the_reader = DerivedCanvasImageReader(fnames[0])
         if the_reader is None:
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type '
@@ -220,8 +222,8 @@ class ImageViewer(WidgetPanel, WidgetWithMetadata):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
-        # TODO: handle non-complex data possibilities here?
-        the_reader = ComplexImageReader(dirname)
+        # NB: handle non-complex data possibilities here?
+        the_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
@@ -279,7 +281,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ImageReader
+    reader : None|str|BaseReader|CanvasImageReader
     """
 
     root = tkinter.Tk()

@@ -1,0 +1,7 @@
+# This details the important differences introduced in sarpy_apps 1.1
+# NB: bump the version number in __about__.py to reflect the below.
+
+* .0 - Syncing for the base tk_builder 1.1 changes
+       Using paned window for many apps, for simple resizing options
+       Updating the metaicon for proper SIDD interpretation
+       Introducing a method for CRSD metaicon production

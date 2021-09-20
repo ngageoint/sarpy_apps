@@ -3,7 +3,7 @@ The container object for the metaicon object.
 """
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 
 import logging
@@ -13,12 +13,15 @@ import numpy
 from scipy.constants import foot
 
 from sarpy.geometry import latlon
-from sarpy.geometry.geocoords import ecf_to_geodetic, geodetic_to_ecf
+from sarpy.geometry.geocoords import ecf_to_geodetic, geodetic_to_ecf, ecf_to_ned
 from sarpy.io.complex.sicd_elements.SICD import SICDType
 from sarpy.io.product.sidd2_elements.SIDD import SIDDType  # version 2.0
 from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
 from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
 from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
+from sarpy.io.phase_history.crsd1_elements.CRSD import CRSDType  # version 1.0
+from sarpy.io.complex.sicd_elements.SCPCOA import GeometryCalculator
+from sarpy.io.product.sidd2_elements.ExploitationFeatures import ExploitationCalculator
 
 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
@@ -37,11 +40,14 @@ class MetaIconDataContainer(object):
                  collector_name=None,
                  core_name=None,
                  azimuth=None,
+                 north=None,
                  graze=None,
                  layover=None,
+                 layover_display=None,
                  shadow=None,
+                 shadow_display=None,
                  multipath=None,
-                 multipath_ground=None,
+                 multipath_display=None,
                  side_of_track=None,
                  col_impulse_response_width=None,
                  row_impulse_response_width=None,
@@ -62,17 +68,32 @@ class MetaIconDataContainer(object):
         collector_name : None|str
         core_name : None|str
         azimuth : None|float
+            This should be clockwise relative to True North.
+        north : None|float
+            Clockwise relative to decreasing row direction (i.e. "up").
         graze : None|float
+            The graze angle, in degree.
         layover : None|float
+            Clockwise relative to decreasing row direction (i.e. "up").
+        layover_display : None|float
+            The angle value for display. The meaning of this varies between different
+            structure types.
         shadow : None|float
+            Clockwise relative to decreasing row direction (i.e. "up").
+        shadow_display : None|float
+            The angle value for display. The meaning of this varies between different
+            structure types.
         multipath : None|float
-        multipath_ground : None|float
+            Clockwise relative to decreasing row direction (i.e. "up").
+        multipath_display : None|float
+            The angle value for display. The meaning of this varies between different
+            structure types.
         side_of_track : None|str
             One of `('L', 'R')`.
         col_impulse_response_width : None|float
-            In feet.
+            In meters.
         row_impulse_response_width : None|float
-            In feet.
+            In meters.
         grid_column_sample_spacing : None|float
             Assumed to be in meters, but the units are not important provided
             that they are the same for row and column.
@@ -88,7 +109,6 @@ class MetaIconDataContainer(object):
         polarization : None|str
             The polarization string.
         """
-        # TODO: beef up the documentation describing the above variables
 
         self.lat = lat
         self.lon = lon
@@ -100,11 +120,15 @@ class MetaIconDataContainer(object):
         self.core_name = core_name
 
         self.azimuth = azimuth
+        self.north = north
         self.graze = graze
         self.layover = layover
+        self.layover_display = layover_display
         self.shadow = shadow
+        self.shadow_display = shadow_display
         self.multipath = multipath
-        self.multipath_ground = multipath_ground
+        self.multipath_display = multipath_display
+
         self.side_of_track = side_of_track
 
         self.col_impulse_response_width = col_impulse_response_width
@@ -159,8 +183,8 @@ class MetaIconDataContainer(object):
         """
 
         if self.col_impulse_response_width is not None:
-            az_ipr = self.col_impulse_response_width
-            rg_ipr = self.row_impulse_response_width
+            az_ipr = self.col_impulse_response_width/foot
+            rg_ipr = self.row_impulse_response_width/foot
             if az_ipr/rg_ipr - 1 < 0.2:
                 res_line = 'IPR: {0:0.1f} ft'.format(0.5*(az_ipr + rg_ipr))
             else:
@@ -207,7 +231,9 @@ class MetaIconDataContainer(object):
         str
         """
 
-        value = getattr(self, angle_type, None)
+        value = getattr(self, angle_type+'_display', None)
+        if value is None:
+            value = getattr(self, angle_type, None)
         if value is None:
             return "{}: No data".format(angle_type.capitalize())
 
@@ -260,16 +286,30 @@ class MetaIconDataContainer(object):
                 pass
 
         def extract_scpcoa():
-            try:
-                variables['azimuth'] = sicd.SCPCOA.AzimAng
-                variables['graze'] = sicd.SCPCOA.GrazeAng
-                variables['layover'] = sicd.SCPCOA.LayoverAng
-                variables['shadow'] = sicd.SCPCOA.Shadow
-                variables['multipath'] = sicd.SCPCOA.Multipath
-                variables['multipath_ground'] = sicd.SCPCOA.MultipathGround
-                variables['side_of_track'] = sicd.SCPCOA.SideOfTrack
-            except AttributeError:
-                pass
+            if sicd.SCPCOA is None:
+                return
+
+            variables['side_of_track'] = sicd.SCPCOA.SideOfTrack
+            azimuth = sicd.SCPCOA.AzimAng
+            if azimuth is None:
+                return
+
+            north = ((360 - azimuth) % 360)
+            variables['azimuth'] = azimuth
+            variables['north'] = north
+            variables['graze'] = sicd.SCPCOA.GrazeAng
+
+            layover = sicd.SCPCOA.LayoverAng
+            if layover is not None:
+                variables['layover'] = ((layover-azimuth + 360) % 360)
+                variables['layover_display'] = layover
+
+            variables['shadow'] = 180
+
+            multipath = sicd.SCPCOA.Multipath
+            if multipath is not None:
+                variables['multipath'] = ((multipath - azimuth + 360) % 360)
+                variables['multipath_display'] = multipath
 
         def extract_imp_resp():
             if sicd.Grid is not None:
@@ -279,8 +319,8 @@ class MetaIconDataContainer(object):
                     pass
 
                 try:
-                    variables['row_impulse_response_width'] = sicd.Grid.Row.ImpRespWid/foot
-                    variables['col_impulse_response_width'] = sicd.Grid.Col.ImpRespWid/foot
+                    variables['row_impulse_response_width'] = sicd.Grid.Row.ImpRespWid
+                    variables['col_impulse_response_width'] = sicd.Grid.Col.ImpRespWid
                 except AttributeError:
                     pass
 
@@ -414,7 +454,6 @@ class MetaIconDataContainer(object):
                 variables['layover'] = mono.LayoverAngle
                 variables['shadow'] = mono.Shadow
                 variables['multipath'] = mono.Multipath
-                variables['multipath_ground'] = mono.MultipathGround
                 variables['side_of_track'] = mono.SideOfTrack
             elif cphd.ReferenceGeometry.Bistatic is not None:
                 bi = cphd.ReferenceGeometry.Bistatic
@@ -580,11 +619,39 @@ class MetaIconDataContainer(object):
             except AttributeError:
                 pass
 
+            if isinstance(sidd, SIDDType1):
+                north = sidd.ExploitationFeatures.Product.North
+            elif isinstance(sidd, SIDDType):
+                north = sidd.ExploitationFeatures.Products[0].North
+            else:
+                raise TypeError('Unhandled sidd type `{}`'.format(sidd.__class__))
+            if north is None:
+                if sidd.Measurement.PlaneProjection is None:
+                    return
+
+                ref_point = sidd.Measurement.PlaneProjection.ReferencePoint
+                ref_time = sidd.Measurement.PlaneProjection.TimeCOAPoly(ref_point.Point.Row, ref_point.Point.Col)
+                plane = sidd.Measurement.PlaneProjection.ProductPlane
+                geom_calculator = GeometryCalculator(
+                    ref_point.ECEF.get_array(dtype='float64'),
+                    sidd.Measurement.ARPPoly(ref_time),
+                    sidd.Measurement.ARPPoly.derivative_eval(ref_time, der_order=1))
+                calculator = ExploitationCalculator(
+                    geom_calculator,
+                    plane.RowUnitVector.get_array(dtype='float64'),
+                    plane.ColUnitVector.get_array(dtype='float64'))
+                north = calculator.North
+            variables['north'] = ((north + 180.0) % 360)
+
             try:
                 exp_phen = sidd.ExploitationFeatures.Collections[0].Phenomenology
-                variables['layover'] = exp_phen.Layover.Angle
-                variables['shadow'] = exp_phen.Shadow.Angle
+                variables['layover'] = ((exp_phen.Layover.Angle + 180) % 360)
+                variables['layover_display'] = exp_phen.Layover.Angle
+                variables['shadow'] = ((exp_phen.Shadow.Angle + 180) % 360)
+                variables['shadow_display'] = exp_phen.Shadow.Angle
                 variables['multipath'] = exp_phen.MultiPath
+                variables['multipath_display'] = ((exp_phen.MultiPath + 180) % 360)
+
             except AttributeError:
                 pass
 
@@ -594,16 +661,86 @@ class MetaIconDataContainer(object):
             meas = sidd.Measurement
             if meas.PlaneProjection is not None:
                 variables['grid_row_sample_spacing'] = meas.PlaneProjection.SampleSpacing.Row
-                variables['grid_column_sample_spacing'] = meas.PlaneProjection.SampleSpacing.Row
+                variables['grid_column_sample_spacing'] = meas.PlaneProjection.SampleSpacing.Col
             elif meas.CylindricalProjection is not None:
                 variables['grid_row_sample_spacing'] = meas.CylindricalProjection.SampleSpacing.Row
-                variables['grid_column_sample_spacing'] = meas.CylindricalProjection.SampleSpacing.Row
+                variables['grid_column_sample_spacing'] = meas.CylindricalProjection.SampleSpacing.Col
             elif meas.GeographicProjection is not None:
                 variables['grid_row_sample_spacing'] = meas.GeographicProjection.SampleSpacing.Row
-                variables['grid_column_sample_spacing'] = meas.GeographicProjection.SampleSpacing.Row
+                variables['grid_column_sample_spacing'] = meas.GeographicProjection.SampleSpacing.Col
 
         variables = {'image_plane': 'GROUND'}
         extract_location()
         extract_exploitation_features()
         extract_spacing()
+        return cls(**variables)
+
+    @classmethod
+    def from_crsd(cls, crsd):
+        """
+        Create an instance from a CRSD version 1.0 object.
+
+        Parameters
+        ----------
+        crsd : CRSDType
+
+        Returns
+        -------
+        MetaIconDataContainer
+        """
+
+        if not isinstance(crsd, CRSDType):
+            raise TypeError(
+                'Got unhandled crsd type `{}`'.format(type(crsd)))
+
+        def extract_collection_id():
+            if crsd.CollectionID is None:
+                return
+
+            try:
+                variables['collector_name'] = crsd.CollectionID.CollectorName
+            except AttributeError:
+                pass
+
+            try:
+                variables['core_name'] = crsd.CollectionID.CoreName
+            except AttributeError:
+                pass
+
+        def extract_coords():
+            try:
+                coords = crsd.SceneCoordinates.IARP.LLH.get_array()
+                variables['lat'] = coords[0]
+                variables['lon'] = coords[1]
+            except AttributeError:
+                pass
+
+        def extract_global():
+            if crsd.Global is None:
+                return
+
+            try:
+                variables['collect_start'] = crsd.Global.Timeline.CollectionRefTime
+            except AttributeError:
+                pass
+
+            try:
+                variables['collect_duration'] = (crsd.Global.Timeline.RcvTime2 - crsd.Global.Timeline.RcvTime1)
+            except AttributeError:
+                pass
+
+        def extract_reference_geometry():
+            if crsd.ReferenceGeometry is None or \
+                    crsd.ReferenceGeometry.RcvParameters is None:
+                return
+            rcv = crsd.ReferenceGeometry.RcvParameters
+            variables['azimuth'] = rcv.AzimuthAngle
+            variables['graze'] = rcv.GrazeAngle
+            variables['side_of_track'] = rcv.SideOfTrack
+
+        variables = {}
+        extract_collection_id()
+        extract_coords()
+        extract_global()
+        extract_reference_geometry()
         return cls(**variables)

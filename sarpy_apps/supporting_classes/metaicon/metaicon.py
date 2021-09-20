@@ -18,7 +18,7 @@ from sarpy.io.general.base import BaseReader
 
 from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 
@@ -67,6 +67,7 @@ class MetaIcon(ImagePanel):
     def close_window(self):
         self.parent.withdraw()
 
+    # noinspection PyUnusedLocal
     def callback_resize(self, event):
         if self.data_container:
             self.canvas.reinitialize_shapes()
@@ -91,7 +92,7 @@ class MetaIcon(ImagePanel):
 
     @property
     def arrows_origin(self):
-        # type: () -> Tuple[float, float]
+        # type: () -> (float, float)
         """
         Tuple[float, float]: The arrow origin location.
         """
@@ -140,7 +141,7 @@ class MetaIcon(ImagePanel):
         metaicon_background = numpy.zeros(
             (self.canvas.variables.state.canvas_height, self.canvas.variables.state.canvas_width),
             dtype=numpy.uint8)
-        numpy_reader = NumpyImageReader(metaicon_background)
+        numpy_reader = NumpyCanvasImageReader(metaicon_background)
         self.set_image_reader(numpy_reader)
 
         line_positions = self.line_positions
@@ -201,12 +202,18 @@ class MetaIcon(ImagePanel):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
         if reader.reader_type == 'SICD':
+            # noinspection PyUnresolvedReferences
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
         elif reader.reader_type == 'CPHD':
+            # noinspection PyUnresolvedReferences
             data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta, index)
         elif reader.reader_type == 'SIDD':
+            # noinspection PyUnresolvedReferences
             data_container = MetaIconDataContainer.from_sidd(reader.sidd_meta[index])
+        elif reader.reader_type == "CRSD":
+            # noinspection PyUnresolvedReferences
+            data_container = MetaIconDataContainer.from_crsd(reader.crsd_meta)
         else:
             raise TypeError('Got unhandled type {}'.format(type(reader)))
 
@@ -248,16 +255,7 @@ class MetaIcon(ImagePanel):
         None|float: The layover arrow angle.
         """
 
-        azimuth = self.data_container.azimuth
-        layover = self.data_container.layover
-
-        if azimuth is None or layover is None:
-            return None
-        if (self.data_container.is_grid or self.data_container.image_plane == 'SLANT') and \
-                self.data_container.multipath_ground is not None:
-            layover = layover - self.data_container.multipath_ground
-        layover = 90 - (layover - azimuth)
-        return layover
+        return self.data_container.layover
 
     @property
     def shadow_arrow_angle(self):
@@ -265,16 +263,7 @@ class MetaIcon(ImagePanel):
         None|float: The shadow arrow angle.
         """
 
-        shadow = self.data_container.shadow
-        azimuth = self.data_container.azimuth
-        if shadow is None or azimuth is None:
-            return None
-
-        if (self.data_container.is_grid or self.data_container.image_plane == 'SLANT') and \
-                self.data_container.multipath_ground is not None:
-            shadow = azimuth - 180 - self.data_container.multipath_ground
-        shadow = 90 - (shadow - azimuth)
-        return shadow
+        return self.data_container.shadow
 
     @property
     def multipath_arrow_angle(self):
@@ -282,16 +271,7 @@ class MetaIcon(ImagePanel):
         None|float: The multipath arrow angle.
         """
 
-        multipath = self.data_container.multipath
-        azimuth = self.data_container.azimuth
-        if multipath is None or azimuth is None:
-            return None
-
-        if self.data_container.is_grid or self.data_container.image_plane == 'SLANT':
-            multipath = azimuth - 180
-        north = azimuth + 90
-        multipath = north - multipath
-        return multipath
+        return self.data_container.multipath
 
     @property
     def north_arrow_angle(self):
@@ -299,10 +279,7 @@ class MetaIcon(ImagePanel):
         float: The north arrow angle.
         """
 
-        if self.data_container.azimuth is None:
-            return None
-
-        return self.data_container.azimuth + 90
+        return self.data_container.north
 
     @property
     def arrow_lengths(self):
@@ -359,17 +336,13 @@ class MetaIcon(ImagePanel):
 
         Returns
         -------
-        Tuple[float, float, float, float]
+        (float, float, float, float)
         """
 
         if arrow_angle is None:
             return 0., 0., 0., 0.
 
-        arrow_rad = numpy.deg2rad(arrow_angle)
-        x_end, y_end = self._adjust_arrow_aspect_ratio(self.arrow_lengths, arrow_rad)
-        x_end = self.arrows_origin[0] + x_end
-        y_end = self.arrows_origin[1] - y_end
-        return self.arrows_origin[0], self.arrows_origin[1], x_end, y_end
+        return self._adjust_arrow_aspect_ratio(self.arrows_origin, self.arrow_lengths, arrow_angle)
 
     def draw_layover_arrow(self):
         """
@@ -446,49 +419,52 @@ class MetaIcon(ImagePanel):
         flight_direction_arrow_end = (self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
         if self.data_container.side_of_track == 'R':
             self.canvas.create_new_arrow(
-                (flight_direction_arrow_start[0], flight_direction_arrow_start[1],
-                 flight_direction_arrow_end[0], flight_direction_arrow_end[1]),
+                flight_direction_arrow_start + flight_direction_arrow_end,
                 increment_color=False, fill=Colors.flight_direction, width=3)
+            text = 'R'
         else:
+            text = 'L'
             self.canvas.create_new_arrow(
-                (flight_direction_arrow_end[0], flight_direction_arrow_end[1],
-                 flight_direction_arrow_start[0], flight_direction_arrow_start[1]),
+                flight_direction_arrow_end + flight_direction_arrow_start,
                 increment_color=False, fill=Colors.flight_direction, width=3)
         self.canvas.create_new_text(
             (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
              flight_direction_arrow_start[1]),
-            increment_color=False, text="R", fill=Colors.flight_direction, font=self.font)
+            increment_color=False, text=text, fill=Colors.flight_direction, font=self.font)
 
-    def _adjust_arrow_aspect_ratio(self, arrow_length, arrow_angle_radians):
+    def _adjust_arrow_aspect_ratio(self, origin, arrow_length, arrow_angle):
         """
-        Adjust the arrow aspect ratios.
+        Adjust the arrow aspect ratios, for non-square grids.
 
         Parameters
         ----------
+        origin : (float, float)
+            The arrow origin coordinates in x/y coordinates.
         arrow_length : float
-        arrow_angle_radians : float
+            The pixel length of the arrow.
+        arrow_angle : None|float
+            The raw arrow angle in degrees.
 
         Returns
         -------
-        Tuple[float, float]
+        (float, float, float, float)
+            The arrow pixel coordinates.
         """
 
-        # adjust aspect ratio in the case we're dealing with circular polarization from RCM
-        aspect_ratio = 1.0
-        if self.data_container.is_grid:
-            pixel_aspect_ratio = self.data_container.grid_column_sample_spacing / self.data_container.grid_row_sample_spacing
-            aspect_ratio = aspect_ratio * pixel_aspect_ratio
+        if arrow_angle is None:
+            return 0., 0., 0., 0.
+        if arrow_length <= 0.0:
+            return origin[0], origin[1], origin[0], origin[1]
 
-        if aspect_ratio > 1:
-            new_length = numpy.sqrt(numpy.square(arrow_length * numpy.cos(arrow_angle_radians) / aspect_ratio) +
-                                    numpy.square(arrow_length * numpy.sin(arrow_angle_radians)))
-            arrow_length = arrow_length * arrow_length / new_length
-            x_end = arrow_length * numpy.cos(arrow_angle_radians) / aspect_ratio
-            y_end = arrow_length * numpy.sin(arrow_angle_radians)
-        else:
-            new_length = numpy.sqrt(numpy.square(arrow_length * numpy.cos(arrow_angle_radians)) +
-                                    numpy.square(arrow_length * numpy.sin(arrow_angle_radians) * aspect_ratio))
-            arrow_length = arrow_length * arrow_length / new_length
-            x_end = arrow_length * numpy.cos(arrow_angle_radians)
-            y_end = arrow_length * numpy.sin(arrow_angle_radians) * aspect_ratio
-        return x_end, y_end
+        rad_angle = numpy.deg2rad(arrow_angle) - 0.5*numpy.pi
+
+        row_adjust = 1.0
+        col_adjust = 1.0
+        if self.data_container.is_grid:
+            row_adjust *= self.data_container.grid_row_sample_spacing
+            col_adjust *= self.data_container.grid_column_sample_spacing
+
+        # tese are canvas coords, so rows and columns roles are switched
+        vector = numpy.array([numpy.cos(rad_angle)/col_adjust, numpy.sin(rad_angle)/row_adjust], dtype='float64')
+        vector *= arrow_length/numpy.linalg.norm(vector)
+        return origin[0], origin[1], float(origin[0] + vector[0]), float(origin[1] + vector[1])

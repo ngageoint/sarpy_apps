@@ -23,7 +23,7 @@ from sarpy_apps.apps.labeling_tool.schema_editor import select_schema_entry
 
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
@@ -79,14 +79,20 @@ class LabelingPanel(WidgetPanel):
 
         WidgetPanel.__init__(self, master)
         # manually instantiate the elements
-        self.object_type_label = basic_widgets.Label(master, text='Type:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
-        self.choose_type = basic_widgets.Button(master, text='Choose')
-        self.comment_label = basic_widgets.Label(master, text='Comment:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.object_type_label = basic_widgets.Label(
+            master, text='Type:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.choose_type = basic_widgets.Button(
+            master, text='Choose')
+        self.comment_label = basic_widgets.Label(
+            master, text='Comment:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         self.comment = tkinter.Text(master)
-        self.confidence_label = basic_widgets.Label(master, text='Confidence:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
+        self.confidence_label = basic_widgets.Label(
+            master, text='Confidence:', anchor=tkinter.CENTER, relief=tkinter.RIDGE)
         self.confidence = basic_widgets.Combobox(master, text='')
-        self.cancel = basic_widgets.Button(master, text='Cancel')
-        self.submit = basic_widgets.Button(master, text='Submit')
+        self.cancel = basic_widgets.Button(
+            master, text='Cancel')
+        self.submit = basic_widgets.Button(
+            master, text='Submit')
         # manually set the positioning
         self.object_type_label.grid(row=0, column=0, sticky='NESW')
         self.choose_type.grid(row=0, column=1, sticky='NESW')
@@ -194,7 +200,7 @@ class LabelingPopup(object):
         # noinspection PyBroadException
         try:
             self.root.destroy()
-        except:
+        except Exception:
             pass
 
 
@@ -205,7 +211,6 @@ class LabelCollectionViewer(basic_widgets.Frame):
     """
     Widget for visualizing an annotation list.
     """
-
 
     def __init__(self, master, annotation_list=None, geometry_size=None, **kwargs):
         """
@@ -268,7 +273,7 @@ class LabelCollectionViewer(basic_widgets.Frame):
             else:
                 entry = properties[0]
                 return self._annotation_list.label_schema.labels[entry.label_id], \
-                       datetime.fromtimestamp(entry.timestamp, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+                    datetime.fromtimestamp(entry.timestamp, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
         def get_geometry_string():
             # type: () -> str
@@ -280,7 +285,9 @@ class LabelCollectionViewer(basic_widgets.Frame):
         the_label, the_date_str = get_annotation_string()
         geometry_string = get_geometry_string()
         the_index = self._annotation_list.annotations.get_integer_index(annotation.uid)
-        self.treeview.insert('', the_index, annotation.uid, text=the_label, values=(the_date_str, geometry_string, annotation.uid))
+        self.treeview.insert(
+            '', the_index, annotation.uid, text=the_label,
+            values=(the_date_str, geometry_string, annotation.uid))
 
     def _empty_entries(self):
         """
@@ -305,7 +312,7 @@ class LabelCollectionViewer(basic_widgets.Frame):
         # noinspection PyBroadException
         try:
             self.treeview.delete(the_id)  # try to delete, and just skip if it fails
-        except:
+        except Exception:
             pass
 
         if the_id in self._annotation_list.annotations:
@@ -330,7 +337,7 @@ class LabelCollectionViewer(basic_widgets.Frame):
             # noinspection PyBroadException
             try:
                 self.treeview.delete(the_id)
-            except:
+            except Exception:
                 pass
 
             self._render_entry(self._annotation_list.annotations[the_id])
@@ -398,8 +405,8 @@ class AppVariables(object):
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader,
-        docstring='The complex type image reader object.')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader,
+        docstring='The complex type image reader object.')  # type: ComplexCanvasImageReader
     label_schema = TypedDescriptor(
         'label_schema', LabelSchema,
         docstring='The label schema object.')  # type: LabelSchema
@@ -758,9 +765,9 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         self.primary.add(self.label_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.context_panel = ImagePanel(self.primary)  # type: ImagePanel
-        self.context_panel.canvas.set_canvas_size(400, 500)
+        self.context_panel.canvas.set_canvas_size(200, 500)
         self.context_panel.config(borderwidth=0)
-        self.primary.add(self.context_panel, width=600, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(self.context_panel, width=200, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
@@ -1202,7 +1209,11 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         bounding_box = feature.geometry.get_bbox()
         y_diff = max(bounding_box[2] - bounding_box[0], 100)
         x_diff = max(bounding_box[3] - bounding_box[1], 100)
-        zoom_box = [bounding_box[0] - 0.5*y_diff, bounding_box[1] - 0.5*x_diff, bounding_box[2] + 0.5*y_diff, bounding_box[3] + 0.5*x_diff]
+        zoom_box = [
+            bounding_box[0] - 0.5*y_diff,
+            bounding_box[1] - 0.5*x_diff,
+            bounding_box[2] + 0.5*y_diff,
+            bounding_box[3] + 0.5*x_diff]
         self.context_panel.canvas.zoom_to_full_image_selection(zoom_box)
 
     # helper functions for callbacks
@@ -1263,11 +1274,13 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         if not self.variables.unsaved_changes:
             return True
 
-        response = askyesnocancel('Save Changes?', message='There are unsaved changes for your annotations. Do you want to save them?')
+        response = askyesnocancel(
+            'Save Changes?',
+            message='There are unsaved changes for your annotations. Do you want to save them?')
         if response is True:
             self.save_annotation_file()
         elif response is None:
-            return False # cancel
+            return False  # cancel
         return True
 
     @staticmethod
@@ -1320,7 +1333,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -1330,14 +1343,14 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
             self._image_browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         self.variables.image_reader = the_reader
@@ -1370,7 +1383,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        image_reader = ComplexImageReader(fname)
+        image_reader = ComplexCanvasImageReader(fname)
         if image_reader.image_count != 1:
             showinfo('Single Image Required',
                      message='The given image reader for file {} has {} distinct images. '
@@ -1516,7 +1529,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if not self._verify_file_annotation_selected(popup=True):
-            return # nothing to be done
+            return  # nothing to be done
 
         shape_id = self.variables.current_canvas_id
         feature_id = self.variables.current_feature_id
@@ -1550,7 +1563,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if not self._verify_file_annotation_selected(popup=True):
-            return # nothing to be done
+            return  # nothing to be done
 
         feature_id = self.variables.current_feature_id
         if feature_id is None:
@@ -1591,7 +1604,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         self.zoom_to_feature(self.variables.current_feature_id)
 
     # event listeners
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def sync_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -1628,7 +1641,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
                 self._add_shape_to_feature(self.variables.current_feature_id, event.x)
                 return
 
-        the_id = self._create_feature_from_shape(event.x)
+        _ = self._create_feature_from_shape(event.x)
         self.set_current_canvas_id(event.x, check_feature=True)
 
     def shape_finalized_on_canvas(self, event):
@@ -1683,7 +1696,7 @@ class LabelingTool(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         if self.variables.current_canvas_id == event.x:
-            return # nothing needs to be done
+            return  # nothing needs to be done
         self.set_current_canvas_id(event.x, check_feature=True)
         if self.variables.current_feature_id is not None:
             self.label_panel.viewer.treeview.focus(self.variables.current_feature_id)
@@ -1739,7 +1752,7 @@ def main(reader=None, annotation=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     annotation : None|str
     """
 
@@ -1772,6 +1785,6 @@ if __name__ == '__main__':
              'If the image input is not specified, then this has no effect. '
              'If both are specified, then a check will be performed that the '
              'annotation actually applies to the provided image.')
-    args = parser.parse_args()
+    this_args = parser.parse_args()
 
-    main(reader=args.input, annotation=args.annotation)
+    main(reader=this_args.input, annotation=this_args.annotation)

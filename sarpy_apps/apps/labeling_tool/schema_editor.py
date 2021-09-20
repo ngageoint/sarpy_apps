@@ -123,7 +123,7 @@ class SchemaViewer(basic_widgets.Frame):
         # noinspection PyBroadException
         try:
             self.treeview.delete(the_id)  # try to delete, and just skip if it fails
-        except:
+        except Exception:
             pass
 
         if the_id in self._label_schema.labels:
@@ -149,7 +149,7 @@ class SchemaViewer(basic_widgets.Frame):
             # noinspection PyBroadException
             try:
                 self.treeview.delete(the_id)
-            except:
+            except Exception:
                 pass
 
             if the_id not in self._label_schema.labels:
@@ -240,7 +240,7 @@ class _SchemaSelectionWidget(object):
         # noinspection PyBroadException
         try:
             self.viewer.treeview.selection_set(selected_value)
-        except:
+        except Exception:
             pass
 
     def destroy(self):
@@ -255,7 +255,7 @@ class _SchemaSelectionWidget(object):
         # noinspection PyBroadException
         try:
             self.root.destroy()
-        except:
+        except Exception:
             pass
 
 
@@ -296,26 +296,35 @@ class _LabelEntryPanel(WidgetPanel):
         ('id_label', 'id_entry', 'name_label', 'name_entry', 'parent_label', 'parent_button'),
         ('cancel_button', 'okay_button'))
     header_message = LabelDescriptor(
-        'header_message', default_text='', docstring='The header message.')# type: basic_widgets.Label
+        'header_message', default_text='',
+        docstring='The header message.')  # type: basic_widgets.Label
     id_label = LabelDescriptor(
-        'id_label', default_text='ID:', docstring='The id label')  # type: basic_widgets.Label
+        'id_label', default_text='ID:',
+        docstring='The id label')  # type: basic_widgets.Label
     id_entry = EntryDescriptor(
-        'id_entry', default_text='', docstring='The id value')  # type: basic_widgets.Entry
+        'id_entry', default_text='',
+        docstring='The id value')  # type: basic_widgets.Entry
 
     name_label = LabelDescriptor(
-        'name_label', default_text='Name:', docstring='The name label')  # type: basic_widgets.Label
+        'name_label', default_text='Name:',
+        docstring='The name label')  # type: basic_widgets.Label
     name_entry = EntryDescriptor(
-        'name_entry', default_text='', docstring='The name value')  # type: basic_widgets.Entry
+        'name_entry', default_text='',
+        docstring='The name value')  # type: basic_widgets.Entry
 
     parent_label = LabelDescriptor(
-        'parent_label', default_text='Parent ID:', docstring='The parent label')  # type: basic_widgets.Label
+        'parent_label', default_text='Parent ID:',
+        docstring='The parent label')  # type: basic_widgets.Label
     parent_button = ButtonDescriptor(
-        'parent_button', default_text='<Choose>', docstring='The parent value')  # type: basic_widgets.Button
+        'parent_button', default_text='<Choose>',
+        docstring='The parent value')  # type: basic_widgets.Button
 
     cancel_button = ButtonDescriptor(
-        'cancel_button', default_text='Cancel', docstring='The cancel button')  # type: basic_widgets.Button
+        'cancel_button', default_text='Cancel',
+        docstring='The cancel button')  # type: basic_widgets.Button
     okay_button = ButtonDescriptor(
-        'okay_button', default_text='Okay', docstring='The okay button')  # type: basic_widgets.Button
+        'okay_button', default_text='Okay',
+        docstring='The okay button')  # type: basic_widgets.Button
 
     def __init__(self, parent):
         """
@@ -445,7 +454,7 @@ class LabelEntryWidget(object):
         # noinspection PyBroadException
         try:
             self.root.destroy()
-        except:
+        except Exception:
             pass
 
 
@@ -461,29 +470,39 @@ class SchemaEditor(WidgetPanel):
         ('schema_viewer', ))
 
     version_label = LabelDescriptor(
-        'version_label', default_text='Version:', docstring='The version label')  # type: basic_widgets.Label
+        'version_label', default_text='Version:',
+        docstring='The version label')  # type: basic_widgets.Label
     version_entry = EntryDescriptor(
-        'version_entry', default_text='', docstring='The version value')  # type: basic_widgets.Entry
+        'version_entry', default_text='',
+        docstring='The version value')  # type: basic_widgets.Entry
 
     version_date_label = LabelDescriptor(
-        'version_date_label', default_text='Version Date:', docstring='The version_date label')  # type: basic_widgets.Label
+        'version_date_label', default_text='Version Date:',
+        docstring='The version_date label')  # type: basic_widgets.Label
     version_date_entry = EntryDescriptor(
-        'version_date_entry', default_text='', docstring='The version_date value')  # type: basic_widgets.Entry
+        'version_date_entry', default_text='',
+        docstring='The version_date value')  # type: basic_widgets.Entry
 
     classification_label = LabelDescriptor(
-        'classification_label', default_text='Classification:', docstring='The classification label')  # type: basic_widgets.Label
+        'classification_label', default_text='Classification:',
+        docstring='The classification label')  # type: basic_widgets.Label
     classification_entry = EntryDescriptor(
-        'classification_entry', default_text='', docstring='The classification value')  # type: basic_widgets.Entry
+        'classification_entry', default_text='',
+        docstring='The classification value')  # type: basic_widgets.Entry
 
     confidence_label = LabelDescriptor(
-        'confidence_label', default_text='Confidence Values:', docstring='The confidence label')  # type: basic_widgets.Label
+        'confidence_label', default_text='Confidence Values:',
+        docstring='The confidence label')  # type: basic_widgets.Label
     confidence_entry = EntryDescriptor(
-        'confidence_entry', default_text='', docstring='The confidence value')  # type: basic_widgets.Entry
+        'confidence_entry', default_text='',
+        docstring='The confidence value')  # type: basic_widgets.Entry
 
     geometries_label = LabelDescriptor(
-        'geometries_label', default_text='Geometries:', docstring='The geometries label')  # type: basic_widgets.Label
+        'geometries_label', default_text='Geometries:',
+        docstring='The geometries label')  # type: basic_widgets.Label
     geometries_entry = EntryDescriptor(
-        'geometries_entry', default_text='', docstring='The geometries value')  # type: basic_widgets.Entry
+        'geometries_entry', default_text='',
+        docstring='The geometries value')  # type: basic_widgets.Entry
 
     new_button = ButtonDescriptor(
         'new_button', default_text='New Entry',
@@ -542,10 +561,13 @@ class SchemaEditor(WidgetPanel):
         self.geometries_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
 
         # setup the GUI callbacks and appearance of labels
-        self.version_entry.config(state='disabled', validate='focusout', validatecommand=self._version_entry_validate)
+        self.version_entry.config(
+            state='disabled', validate='focusout', validatecommand=self._version_entry_validate)
         self.version_date_entry.config(state='disabled')
-        self.classification_entry.config(state='disabled', validate='focusout', validatecommand=self._classification_validate)
-        self.confidence_entry.config(state='disabled', validate='focusout', validatecommand=self._confidence_validate)
+        self.classification_entry.config(
+            state='disabled', validate='focusout', validatecommand=self._classification_validate)
+        self.confidence_entry.config(
+            state='disabled', validate='focusout', validatecommand=self._confidence_validate)
         self.geometries_entry.config(state='disabled')
         self.edit_button.config(command=self.edit_entry)
         self.new_button.config(command=self.new_entry)
@@ -600,7 +622,7 @@ class SchemaEditor(WidgetPanel):
             # noinspection PyBroadException
             try:
                 the_values = [int(entry) for entry in temp_values]
-            except:
+            except Exception:
                 the_values = temp_values
 
         if self.label_schema.confidence_values != the_values:
@@ -812,7 +834,9 @@ class SchemaEditor(WidgetPanel):
         if not self._check_save_state():
             return
 
-        schema_file = askopenfilename(initialdir=self.browse_directory, filetypes=[file_filters.json_files, file_filters.all_files])
+        schema_file = askopenfilename(
+            initialdir=self.browse_directory,
+            filetypes=[file_filters.json_files, file_filters.all_files])
         if schema_file == '' or schema_file == ():
             # closed or cancelled
             return

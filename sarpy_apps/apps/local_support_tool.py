@@ -9,23 +9,22 @@ __author__ = "Thomas McCullough"
 
 
 import os
+from typing import Union
 import numpy
 
 import tkinter
 from tkinter import ttk
-
 from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, StringDescriptor
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.complex.utils import get_physical_coordinates
@@ -42,7 +41,7 @@ class AppVariables(object):
     remap_type = StringDescriptor(
         'remap_type', default_value='density', docstring='')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
     row_line_low = IntegerDescriptor(
         'row_line_low',
         docstring='The id of the frequency_panel of the lower row bandwidth line.')  # type: Union[None, int]
@@ -152,13 +151,10 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             min(full_cols, int(0.5*(full_cols + default_size))))
         self.image_panel.canvas.zoom_to_full_image_selection((0, 0, full_rows, full_cols))
         # set selection rectangle
-        self.image_panel.canvas.set_current_tool_to_select()
+        self.image_panel.canvas.current_tool = 'SELECT'
         self.image_panel.canvas.modify_existing_shape_using_image_coords(
             self.image_panel.canvas.variables.select_rect.uid, middle)
-        self.image_panel.canvas.show_shape(self.image_panel.canvas.variables.select_rect.uid)
-        # we need to set some drawing state here...this is ugly, but not worth
-        anchor = self.image_panel.canvas.get_shape_canvas_coords(self.image_panel.canvas.variables.select_rect.uid)[:2]
-        self.image_panel.canvas.set_select_initial_state(anchor)
+        self.image_panel.canvas.emit_select_finalized()
 
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):
@@ -178,7 +174,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
         self.update_displayed_selection()
 
-    #noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal
     def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -197,7 +193,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -207,19 +203,19 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
-        self.image_panel.canvas.set_current_tool_to_view()
-        self.image_panel.canvas.set_current_tool_to_view()
+        self.image_panel.canvas.current_tool = 'VIEW'
+        self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
@@ -235,9 +231,9 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexImageReader(fnames[0])
+            the_reader = ComplexCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexImageReader(fnames)
+            the_reader = ComplexCanvasImageReader(fnames)
 
         if the_reader is None:
             showinfo('Opener not found',
@@ -252,7 +248,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
-        the_reader = ComplexImageReader(dirname)
+        the_reader = ComplexCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def _initialize_bandwidth_lines(self):
@@ -318,6 +314,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 self.variables.col_deltak2, (0, deltak2, row_count, deltak2))
 
         def draw_row_bandwidth_lines():
+            # noinspection PyBroadException
             try:
                 delta_kcoa_center = the_sicd.Grid.Row.DeltaKCOAPoly(row_phys, col_phys)
             except Exception:
@@ -337,6 +334,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 self.variables.row_line_high, (row_bw_high, 0, row_bw_high, col_count))
 
         def draw_col_bandwidth_lines():
+            # noinspection PyBroadException
             try:
                 delta_kcoa_center = the_sicd.Grid.Col.DeltaKCOAPoly(row_phys, col_phys)
             except Exception:
@@ -368,13 +366,13 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         if row_count < threshold or col_count < threshold:
             junk_data = numpy.zeros((100, 100), dtype='uint8')
-            self.frequency_panel.set_image_reader(NumpyImageReader(junk_data))
+            self.frequency_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
             self._initialize_bandwidth_lines()
         else:
             image_data = self.variables.image_reader.base_reader[extent[0]:extent[1], extent[2]:extent[3]]
             if image_data is not None:
                 self.frequency_panel.set_image_reader(
-                    NumpyImageReader(remap.density(fftshift(fft2_sicd(image_data, the_sicd)))))
+                    NumpyCanvasImageReader(remap.density(fftshift(fft2_sicd(image_data, the_sicd)))))
                 self._initialize_bandwidth_lines()
                 draw_row_delta_lines()
                 draw_col_delta_lines()
@@ -382,7 +380,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 draw_col_bandwidth_lines()
             else:
                 junk_data = numpy.zeros((100, 100), dtype='uint8')
-                self.frequency_panel.set_image_reader(NumpyImageReader(junk_data))
+                self.frequency_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
                 self._initialize_bandwidth_lines()
 
     def my_populate_metaicon(self):
@@ -413,7 +411,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     """
 
     root = tkinter.Tk()

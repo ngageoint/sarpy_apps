@@ -17,17 +17,17 @@ from tkinter.scrolledtext import ScrolledText
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.file_filters import create_filter_entry, all_files
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 from tk_builder.logger import TextHandler
 from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 
-from sarpy_apps.apps.aperture_tool.aperture_tool import RegionSelection
-from sarpy_apps.apps.frequency_support_tool.local_support_tool import LocalFrequencySupportTool
-from sarpy_apps.apps.frequency_support_tool.full_support_tool import FullFrequencySupportTool
-from sarpy_apps.apps.rcs_tool.rcs_tool import RCSTool
+from sarpy_apps.apps.aperture_tool import RegionSelection
+from sarpy_apps.apps.local_support_tool import LocalFrequencySupportTool
+from sarpy_apps.apps.full_support_tool import FullFrequencySupportTool
+from sarpy_apps.apps.rcs_tool import RCSTool
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexImageReader
+from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.product.kmz_product_creation import create_kmz_view
@@ -172,7 +172,7 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexImageReader, docstring='')  # type: ComplexImageReader
+        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
 
 
 class ValidationTool(WidgetPanel, WidgetWithMetadata):
@@ -201,7 +201,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.primary_frame.add(self.button_panel, width=700, height=300, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # create the scrolled text widget for logging output
-        self.text_log_widget = ScrolledText(self.primary_frame) # TODO: other configuration?
+        self.text_log_widget = ScrolledText(self.primary_frame)  # TODO: other configuration?
         self.primary_frame.add(self.text_log_widget, width=700, height=400, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # set the logging handler for the validation logger to log to our widget
@@ -304,11 +304,13 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         if isinstance(the_reader, SICDReader):
             msg_id = 'SICD structure for file {}'.format(the_reader.file_name)
             self.logger.info('Starting validation of {}'.format(msg_id))
+            # noinspection PyUnresolvedReferences
             result = check_file(the_reader.nitf_details)
             if result:
                 self.logger.info('***{} appears to be valid***'.format(msg_id))
             self.logger.info('Completed validation for {}\n'.format(msg_id))
         else:
+            # noinspection PyUnresolvedReferences
             the_sicds = the_reader.get_sicds_as_tuple()
             for the_index, the_sicd in enumerate(the_sicds):
                 msg_id = 'SICD structure at index {}'.format(the_index) if len(the_sicds) > 1 else 'SICD structure'
@@ -324,7 +326,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|ImageReader
+        the_reader : str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
 
@@ -334,14 +336,14 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
         if isinstance(the_reader, BaseReader):
             if the_reader.reader_type != 'SICD':
                 raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexImageReader(the_reader)
+            the_reader = ComplexCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexImageReader):
+        if not isinstance(the_reader, ComplexCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # update the reader
@@ -352,7 +354,9 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.my_populate_metaviewer()
         self.log_handler.clear()
         # perform the initial validation
-        self.logger.info('Preparing validation for file {}\n'.format(os.path.abspath(self.variables.image_reader.file_name)))
+        self.logger.info(
+            'Preparing validation for file {}\n'.format(
+                os.path.abspath(self.variables.image_reader.file_name)))
         self.perform_basic_validation()
 
     def _disconnect_logging(self):
@@ -369,7 +373,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         try:
-            the_reader = ComplexImageReader(fname)
+            the_reader = ComplexCanvasImageReader(fname)
         except SarpyIOError:
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type.'.format(fname))
@@ -382,7 +386,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         try:
-            the_reader = ComplexImageReader(dirname)
+            the_reader = ComplexCanvasImageReader(dirname)
         except SarpyIOError:
             showinfo('Opener not found',
                      message='Directory {} was not successfully opened as a SICD type.'.format(dirname))
@@ -398,7 +402,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
         tool = LocalFrequencySupportTool(root)
@@ -417,7 +421,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
         tool = FullFrequencySupportTool(root)
@@ -436,7 +440,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
         # open the aperture tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
         tool = RegionSelection(root)
@@ -455,7 +459,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexImageReader(self.variables.image_reader.base_reader)
+        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
         # open the rcs tool based on this reader
         root = tkinter.Toplevel()  # create a new toplevel with its own mainloop, so it's blocking
         tool = RCSTool(root)
@@ -513,6 +517,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
     def destroy(self):
         self._disconnect_logging()
+        # noinspection PyBroadException
         try:
             super(ValidationTool, self).destroy()
         except Exception:
@@ -525,7 +530,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexImageReader
+    reader : None|str|BaseReader|ComplexCanvasImageReader
     """
 
     root = tkinter.Tk()
