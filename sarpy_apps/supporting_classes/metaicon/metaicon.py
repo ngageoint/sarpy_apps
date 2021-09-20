@@ -419,22 +419,22 @@ class MetaIcon(ImagePanel):
         flight_direction_arrow_end = (self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
         if self.data_container.side_of_track == 'R':
             self.canvas.create_new_arrow(
-                (flight_direction_arrow_start[0], flight_direction_arrow_start[1],
-                 flight_direction_arrow_end[0], flight_direction_arrow_end[1]),
+                flight_direction_arrow_start + flight_direction_arrow_end,
                 increment_color=False, fill=Colors.flight_direction, width=3)
+            text = 'R'
         else:
+            text = 'L'
             self.canvas.create_new_arrow(
-                (flight_direction_arrow_end[0], flight_direction_arrow_end[1],
-                 flight_direction_arrow_start[0], flight_direction_arrow_start[1]),
+                flight_direction_arrow_end + flight_direction_arrow_start,
                 increment_color=False, fill=Colors.flight_direction, width=3)
         self.canvas.create_new_text(
             (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
              flight_direction_arrow_start[1]),
-            increment_color=False, text="R", fill=Colors.flight_direction, font=self.font)
+            increment_color=False, text=text, fill=Colors.flight_direction, font=self.font)
 
     def _adjust_arrow_aspect_ratio(self, origin, arrow_length, arrow_angle):
         """
-        Adjust the arrow aspect ratios.
+        Adjust the arrow aspect ratios, for non-square grids.
 
         Parameters
         ----------
@@ -456,14 +456,15 @@ class MetaIcon(ImagePanel):
         if arrow_length <= 0.0:
             return origin[0], origin[1], origin[0], origin[1]
 
-        rad_angle = 0.25*numpy.pi - numpy.deg2rad(arrow_angle)
+        rad_angle = numpy.deg2rad(arrow_angle) - 0.5*numpy.pi
 
         row_adjust = 1.0
         col_adjust = 1.0
         if self.data_container.is_grid:
-            col_adjust /= self.data_container.grid_column_sample_spacing
-            row_adjust /= self.data_container.grid_row_sample_spacing
+            row_adjust *= self.data_container.grid_row_sample_spacing
+            col_adjust *= self.data_container.grid_column_sample_spacing
 
-        vector = numpy.array([numpy.cos(rad_angle)/row_adjust, numpy.sin(rad_angle)/col_adjust], dtype='float64')
+        # tese are canvas coords, so rows and columns roles are switched
+        vector = numpy.array([numpy.cos(rad_angle)/col_adjust, numpy.sin(rad_angle)/row_adjust], dtype='float64')
         vector *= arrow_length/numpy.linalg.norm(vector)
         return origin[0], origin[1], float(origin[0] + vector[0]), float(origin[1] + vector[1])

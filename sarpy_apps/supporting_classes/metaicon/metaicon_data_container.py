@@ -20,6 +20,9 @@ from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # versio
 from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
 from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
 from sarpy.io.phase_history.crsd1_elements.CRSD import CRSDType  # version 1.0
+from sarpy.io.complex.sicd_elements.SCPCOA import GeometryCalculator
+from sarpy.io.product.sidd2_elements.ExploitationFeatures import ExploitationCalculator
+
 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
 
@@ -120,8 +123,11 @@ class MetaIconDataContainer(object):
         self.north = north
         self.graze = graze
         self.layover = layover
+        self.layover_display = layover_display
         self.shadow = shadow
+        self.shadow_display = shadow_display
         self.multipath = multipath
+        self.multipath_display = multipath_display
 
         self.side_of_track = side_of_track
 
@@ -288,23 +294,22 @@ class MetaIconDataContainer(object):
             if azimuth is None:
                 return
 
-            north = ((azimuth + 180) % 360)
+            north = ((360 - azimuth) % 360)
             variables['azimuth'] = azimuth
             variables['north'] = north
             variables['graze'] = sicd.SCPCOA.GrazeAng
 
             layover = sicd.SCPCOA.LayoverAng
             if layover is not None:
-                variables['layover'] = layover - north
+                variables['layover'] = ((layover-azimuth + 360) % 360)
                 variables['layover_display'] = layover
 
             variables['shadow'] = 180
-            variables['shadow_display'] = azimuth
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:
-                variables['multipath'] = multipath
-                variables['multipath_display'] = multipath - north
+                variables['multipath'] = ((multipath - azimuth + 360) % 360)
+                variables['multipath_display'] = multipath
 
         def extract_imp_resp():
             if sicd.Grid is not None:
@@ -620,6 +625,22 @@ class MetaIconDataContainer(object):
                 north = sidd.ExploitationFeatures.Products[0].North
             else:
                 raise TypeError('Unhandled sidd type `{}`'.format(sidd.__class__))
+            if north is None:
+                if sidd.Measurement.PlaneProjection is None:
+                    return
+
+                ref_point = sidd.Measurement.PlaneProjection.ReferencePoint
+                ref_time = sidd.Measurement.PlaneProjection.TimeCOAPoly(ref_point.Point.Row, ref_point.Point.Col)
+                plane = sidd.Measurement.PlaneProjection.ProductPlane
+                geom_calculator = GeometryCalculator(
+                    ref_point.ECEF.get_array(dtype='float64'),
+                    sidd.Measurement.ARPPoly(ref_time),
+                    sidd.Measurement.ARPPoly.derivative_eval(ref_time, der_order=1))
+                calculator = ExploitationCalculator(
+                    geom_calculator,
+                    plane.RowUnitVector.get_array(dtype='float64'),
+                    plane.ColUnitVector.get_array(dtype='float64'))
+                north = calculator.North
             variables['north'] = ((north + 180.0) % 360)
 
             try:
