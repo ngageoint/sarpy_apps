@@ -37,7 +37,6 @@ class MetaIconDemo(WidgetPanel):
         layover = 263.96070589564016
         shadow = -90.0
         multipath = 66.5880303387554
-        multipath_ground = 5.435625387525644
         side_of_track = 'R'
         col_impulse_response_width = 0.1903215223097113
         row_impulse_response_width = 0.1606955380577428
@@ -59,7 +58,6 @@ class MetaIconDemo(WidgetPanel):
                                                layover=layover,
                                                shadow=shadow,
                                                multipath=multipath,
-                                               multipath_ground=multipath_ground,
                                                side_of_track=side_of_track,
                                                col_impulse_response_width=col_impulse_response_width,
                                                row_impulse_response_width=row_impulse_response_width,

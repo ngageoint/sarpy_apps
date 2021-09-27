@@ -110,6 +110,7 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
+        self.primary.destroy()
         self.root.destroy()
 
     # noinspection PyUnusedLocal
