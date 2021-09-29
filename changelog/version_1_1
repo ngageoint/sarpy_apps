@@ -1,6 +1,8 @@
 # This details the important differences introduced in sarpy_apps 1.1
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .1 - Bug fixes for metaicon and pyplot image panel
+       Dropping of stated Python 2.7 support
 * .0 - Syncing for the base tk_builder 1.1 changes
        Using paned window for many apps, for simple resizing options
        Updating the metaicon for proper SIDD interpretation

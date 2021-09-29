@@ -37,8 +37,7 @@ class Metaviewer(basic_widgets.Treeview):
         master : tkinter.Tk|tkinter.Toplevel
             The GUI element which is the parent or master of this node.
         """
-
-        super(Metaviewer, self).__init__(master)
+        basic_widgets.Treeview.__init__(self, master)
         self.parent = master
         self.parent.geometry("800x600")
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)

@@ -29,7 +29,7 @@ from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 import sarpy.visualization.remap as remap
-from sarpy.processing.aperture_filter import ApertureFilter
+from sarpy.processing.subaperture import ApertureFilter
 from sarpy.io.general.base import BaseReader
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
