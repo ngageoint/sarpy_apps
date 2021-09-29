@@ -271,7 +271,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 FlatSICDReader(self.variables.image_reader.get_sicd(), row_memmap))
             self.row_centered_image_panel.set_image_reader(self.variables.row_fourier_reader)
 
-            draw_deltak_lines(self.row_centered_image_panel.canvas)
+            draw_deltak_lines(self.row_centered_image_panel.canvas, 'row')
 
             # rescale the row_mean_value so that the smoothed max value is essentially 1
             if row_mean_value.size < 200:
@@ -295,7 +295,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 FlatSICDReader(self.variables.image_reader.get_sicd(), col_memmap))
             self.column_centered_image_panel.set_image_reader(self.variables.column_fourier_reader)
 
-            draw_deltak_lines(self.column_centered_image_panel.canvas)
+            draw_deltak_lines(self.column_centered_image_panel.canvas, 'column')
 
             # rescale the row_mean_value so that the smoothed max value is essentially 1
             if col_mean_value.size < 200:
@@ -310,32 +310,43 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             # construct the proper weights and prepare information for weight plotting
             self.variables.derived_column_weights = the_sicd.Grid.Col.define_weight_function(populate=False)
 
-        def draw_deltak_lines(canvas):
-            # calculate the row deltak1/deltak2 values
-            deltak1 = (row_count - 1)*(0.5 + the_sicd.Grid.Row.SS*the_sicd.Grid.Row.DeltaK1) + 1
-            deltak2 = (row_count - 1)*(0.5 + the_sicd.Grid.Row.SS*the_sicd.Grid.Row.DeltaK2) + 1
-            # draw the deltak1/deltak2 lines
-            deltak1_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
-            canvas.modify_existing_shape_using_image_coords(
-                deltak1_id, (deltak1, 0, deltak1, col_count))
-            deltak2_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
-            canvas.modify_existing_shape_using_image_coords(
-                deltak2_id, (deltak2, 0, deltak2, col_count))
+        def draw_deltak_lines(canvas, dimension):
+            if dimension == 'row':
+                # populate row as full bandwidth
+                row_deltak1 = (row_count - 1)*(0.5 - 0.5*the_sicd.Grid.Row.SS*the_sicd.Grid.Row.ImpRespBW) + 1
+                row_deltak2 = (row_count - 1)*(0.5 + 0.5*the_sicd.Grid.Row.SS*the_sicd.Grid.Row.ImpRespBW) + 1
+                # calculate the column deltak1/deltak2 values
+                col_deltak1 = (col_count - 1) * (0.5 + the_sicd.Grid.Col.SS*the_sicd.Grid.Col.DeltaK1) + 1
+                col_deltak2 = (col_count - 1) * (0.5 + the_sicd.Grid.Col.SS*the_sicd.Grid.Col.DeltaK2) + 1
+            elif dimension == 'column':
+                # calculate the row deltak1/deltak2 values
+                row_deltak1 = (row_count - 1)*(0.5 + the_sicd.Grid.Row.SS*the_sicd.Grid.Row.DeltaK1) + 1
+                row_deltak2 = (row_count - 1)*(0.5 + the_sicd.Grid.Row.SS*the_sicd.Grid.Row.DeltaK2) + 1
+                # populate column as full bandwidth
+                col_deltak1 = (col_count - 1) * (0.5 - 0.5*the_sicd.Grid.Col.SS*the_sicd.Grid.Col.ImpRespBW) + 1
+                col_deltak2 = (col_count - 1) * (0.5 + 0.5*the_sicd.Grid.Col.SS*the_sicd.Grid.Col.ImpRespBW) + 1
+            else:
+                raise ValueError('Unrecognized dimension argument `{}`'.format(dimension))
 
-            # calculate the column deltak1/deltak2 values
-            deltak1 = (col_count - 1)*(0.5 + the_sicd.Grid.Col.SS*the_sicd.Grid.Col.DeltaK1) + 1
-            deltak2 = (col_count - 1)*(0.5 + the_sicd.Grid.Col.SS*the_sicd.Grid.Col.DeltaK2) + 1
-            # draw the deltak1/deltak2 lines
-            deltak1_id = canvas.create_new_line(
+            # draw the row deltak1/deltak2 lines
+            row_deltak1_id = canvas.create_new_line(
                 (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
             canvas.modify_existing_shape_using_image_coords(
-                deltak1_id, (0, deltak1, row_count, deltak1))
+                row_deltak1_id, (row_deltak1, 0, row_deltak1, col_count))
             deltak2_id = canvas.create_new_line(
                 (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
             canvas.modify_existing_shape_using_image_coords(
-                deltak2_id, (0, deltak2, row_count, deltak2))
+                deltak2_id, (row_deltak2, 0, row_deltak2, col_count))
+
+            # draw the column deltak1/deltak2 lines
+            col_deltak1_id = canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+            canvas.modify_existing_shape_using_image_coords(
+                col_deltak1_id, (0, col_deltak1, row_count, col_deltak1))
+            deltak2_id = canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+            canvas.modify_existing_shape_using_image_coords(
+                deltak2_id, (0, col_deltak2, row_count, col_deltak2))
 
         # delete any previous state variables and clear displays
         self._clear_display()

@@ -154,7 +154,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.current_tool = 'SELECT'
         self.image_panel.canvas.modify_existing_shape_using_image_coords(
             self.image_panel.canvas.variables.select_rect.uid, middle)
-        self.image_panel.canvas.emit_select_finalized()
+        self.handle_selection_change(None)
 
     # noinspection PyUnusedLocal
     def handle_selection_change(self, event):
