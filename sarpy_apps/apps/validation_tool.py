@@ -27,13 +27,14 @@ from sarpy_apps.apps.local_support_tool import LocalFrequencySupportTool
 from sarpy_apps.apps.full_support_tool import FullFrequencySupportTool
 from sarpy_apps.apps.rcs_tool import RCSTool
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.product.kmz_product_creation import create_kmz_view
+from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.sicd import SICDReader
 from sarpy.consistency.sicd_consistency import check_file
-from sarpy.io.general.base import SarpyIOError, BaseReader
+from sarpy.io.general.base import SarpyIOError
 from sarpy.compliance import string_types
 
 
@@ -172,7 +173,7 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
+        'image_reader', SICDTypeCanvasImageReader, docstring='')  # type: SICDTypeCanvasImageReader
 
 
 class ValidationTool(WidgetPanel, WidgetWithMetadata):
@@ -326,7 +327,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|CanvasImageReader
+        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
 
@@ -336,14 +337,12 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexCanvasImageReader(the_reader)
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if isinstance(the_reader, BaseReader):
-            if the_reader.reader_type != 'SICD':
-                raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexCanvasImageReader(the_reader)
+        if isinstance(the_reader, SICDTypeReader):
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexCanvasImageReader):
+        if not isinstance(the_reader, SICDTypeCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # update the reader
@@ -373,7 +372,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         try:
-            the_reader = ComplexCanvasImageReader(fname)
+            the_reader = SICDTypeCanvasImageReader(fname)
         except SarpyIOError:
             showinfo('Opener not found',
                      message='File {} was not successfully opened as a SICD type.'.format(fname))
@@ -386,7 +385,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         try:
-            the_reader = ComplexCanvasImageReader(dirname)
+            the_reader = SICDTypeCanvasImageReader(dirname)
         except SarpyIOError:
             showinfo('Opener not found',
                      message='Directory {} was not successfully opened as a SICD type.'.format(dirname))
@@ -402,7 +401,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
+        reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
         tool = LocalFrequencySupportTool(root)
@@ -421,7 +420,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
+        reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
         tool = FullFrequencySupportTool(root)
@@ -440,7 +439,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
+        reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the aperture tool based on this reader
         root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
         tool = RegionSelection(root)
@@ -459,7 +458,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
             return
 
         # create a complex image reader - don't pass the same one around, so no hidden state
-        reader = ComplexCanvasImageReader(self.variables.image_reader.base_reader)
+        reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the rcs tool based on this reader
         root = tkinter.Toplevel()  # create a new toplevel with its own mainloop, so it's blocking
         tool = RCSTool(root)
@@ -530,7 +529,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexCanvasImageReader
+    reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
     """
 
     root = tkinter.Tk()

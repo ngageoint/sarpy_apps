@@ -1,3 +1,8 @@
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import os
 
 import tkinter
@@ -17,11 +22,8 @@ from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 
 import sarpy.geometry.point_projection as point_projection
 import sarpy.geometry.geocoords as geocoords
-import sarpy.visualization.remap as remap
+from sarpy.visualization.remap import get_remap_list
 
-
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
 
 
 class CanvasDemoButtonPanel(WidgetPanel):
@@ -52,14 +54,7 @@ class CanvasDemoButtonPanel(WidgetPanel):
 
         self.init_w_box_layout(2, column_widths=20)
 
-        self.remap_dropdown.update_combobox_values(["density",
-                                                    "brighter",
-                                                    "darker",
-                                                    "high contrast",
-                                                    "linear",
-                                                    "log",
-                                                    "pedf",
-                                                    "nrl"])
+        self.remap_dropdown.update_combobox_values([entry[0] for entry in get_remap_list()])
 
 
 class AppVariables(object):
@@ -188,7 +183,7 @@ class CanvasDemo(WidgetPanel):
         self.update_selection()
 
     def update_selection(self):
-        remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
+        remap_dict = {entry[0]: entry[1] for entry in get_remap_list()}
         selection = self.button_panel.remap_dropdown.get()
         self.variables.image_reader.set_remap_type(remap_dict[selection])
         image_data = self.canvas_demo_image_panel.canvas.get_image_data_in_canvas_rect_by_id(

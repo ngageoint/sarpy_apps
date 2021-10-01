@@ -24,7 +24,7 @@ import numpy
 
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files, \
     nitf_preferred_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from tk_builder.widgets import basic_widgets, widget_descriptors
@@ -35,10 +35,9 @@ from tk_builder.panels.image_panel import ImagePanel
 from sarpy.compliance import string_types, integer_types, int_func
 from sarpy.annotation.rcs import RCSStatistics, RCSValue, RCSValueCollection, \
     RCSFeature, FileRCSCollection
-from sarpy.geometry.geometry_elements import Geometry, LinearRing, Polygon, \
-    MultiPolygon
+from sarpy.geometry.geometry_elements import Geometry, LinearRing, Polygon, MultiPolygon
 from sarpy.io.complex.utils import get_im_physical_coords
-from sarpy.io.general.base import BaseReader
+from sarpy.io.complex.base import SICDTypeReader
 
 
 def _power_to_db(value):
@@ -464,8 +463,8 @@ class AppVariables(object):
         'unsaved_changes', default_value=False,
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
     image_reader = TypedDescriptor(
-        'image_reader', ComplexCanvasImageReader,
-        docstring='The complex type image reader object.')  # type: ComplexCanvasImageReader
+        'image_reader', SICDTypeCanvasImageReader,
+        docstring='The complex type image reader object.')  # type: SICDTypeCanvasImageReader
     file_rcs_collection = TypedDescriptor(
         'file_rcs_collection', FileRCSCollection,
         docstring='The rcs annotation collection object.')  # type: FileRCSCollection
@@ -1612,7 +1611,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        reader : str|BaseReader|CanvasImageReader
+        reader : str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
 
@@ -1622,14 +1621,12 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
             self._image_browse_directory = os.path.split(reader)[0]
 
         if isinstance(reader, string_types):
-            reader = ComplexCanvasImageReader(reader)
+            reader = SICDTypeCanvasImageReader(reader)
 
-        if isinstance(reader, BaseReader):
-            if reader.reader_type != 'SICD':
-                raise ValueError('reader for the aperture tool is expected to be complex')
-            reader = ComplexCanvasImageReader(reader)
+        if isinstance(reader, SICDTypeReader):
+            reader = SICDTypeCanvasImageReader(reader)
 
-        if not isinstance(reader, ComplexCanvasImageReader):
+        if not isinstance(reader, SICDTypeCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # noinspection PyUnresolvedReferences
@@ -1677,7 +1674,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if fname in ['', ()]:
             return
 
-        image_reader = ComplexCanvasImageReader(fname)
+        image_reader = SICDTypeCanvasImageReader(fname)
         self.update_reader(image_reader, update_browse=os.path.split(fname)[0])
 
     def select_directory(self):
@@ -1690,7 +1687,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         if dirname is None or dirname in [(), '']:
             return
 
-        image_reader = ComplexCanvasImageReader(dirname)
+        image_reader = SICDTypeCanvasImageReader(dirname)
         self.update_reader(image_reader, update_browse=os.path.split(dirname)[0])
 
     def create_new_annotation_file(self):
@@ -2050,7 +2047,7 @@ def main(reader=None, annotation=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexCanvasImageReader
+    reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
     annotation : None|str
     """
 

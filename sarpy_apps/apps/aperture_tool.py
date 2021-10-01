@@ -28,12 +28,12 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.image_utils import frame_sequence_utils
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
-import sarpy.visualization.remap as remap
+from sarpy.visualization.remap import NRL
 from sarpy.processing.subaperture import ApertureFilter
-from sarpy.io.general.base import BaseReader
+from sarpy.io.complex.base import SICDTypeReader
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 from sarpy.compliance import string_types
 
@@ -868,6 +868,8 @@ class ApertureTool(WidgetPanel):
         """
 
         filter_image = self.get_filtered_image()
+        if self.phase_history_panel.canvas.variables.canvas_image_object is None:
+            return
         if filter_image is None:
             full_n_rows = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_ny
             full_n_cols = self.phase_history_panel.canvas.variables.canvas_image_object.image_reader.full_image_nx
@@ -887,7 +889,7 @@ class ApertureTool(WidgetPanel):
         # fetch the remap function
         remap_function = self.app_variables.image_reader.remap_function
         if remap_function is None:
-            remap_function = remap.density
+            remap_function = NRL()
 
         # fetch the data
         select_rect_id = self.phase_history_panel.canvas.variables.select_rect.uid
@@ -1049,8 +1051,8 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexCanvasImageReader,
-        docstring='The complex type image reader object.')  # type: ComplexCanvasImageReader
+        'image_reader', SICDTypeCanvasImageReader,
+        docstring='The complex type image reader object.')  # type: SICDTypeCanvasImageReader
     aperture_filter = TypedDescriptor(
         'aperture_filter', ApertureFilter,
         docstring='The aperture filter calculator.')  # type: ApertureFilter
@@ -1248,9 +1250,9 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexCanvasImageReader(fnames[0])
+            the_reader = SICDTypeCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexCanvasImageReader(fnames)
+            the_reader = SICDTypeCanvasImageReader(fnames)
         self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
@@ -1266,7 +1268,7 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|CanvasImageReader
+        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
 
@@ -1276,14 +1278,12 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexCanvasImageReader(the_reader)
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if isinstance(the_reader, BaseReader):
-            if the_reader.reader_type != 'SICD':
-                raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexCanvasImageReader(the_reader)
+        if isinstance(the_reader, SICDTypeReader):
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexCanvasImageReader):
+        if not isinstance(the_reader, SICDTypeCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -1329,7 +1329,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexCanvasImageReader
+    reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
     """
 
     root = tkinter.Tk()

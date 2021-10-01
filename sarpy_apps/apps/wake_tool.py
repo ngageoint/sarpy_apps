@@ -13,7 +13,7 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilenames, askdirectory
 import numpy
 
-from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
@@ -24,7 +24,7 @@ from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
 from sarpy.compliance import string_types
-from sarpy.io.general.base import BaseReader
+from sarpy.io.complex.base import SICDTypeReader
 
 
 ######
@@ -96,7 +96,7 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The initial opening directory. This will get updated on chosen file.')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
+        'image_reader', SICDTypeCanvasImageReader, docstring='')  # type: SICDTypeCanvasImageReader
     arrow_id = IntegerDescriptor(
         'arrow_id', docstring='')  # type: int
     point_id = IntegerDescriptor(
@@ -207,9 +207,9 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexCanvasImageReader(fnames[0])
+            the_reader = SICDTypeCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexCanvasImageReader(fnames)
+            the_reader = SICDTypeCanvasImageReader(fnames)
         self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
@@ -217,7 +217,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         if dirname is None or dirname in [(), '']:
             return
 
-        the_reader = ComplexCanvasImageReader(dirname)
+        the_reader = SICDTypeCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     # callbacks for canvas event bindings
@@ -306,7 +306,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|CanvasImageReader
+        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
 
@@ -316,14 +316,12 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexCanvasImageReader(the_reader)
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if isinstance(the_reader, BaseReader):
-            if the_reader.reader_type != 'SICD':
-                raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexCanvasImageReader(the_reader)
+        if isinstance(the_reader, SICDTypeReader):
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexCanvasImageReader):
+        if not isinstance(the_reader, SICDTypeCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -449,7 +447,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexCanvasImageReader
+    reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
     """
 
     root = tkinter.Tk()
