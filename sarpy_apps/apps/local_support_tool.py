@@ -24,14 +24,14 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
+from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.utils import get_physical_coordinates
-from sarpy.visualization import remap
+from sarpy.visualization.remap import NRL
 from sarpy.processing.fft_base import fft2_sicd, fftshift
 from sarpy.compliance import string_types
-from sarpy.io.general.base import BaseReader
 
 
 class AppVariables(object):
@@ -39,9 +39,9 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
     remap_type = StringDescriptor(
-        'remap_type', default_value='density', docstring='')  # type: str
+        'remap_type', default_value='', docstring='')  # type: str
     image_reader = TypedDescriptor(
-        'image_reader', ComplexCanvasImageReader, docstring='')  # type: ComplexCanvasImageReader
+        'image_reader', SICDTypeCanvasImageReader, docstring='')  # type: SICDTypeCanvasImageReader
     row_line_low = IntegerDescriptor(
         'row_line_low',
         docstring='The id of the frequency_panel of the lower row bandwidth line.')  # type: Union[None, int]
@@ -79,6 +79,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         WidgetPanel.__init__(self, self.primary_frame)
         WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
+        self.phase_remap = NRL()
 
         self.init_w_horizontal_layout()
         self.set_title()
@@ -193,7 +194,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|CanvasImageReader
+        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
 
@@ -203,14 +204,12 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, string_types):
-            the_reader = ComplexCanvasImageReader(the_reader)
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if isinstance(the_reader, BaseReader):
-            if the_reader.reader_type != 'SICD':
-                raise ValueError('reader for the aperture tool is expected to be complex')
-            the_reader = ComplexCanvasImageReader(the_reader)
+        if isinstance(the_reader, SICDTypeReader):
+            the_reader = SICDTypeCanvasImageReader(the_reader)
 
-        if not isinstance(the_reader, ComplexCanvasImageReader):
+        if not isinstance(the_reader, SICDTypeCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
@@ -231,9 +230,9 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
 
         if len(fnames) == 1:
-            the_reader = ComplexCanvasImageReader(fnames[0])
+            the_reader = SICDTypeCanvasImageReader(fnames[0])
         else:
-            the_reader = ComplexCanvasImageReader(fnames)
+            the_reader = SICDTypeCanvasImageReader(fnames)
 
         if the_reader is None:
             showinfo('Opener not found',
@@ -248,7 +247,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             return
         # update the default directory for browsing
         self.variables.browse_directory = os.path.split(dirname)[0]
-        the_reader = ComplexCanvasImageReader(dirname)
+        the_reader = SICDTypeCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def _initialize_bandwidth_lines(self):
@@ -372,7 +371,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
             image_data = self.variables.image_reader.base_reader[extent[0]:extent[1], extent[2]:extent[3]]
             if image_data is not None:
                 self.frequency_panel.set_image_reader(
-                    NumpyCanvasImageReader(remap.density(fftshift(fft2_sicd(image_data, the_sicd)))))
+                    NumpyCanvasImageReader(self.phase_remap(fftshift(fft2_sicd(image_data, the_sicd)))))
                 self._initialize_bandwidth_lines()
                 draw_row_delta_lines()
                 draw_col_delta_lines()
@@ -411,7 +410,7 @@ def main(reader=None):
 
     Parameters
     ----------
-    reader : None|str|BaseReader|ComplexCanvasImageReader
+    reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
     """
 
     root = tkinter.Tk()

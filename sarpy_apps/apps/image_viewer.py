@@ -34,7 +34,7 @@ class AppVariables(object):
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
     remap_type = StringDescriptor(
-        'remap_type', default_value='density', docstring='')  # type: str
+        'remap_type', default_value='nrl', docstring='')  # type: str
     image_reader = TypedDescriptor(
         'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
 
