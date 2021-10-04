@@ -19,7 +19,7 @@ from sarpy.io.product.sidd2_elements.SIDD import SIDDType  # version 2.0
 from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
 from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
 from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
-from sarpy.io.phase_history.crsd1_elements.CRSD import CRSDType  # version 1.0
+from sarpy.io.received.crsd1_elements.CRSD import CRSDType  # version 1.0
 from sarpy.io.complex.sicd_elements.SCPCOA import GeometryCalculator
 from sarpy.io.product.sidd2_elements.ExploitationFeatures import ExploitationCalculator
 
