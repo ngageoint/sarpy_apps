@@ -8,27 +8,34 @@ __author__ = "Thomas McCullough"
 
 import logging
 import numpy
-from typing import List, Tuple, Union
+from typing import List, Tuple
 import gc
+
+from tk_builder.image_reader import CanvasImageReader
 
 from sarpy.compliance import string_types, int_func
 from sarpy.io.general.base import AbstractReader, SarpyIOError
-from sarpy.io.complex.base import SICDTypeReader
-from sarpy.io.product.base import SIDDTypeReader
-from tk_builder.image_reader import CanvasImageReader
 from sarpy.visualization.remap import get_remap_list, get_registered_remap, RemapFunction
 
 from sarpy.io.complex.converter import open_complex
+from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.aggregate import AggregateComplexReader
 from sarpy.io.complex.sicd_elements.SICD import SICDType
+
 from sarpy.io.product.converter import open_product
+from sarpy.io.product.base import SIDDTypeReader
+from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1
+from sarpy.io.product.sidd2_elements.SIDD import SIDDType as SIDDType2
+
 
 from sarpy.io.phase_history.converter import open_phase_history
-from sarpy.io.phase_history.cphd import CPHDReader
+from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType as CPHDType1
 from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3
-from sarpy.io.phase_history.crsd import CRSDReader
-from sarpy.io.phase_history.crsd1_elements.CRSD import CRSDType
+
+from sarpy.io.received.converter import open_received
+from sarpy.io.received.base import CRSDTypeReader
+from sarpy.io.received.crsd1_elements.CRSD import CRSDType
 
 from sarpy.io.general.converter import open_general
 
@@ -45,7 +52,142 @@ def _get_default_remap():
     return get_remap_list()[0][1]
 
 
-class ComplexCanvasImageReader(CanvasImageReader):
+#######
+# general reader
+
+class GeneralCanvasImageReader(CanvasImageReader):
+    """
+    This is a general image reader of unknown type. There may be trouble
+    with the image segments of unexpected type.
+    """
+
+    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
+
+    def __init__(self, reader):
+        """
+
+        Parameters
+        ----------
+        reader : str|AbstractReader
+            The reader, or path to appropriate data file.
+        """
+
+        # initialize
+        self._base_reader = None
+        self._chippers = None
+        self._data_size = None
+        self._index = None
+        # set the reader
+        self.base_reader = reader
+
+    @property
+    def base_reader(self):
+        # type: () -> AbstractReader
+        """
+        AbstractReader: The reader object
+        """
+
+        return self._base_reader
+
+    @base_reader.setter
+    def base_reader(self, value):
+        if isinstance(value, string_types):
+            value = open_general(value)
+        if not isinstance(value, AbstractReader):
+            raise TypeError('base_reader must be of type AbstractReader, got type {}'.format(type(value)))
+        self._base_reader = value
+        # noinspection PyProtectedMember
+        self._chippers = value._get_chippers_as_tuple()
+        self._index = 0
+        self._data_size = value.get_data_size_as_tuple()[0]
+
+    @property
+    def reader_type(self):
+        """
+        str: The reader type.
+        """
+
+        return self.base_reader.reader_type
+
+    @property
+    def index(self):
+        """
+        int: The reader index.
+        """
+
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        value = int(value)
+        data_sizes = self.base_reader.get_data_size_as_tuple()
+        if not (0 <= value < len(data_sizes)):
+            logging.error(
+                'The index property must be 0 <= index < {}, '
+                'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
+            value = 0
+        self._index = value
+        self._data_size = data_sizes[value]
+
+    @property
+    def file_name(self):
+        return None if self.base_reader is None else self.base_reader.file_name
+
+    @property
+    def remapable(self):
+        return False
+
+    @property
+    def remap_function(self):
+        return None
+
+    @property
+    def image_count(self):
+        return 0 if self._chippers is None else len(self._chippers)
+
+    def get_meta_data(self):
+        """
+        Gets one of a varieties of metadata structure.
+
+        Returns
+        -------
+        Any
+        """
+
+        if isinstance(self.base_reader, SICDTypeReader):
+            if self._index is None:
+                return None
+            # noinspection PyUnresolvedReferences
+            return self.base_reader.get_sicds_as_tuple()[self._index]
+        elif isinstance(self.base_reader, SIDDTypeReader):
+            if self._index is None:
+                return None
+            # noinspection PyUnresolvedReferences
+            return self.base_reader.get_sidds_as_tuple()[self._index]
+        elif isinstance(self.base_reader, CPHDTypeReader):
+            # noinspection PyUnresolvedReferences
+            return self.base_reader.cphd_meta
+        elif isinstance(self.base_reader, CRSDTypeReader):
+            # noinspection PyUnresolvedReferences
+            return self.base_reader.crsd_meta
+        return None
+
+    def __getitem__(self, item):
+        return self._chippers[self.index].__getitem__(item)
+
+    def __del__(self):
+        # noinspection PyBroadException
+        try:
+            del self._chippers
+            gc.collect()
+        except Exception:
+            pass
+
+
+########
+# general complex type reader structure - really just sets the remap
+
+class ComplexCanvasImageReader(GeneralCanvasImageReader):
     __slots__ = ('_base_reader', '_chippers', '_index', '_data_size', '_remap_function')
 
     def __init__(self, reader):
@@ -57,18 +199,8 @@ class ComplexCanvasImageReader(CanvasImageReader):
             The complex valued reader, or path to appropriate data file.
         """
 
-        # initialize
-        self._base_reader = None
-        self._chippers = None
-        self._data_size = None
-        self._index = None
         self._remap_function = _get_default_remap()
-        # set the reader
-        self.base_reader = reader
-
-    @property
-    def file_name(self):
-        return None if self.base_reader is None else self.base_reader.file_name
+        GeneralCanvasImageReader.__init__(self, reader)
 
     @property
     def base_reader(self):
@@ -83,17 +215,28 @@ class ComplexCanvasImageReader(CanvasImageReader):
     def base_reader(self, value):
         if isinstance(value, string_types):
             reader = None
+
+            # try to open as sicd type
             try:
                 reader = open_complex(value)
             except SarpyIOError:
                 pass
+
+            # try to open as phase_history
             if reader is None:
                 try:
                     reader = open_phase_history(value)
                 except SarpyIOError:
                     pass
+
             if reader is None:
-                raise SarpyIOError('Could not open file {} as a SICD or CPHD type reader'.format(value))
+                try:
+                    reader = open_received(value)
+                except SarpyIOError:
+                    pass
+
+            if reader is None:
+                raise SarpyIOError('Could not open file {} as a one of the complex type readers'.format(value))
             value = reader
         elif isinstance(value, (tuple, list)):
             value = AggregateComplexReader(value)
@@ -110,26 +253,6 @@ class ComplexCanvasImageReader(CanvasImageReader):
         self._data_size = value.get_data_size_as_tuple()[0]
 
     @property
-    def index(self):
-        """
-        int: The reader index.
-        """
-
-        return self._index
-
-    @index.setter
-    def index(self, value):
-        value = int(value)
-        data_sizes = self.base_reader.get_data_size_as_tuple()
-        if not (0 <= value < len(data_sizes)):
-            logging.error(
-                'The index property for ComplexCanvasImageReader must be 0 <= index < {}, '
-                'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
-            value = 0
-        self._index = value
-        self._data_size = data_sizes[value]
-
-    @property
     def remapable(self):
         return True
 
@@ -137,14 +260,9 @@ class ComplexCanvasImageReader(CanvasImageReader):
     def remap_function(self):
         return self._remap_function
 
-    @property
-    def image_count(self):
-        return 0 if self._chippers is None else len(self._chippers)
-
     def __getitem__(self, item):
         cdata = self._chippers[self.index].__getitem__(item)
-        decimated_image_data = self.remap_complex_data(cdata)
-        return decimated_image_data
+        return self.remap_complex_data(cdata)
 
     def remap_complex_data(self, complex_data):
         """
@@ -172,18 +290,22 @@ class ComplexCanvasImageReader(CanvasImageReader):
                 'Got unexpected value for remap `{}`, using `{}`'.format(remap_type, default_remap.name))
             self._remap_function = default_remap
 
-    def __del__(self):
-        # noinspection PyBroadException
-        try:
-            del self._chippers
-            gc.collect()
-        except Exception:
-            pass
 
 ########
 # SICD specific type readers
 
 class SICDTypeCanvasImageReader(ComplexCanvasImageReader):
+
+    def __init__(self, reader):
+        """
+
+        Parameters
+        ----------
+        reader : str|SICDTypeReader
+            The sicd type reader, or path to appropriate data file.
+        """
+
+        ComplexCanvasImageReader.__init__(self, reader)
 
     @property
     def base_reader(self):
@@ -235,6 +357,17 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
     __slots__ = (
         '_base_reader', '_chippers', '_sicd_partitions', '_index', '_index_ordering',
         '_data_size', '_remap_function')
+
+    def __init__(self, reader):
+        """
+
+        Parameters
+        ----------
+        reader : str|SICDTypeReader
+            The sicd type reader, or path to appropriate data file.
+        """
+
+        ComplexCanvasImageReader.__init__(self, reader)
 
     @property
     def base_reader(self):
@@ -401,11 +534,22 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
 
 class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
 
+    def __init__(self, reader):
+        """
+
+        Parameters
+        ----------
+        reader : str|CPHDTypeReader
+            The cphd type reader, or path to appropriate data file.
+        """
+
+        ComplexCanvasImageReader.__init__(self, reader)
+
     @property
     def base_reader(self):
-        # type: () -> CPHDReader
+        # type: () -> CPHDTypeReader
         """
-        CPHDReader: The cphd reader object
+        CPHDTypeReader: The cphd reader object
         """
 
         return self._base_reader
@@ -415,7 +559,7 @@ class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
         if isinstance(value, string_types):
             reader = None
             try:
-                reader = CPHDReader(value)
+                reader = open_phase_history(value)
             except SarpyIOError:
                 pass
 
@@ -423,7 +567,7 @@ class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
                 raise SarpyIOError('Could not open file {} as a CPHD reader'.format(value))
             value = reader
 
-        if not isinstance(value, CPHDReader):
+        if not isinstance(value, CPHDTypeReader):
             raise TypeError('base_reader must be a CPHDReader, got type {}'.format(type(value)))
         self._base_reader = value
         # noinspection PyProtectedMember
@@ -443,13 +587,27 @@ class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
         return self.base_reader.cphd_meta
 
 
+#######
+# Received data specific type reader
+
 class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
+
+    def __init__(self, reader):
+        """
+
+        Parameters
+        ----------
+        reader : str|CRSDTypeReader
+            The crsd type reader, or path to appropriate data file.
+        """
+
+        ComplexCanvasImageReader.__init__(self, reader)
 
     @property
     def base_reader(self):
-        # type: () -> CRSDReader
+        # type: () -> CRSDTypeReader
         """
-        CRSDReader: The crsd reader object
+        CRSDTypeReader: The crsd reader object
         """
 
         return self._base_reader
@@ -459,7 +617,7 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
         if isinstance(value, string_types):
             reader = None
             try:
-                reader = CRSDReader(value)
+                reader = open_received(value)
             except SarpyIOError:
                 pass
 
@@ -467,7 +625,7 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
                 raise SarpyIOError('Could not open file {} as a CRSD reader'.format(value))
             value = reader
 
-        if not isinstance(value, CRSDReader):
+        if not isinstance(value, CRSDTypeReader):
             raise TypeError('base_reader must be a CRSDReader, got type {}'.format(type(value)))
         self._base_reader = value
         # noinspection PyProtectedMember
@@ -487,69 +645,10 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
         return self.base_reader.crsd_meta
 
 
-class PhaseHistoryCanvasImageReader(ComplexCanvasImageReader):
-
-    @property
-    def base_reader(self):
-        # type: () -> Union[CPHDReader, CRSDReader]
-        """
-        CPHDReader|CRSDReader: The cphd or crsd reader object
-        """
-
-        return self._base_reader
-
-    @base_reader.setter
-    def base_reader(self, value):
-        if isinstance(value, string_types):
-            reader = None
-            try:
-                reader = open_phase_history(value)
-            except SarpyIOError:
-                pass
-
-            if reader is None:
-                raise SarpyIOError('Could not open file {} as a phase history reader'.format(value))
-            value = reader
-
-        if not isinstance(value, (CPHDReader, CRSDReader)):
-            raise TypeError('base_reader must be a CPHDReader or CRSDReader, got type {}'.format(type(value)))
-        self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
-
-    def get_cphd(self):
-        """
-        Gets the relevant CPHD structure.
-
-        Returns
-        -------
-        None|CPHDType1|CPHDType0_3
-        """
-
-        if not isinstance(self.base_reader, CPHDReader):
-            return None
-        return self.base_reader.cphd_meta
-
-    def get_crsd(self):
-        """
-        Gets the relevant CRSD structure.
-
-        Returns
-        -------
-        None|CRSDType
-        """
-
-        if not isinstance(self.base_reader, CRSDReader):
-            return None
-        return self.base_reader.crsd_meta
-
-
 ######
 # SIDD specific type reader
 
-class DerivedCanvasImageReader(CanvasImageReader):
+class DerivedCanvasImageReader(GeneralCanvasImageReader):
     __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
 
     def __init__(self, reader):
@@ -558,16 +657,10 @@ class DerivedCanvasImageReader(CanvasImageReader):
         Parameters
         ----------
         reader : str|SIDDTypeReader
-            The sidd based reader, or path to appropriate data file.
+            The sidd type reader, or path to appropriate data file.
         """
 
-        # initialize
-        self._base_reader = None
-        self._chippers = None
-        self._data_size = None
-        self._index = None
-        # set the reader
-        self.base_reader = reader
+        GeneralCanvasImageReader.__init__(self, reader)
 
     @property
     def base_reader(self):
@@ -591,30 +684,6 @@ class DerivedCanvasImageReader(CanvasImageReader):
         self._data_size = value.get_data_size_as_tuple()[0]
 
     @property
-    def index(self):
-        """
-        int: The reader index.
-        """
-
-        return self._index
-
-    @index.setter
-    def index(self, value):
-        value = int(value)
-        data_sizes = self.base_reader.get_data_size_as_tuple()
-        if not (0 <= value < len(data_sizes)):
-            logging.error(
-                'The index property for DerivedCanvasImageReader must be 0 <= index < {}, '
-                'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
-            value = 0
-        self._index = value
-        self._data_size = data_sizes[value]
-
-    @property
-    def file_name(self):
-        return None if self.base_reader is None else self.base_reader.file_name
-
-    @property
     def remapable(self):
         return False
 
@@ -622,114 +691,15 @@ class DerivedCanvasImageReader(CanvasImageReader):
     def remap_function(self):
         return None
 
-    @property
-    def image_count(self):
-        return 0 if self._chippers is None else len(self._chippers)
+    def get_sidd(self):
+        """
+        Gets the relevant SIDD structure.
 
-    def __getitem__(self, item):
-        return self._chippers[self.index].__getitem__(item)
-
-    def __del__(self):
-        # noinspection PyBroadException
-        try:
-            del self._chippers
-            gc.collect()
-        except Exception:
-            pass
-
-
-#######
-# general reader
-
-class GeneralCanvasImageReader(CanvasImageReader):
-    """
-    This is a general image reader of unknown type. There may be trouble
-    with the image segments of unexpected type.
-    """
-
-    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
-
-    def __init__(self, reader):
+        Returns
+        -------
+        None|SIDDType1|SIDDType2
         """
 
-        Parameters
-        ----------
-        reader : str|AbstractReader
-            The sidd based reader, or path to appropriate data file.
-        """
-
-        # initialize
-        self._base_reader = None
-        self._chippers = None
-        self._data_size = None
-        self._index = None
-        # set the reader
-        self.base_reader = reader
-
-    @property
-    def base_reader(self):
-        # type: () -> AbstractReader
-        """
-        AbstractReader: The reader object
-        """
-
-        return self._base_reader
-
-    @base_reader.setter
-    def base_reader(self, value):
-        if isinstance(value, string_types):
-            value = open_general(value)
-        if not isinstance(value, AbstractReader):
-            raise TypeError('base_reader must be of type AbstractReader, got type {}'.format(type(value)))
-        self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
-
-    @property
-    def index(self):
-        """
-        int: The reader index.
-        """
-
-        return self._index
-
-    @index.setter
-    def index(self, value):
-        value = int(value)
-        data_sizes = self.base_reader.get_data_size_as_tuple()
-        if not (0 <= value < len(data_sizes)):
-            logging.error(
-                'The index property for DerivedCanvasImageReader must be 0 <= index < {}, '
-                'and got argument {}. Setting to 0.'.format(len(data_sizes), value))
-            value = 0
-        self._index = value
-        self._data_size = data_sizes[value]
-
-    @property
-    def file_name(self):
-        return None if self.base_reader is None else self.base_reader.file_name
-
-    @property
-    def remapable(self):
-        return False
-
-    @property
-    def remap_function(self):
-        return None
-
-    @property
-    def image_count(self):
-        return 0 if self._chippers is None else len(self._chippers)
-
-    def __getitem__(self, item):
-        return self._chippers[self.index].__getitem__(item)
-
-    def __del__(self):
-        # noinspection PyBroadException
-        try:
-            del self._chippers
-            gc.collect()
-        except Exception:
-            pass
+        if self._index is None:
+            return None
+        return self.base_reader.get_sidds_as_tuple()[self._index]

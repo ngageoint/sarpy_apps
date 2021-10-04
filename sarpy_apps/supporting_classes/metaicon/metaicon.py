@@ -5,7 +5,7 @@ The metaicon widget.
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
-
+import logging
 from typing import Tuple, List
 from tkinter import font
 import tkinter
@@ -14,15 +14,22 @@ import numpy
 
 from sarpy.compliance import string_types
 from sarpy.io.complex.converter import open_complex
-from sarpy.io.general.base import BaseReader
+from sarpy.io.general.base import AbstractReader
+
+from sarpy.io.complex.base import SICDTypeReader
+from sarpy.io.product.base import SIDDTypeReader
+from sarpy.io.phase_history.base import CPHDTypeReader
+from sarpy.io.received.base import CRSDTypeReader
 
 from tk_builder.panels.image_panel import ImagePanel
 import tk_builder.utils.color_utils.color_converter as color_converter
 from tk_builder.image_reader import NumpyCanvasImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
+logger = logging.getLogger(__name__)
 
-class Colors:
+
+class Colors(object):
     layover = color_converter.rgb_to_hex((1, 0.65, 0))
     shadow = color_converter.rgb_to_hex((0, 0.65, 1))
     multipath = color_converter.rgb_to_hex((1, 0, 0))
@@ -30,7 +37,7 @@ class Colors:
     flight_direction = color_converter.rgb_to_hex((1, 1, 0))
 
 
-class ArrowWidths:
+class ArrowWidths(object):
     layover_width = 2
     shadow_width = 2
     multipath_width = 2
@@ -186,7 +193,7 @@ class MetaIcon(ImagePanel):
 
         Parameters
         ----------
-        reader : BaseReader|str
+        reader : AbstractReader|str
             A file name or reader object.
         index : int
             The meta object index in the reader.
@@ -198,24 +205,24 @@ class MetaIcon(ImagePanel):
 
         if isinstance(reader, string_types):
             reader = open_complex(reader)
-        if not isinstance(reader, BaseReader):
+
+        if not isinstance(reader, AbstractReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
-        if reader.reader_type == 'SICD':
-            # noinspection PyUnresolvedReferences
+        if isinstance(reader, SICDTypeReader):
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
-        elif reader.reader_type == 'CPHD':
-            # noinspection PyUnresolvedReferences
+        elif isinstance(reader, SIDDTypeReader):
+            sidd = reader.get_sidds_as_tuple()[index]
+            data_container = MetaIconDataContainer.from_sidd(sidd)
+        elif isinstance(reader, CPHDTypeReader):
             data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta, index)
-        elif reader.reader_type == 'SIDD':
-            # noinspection PyUnresolvedReferences
-            data_container = MetaIconDataContainer.from_sidd(reader.sidd_meta[index])
-        elif reader.reader_type == "CRSD":
-            # noinspection PyUnresolvedReferences
+        elif isinstance(reader, CRSDTypeReader):
             data_container = MetaIconDataContainer.from_crsd(reader.crsd_meta)
         else:
-            raise TypeError('Got unhandled type {}'.format(type(reader)))
+            data_container = MetaIconDataContainer()
+
+            logger.warning('Cannot render a metaicon from unhandled reader type {}'.format(type(reader)))
 
         self.create_from_metaicon_data_container(data_container)
 
