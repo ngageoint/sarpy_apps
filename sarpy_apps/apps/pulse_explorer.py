@@ -63,7 +63,7 @@ def _reramp(pulse_data, sampling_rate, deramp_rate):
     use_data = resample(pulse_data - numpy.mean(pulse_data), sample_size)
     time_interval = 1 / (sampling_rate * upsample_factor * oversample_factor)
     times = time_interval * numpy.arange(sample_size) - 0.5 * rcv_window_length
-    return use_data * numpy.exp(1j*numpy.pi*deramp_rate*times*times), 1./time_interval
+    return use_data*numpy.exp(1j*numpy.pi*deramp_rate*times*times), 1./time_interval
 
 
 def _stft(data, sampling_rate):
@@ -91,9 +91,11 @@ def _stft(data, sampling_rate):
     nperseg = int(0.97*nfft)
     window = kaiser(nperseg, 5)
     noverlap = int(0.9*nfft)
-    frequencies, times, trans_data = stft(data, sampling_rate, window=window, nperseg=nperseg, noverlap=noverlap, nfft=nfft, return_onesided=False)
+    frequencies, times, trans_data = stft(
+        data, sampling_rate, window=window, nperseg=nperseg, noverlap=noverlap,
+        nfft=nfft, return_onesided=False)
     # todo: anything to do with frequencies and times?
-    return fftshift(trans_data, axes=0)
+    return times, frequencies, fftshift(trans_data, axes=0)
 
 
 def _rf_signal(reader, index, pulse):
@@ -108,27 +110,35 @@ def _rf_signal(reader, index, pulse):
 
     Returns
     -------
-    numpy.ndarray
+    (numpy.ndarray, numpy.ndarray, numpy.ndarray)
+        The times, frequencies, and stft data array
     """
 
     crsd = reader.crsd_meta
-    sampling_rate = crsd.Channel.Parameters[index].Fs
+    params = crsd.Channel.Parameters[index]
+    sampling_rate = params.Fs
     pulse_data = reader[pulse, :, index].flatten()
-    test = reader.read_pvp_variable('FICRate', index, the_range=pulse)
     fic_rate = float(reader.read_pvp_variable('FICRate', index, pulse)[0])
-
-    # todo: anything to do with frequencies and times?
+    dfic0 = float(reader.read_pvp_variable('DFIC0', index, pulse)[0])
 
     if fic_rate == 0:
-        return _stft(pulse_data, sampling_rate)
+        times, frequencies, stft_data = _stft(pulse_data, sampling_rate)
+        frequencies += params.F0Ref + dfic0 - 0.5*sampling_rate
     else:
-        return _stft(*_reramp(pulse_data, sampling_rate, fic_rate))
+        reramped, reramped_sampling_rate = _reramp(pulse_data, sampling_rate, fic_rate)
+        times, frequencies, stft_data = _stft(reramped, reramped_sampling_rate)
+        frequencies += \
+            params.F0Ref + dfic0 + \
+            0.5*fic_rate*pulse_data.size/reramped_sampling_rate - \
+            0.5*reramped_sampling_rate
+    return times, fftshift(frequencies, axes=0), stft_data
 
 
 class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
     __slots__ = (
         '_base_reader', '_chippers', '_index', '_data_size', '_remap_function',
-        '_signal_data_size', '_pulse', '_pulse_display', '_pulse_data')
+        '_signal_data_size', '_pulse', '_pulse_display', '_pulse_data',
+        '_times', '_frequencies')
 
     def __init__(self, reader):
         """
@@ -143,6 +153,8 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         self._pulse = None
         self._pulse_display = None
         self._pulse_data = None
+        self._times = None
+        self._frequencies = None
         self.pulse_display = _PULSE_DISPLAY_VALUES[0]
         CRSDTypeCanvasImageReader.__init__(self, reader)
 
@@ -243,15 +255,34 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         self._pulse = value
         self._set_pulse_data()
 
+    @property
+    def times(self):
+        """
+        numpy.ndarray: Gets the times array for stft data for the current pulse.
+        """
+
+        return self._times
+
+    @property
+    def frequencies(self):
+        """
+        numpy.ndarray: Gets the frequencies array for stft data for the current pulse.
+        """
+
+        return self._frequencies
+
     def _set_pulse_data(self):
         if self.pulse is None:
             self._pulse_data = None
             return
 
         if self._pulse_display == 'RFSignal':
-            data = _rf_signal(self.base_reader, self.index, self.pulse)
+            times, frequencies, data = _rf_signal(self.base_reader, self.index, self.pulse)
         else:
             raise ValueError('Got unhandled pulse display value `{}`'.format(self.pulse_display))
+
+        self._times = times
+        self._frequencies = frequencies
         self._data_size = data.shape
         self._pulse_data = FlatReader(data)
 
@@ -278,7 +309,7 @@ class AppVariables(object):
         docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
 
 
-class RegionSelection(WidgetPanel, WidgetWithMetadata):
+class PulseExplorer(WidgetPanel, WidgetWithMetadata):
     """
     The widget for selecting the Area of Interest for the aperture tool.
     """
@@ -442,7 +473,7 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = RegionSelection(root)
+    app = PulseExplorer(root)
     root.geometry("1000x800")
     if reader is not None:
         app.update_reader(reader)
@@ -465,9 +496,28 @@ if __name__ == '__main__':
 
     import os
     from matplotlib import pyplot
-    reader = open_received(os.path.expanduser('~/Desktop/sarpy_testing/crsd/S1B_IW_RAW__0SDV_20210326T153759_20210326T153832_026188_032019_A1AF_43000_2500.crsd'))
-    canvas_reader = STFTCanvasImageReader(reader)
+    crsd_file = r'R:\sar\Data_SomeDomestic\CRSD\AmazonRainforest\S1A_IW_RAW__0SDV_20161110T095516_20161110T095548_013878_01653D_8571_0_5000.crsd'
+
+    # reader = open_received(crsd_file)
+    # canvas_reader = STFTCanvasImageReader(reader)
+
+    canvas_reader = STFTCanvasImageReader(crsd_file)
     data = canvas_reader[:, :]
+    tims = canvas_reader.times
+    freqs = canvas_reader.frequencies
+    times = numpy.zeros((tims.size + 1))
+    times[:-1] = tims[:]
+    times[-1] = tims[-1]
+    frequencies = numpy.zeros((freqs.size + 1))
+    frequencies[:-1] = freqs[:]
+    frequencies[-1] = freqs[-1]
+
+    print(f'times shape = {times.shape}, freqs shape = {freqs.shape}, data shape = {data.shape}')
     fig, ax = pyplot.subplots()
-    ax.imshow(data)
+    ax.pcolormesh(times, frequencies, data)
+
+    # fig, ax = pyplot.subplots(nrows=2)
+    # ax[0].plot(times)
+    # ax[1].plot(frequencies)
+
     pyplot.show()
