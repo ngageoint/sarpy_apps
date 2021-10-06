@@ -19,6 +19,7 @@ from tkinter.filedialog import askopenfilename
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
+from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import crsd_files, all_files
@@ -256,7 +257,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
     @property
     def times(self):
         """
-        numpy.ndarray: Gets the times array for stft data for the current pulse.
+        numpy.ndarray: Gets the times array for stft/spectrogram data for the current pulse.
         """
 
         return self._times
@@ -264,10 +265,17 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
     @property
     def frequencies(self):
         """
-        numpy.ndarray: Gets the frequencies array for stft data for the current pulse.
+        numpy.ndarray: Gets the frequencies array for stft/spectrogram data for the current pulse.
         """
 
         return self._frequencies
+
+    @property
+    def pulse_data(self):
+        """
+        numpy.ndarray: The spectrogram of the currently selected pulse
+        """
+        return self._pulse_data
 
     def _set_pulse_data(self):
         if self.pulse is None:
@@ -307,49 +315,35 @@ class AppVariables(object):
         docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
 
 
-class PulseExplorer(WidgetPanel, WidgetWithMetadata):
-    """
-    The widget for selecting the Area of Interest for the aperture tool.
-    """
-
-    _widget_list = ("instructions", "image_panel")
-    instructions = widget_descriptors.LabelDescriptor(
-        "instructions",
-        default_text='Maybe have a helpful description here?.',
-        docstring='The basic instructions.')   # type: basic_widgets.Label
-    image_panel = widget_descriptors.ImagePanelDescriptor(
-        "image_panel", docstring='The image panel.')  # type: ImagePanel
-
-    def __init__(self, parent):
+class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
+    def __init__(self, primary):
         """
 
         Parameters
         ----------
-        parent : tkinter.Tk|tkinter.Toplevel
+        primary : tkinter.Toplevel|tkinter.Tk
         """
 
-        # set the parent frame
-        self.root = parent
-        self.primary_frame = basic_widgets.Frame(parent)
-        WidgetPanel.__init__(self, self.primary_frame)
-        WidgetWithMetadata.__init__(self, parent)
+        self.root = primary
+        self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
 
+        basic_widgets.Frame.__init__(self, primary)
+        WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
-        self.init_w_vertical_layout()
-        self.set_title()
-        # todo: replace the instructions widget with a thing for selecting pulse
+        self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
+        self.image_panel.config(borderwidth=0)
+        self.primary.add(self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
-        # adjust packing so the image panel takes all the space
-        self.instructions.master.pack(side='top', expand=tkinter.NO)
-        self.image_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
-        # jazz up the instruction a little
-        self.instructions.config(
-            font=('Arial', '12'), anchor=tkinter.CENTER, relief=tkinter.RIDGE,
-            justify=tkinter.CENTER, padding=5)
-        # hide some extraneous image panel elements
-        self.image_panel.hide_tools('shape_drawing')
-        self.image_panel.hide_shapes()
+        self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
+        self.primary.add(self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.pyplot_panel.cmap_name = 'viridis'
+        self.pyplot_panel.set_ylabel('GHz')
+        self.pyplot_panel.set_xlabel('microseconds')
+
+        self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
+        self.set_title()
 
         # define menus
         menubar = tkinter.Menu()
@@ -366,13 +360,19 @@ class PulseExplorer(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
-        # handle packing
-        parent.config(menu=menubar)
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        primary.config(menu=menubar)
 
-        # todo: handle if the pulse has changed...
+        # hide extraneous tool elements
+        self.image_panel.hide_tools('shape_drawing')
+        self.image_panel.hide_shapes()
 
-    # callbacks
+        # bind canvas events for proper functionality
+        # this makes for bad performance on a larger image - do not activate
+        # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
+        self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
+        self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
     def set_title(self):
         """
         Sets the window title.
@@ -386,17 +386,51 @@ class PulseExplorer(WidgetPanel, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
+        self.primary.destroy()
         self.root.destroy()
 
-    def callback_select_files(self):
-        fname = askopenfilename(initialdir=self.variables.browse_directory, filetypes=[crsd_files, all_files])
-        if fname is None or fname in ['', ()]:
+    # noinspection PyUnusedLocal
+    def handle_selection_change(self, event):
+        """
+        Handle a change in the selection area.
+
+        Parameters
+        ----------
+        event
+        """
+
+        if self.variables.image_reader is None:
             return
 
-        the_reader = STFTCanvasImageReader(fname)
-        self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
+        full_image_width = self.image_panel.canvas.variables.state.canvas_width
+        fill_image_height = self.image_panel.canvas.variables.state.canvas_height
+        self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
+        self.display_canvas_rect_selection_in_pyplot_frame()
 
-    # methods used in callbacks
+    # noinspection PyUnusedLocal
+    def handle_remap_change(self, event):
+        """
+        Handle that the remap for the image canvas has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        pass
+
+    # noinspection PyUnusedLocal
+    def handle_image_index_changed(self, event):
+        """
+        Handle that the image index has changed.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.my_populate_metaicon()
+
     def update_reader(self, the_reader, update_browse=None):
         """
         Update the reader.
@@ -429,17 +463,49 @@ class PulseExplorer(WidgetPanel, WidgetWithMetadata):
         self.image_panel.set_image_reader(the_reader)
         self.set_title()
         # refresh appropriate GUI elements
+        self.pyplot_panel.make_blank()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+
+    def callback_select_files(self):
+        fname = askopenfilename(initialdir=self.variables.browse_directory, filetypes=[crsd_files, all_files])
+        if fname is None or fname in ['', ()]:
+            return
+
+        the_reader = STFTCanvasImageReader(fname)
+        self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
+
+    def display_canvas_rect_selection_in_pyplot_frame(self):
+        def get_extent(coords):
+            row_min = int(numpy.floor(min(coords[0::2])))
+            row_max = int(numpy.ceil(max(coords[0::2])))
+            col_min = int(numpy.floor(min(coords[1::2])))
+            col_max = int(numpy.ceil(max(coords[1::2])))
+            return row_min, row_max, col_min, col_max
+
+        threshold = self.image_panel.canvas.variables.config.select_size_threshold
+
+        select_id = self.image_panel.canvas.variables.select_rect.uid
+        rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
+        extent = get_extent(rect_coords)
+
+        if abs(extent[1] - extent[0]) < threshold or abs(extent[3] - extent[2]) < threshold:
+            self.pyplot_panel.make_blank()
+        else:
+            times = 1e6*self.variables.image_reader.times[extent[2]:extent[3]]
+            frequencies = 1e-9*self.variables.image_reader.frequencies[extent[0]:extent[1]]
+            image_data = self.variables.image_reader.pulse_data[extent[0]: extent[1], extent[2]:extent[3]]
+            self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
 
     def my_populate_metaicon(self):
         """
         Populate the metaicon.
         """
+
         if self.image_panel.canvas.variables.canvas_image_object is None or \
                 self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
             image_reader = None
-            the_index = None
+            the_index = 0
         else:
             image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
             the_index = self.image_panel.canvas.get_image_index()
@@ -480,31 +546,31 @@ def main(reader=None):
 
 
 if __name__ == '__main__':
-    # import argparse
-    # parser = argparse.ArgumentParser(
-    #     description="Open the pulse explorer with optional input file.",
-    #     formatter_class=argparse.RawTextHelpFormatter)
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the pulse explorer with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+    args = parser.parse_args()
+
+    main(reader=args.input)
+
+
+    # import os
+    # from matplotlib import pyplot
+    # crsd_file = r'R:\sar\Data_SomeDomestic\CRSD\AmazonRainforest\S1A_IW_RAW__0SDV_20161110T095516_20161110T095548_013878_01653D_8571_0_5000.crsd'
     #
-    # parser.add_argument(
-    #     '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
-    # args = parser.parse_args()
+    # # reader = open_received(crsd_file)
+    # # canvas_reader = STFTCanvasImageReader(reader)
     #
-    # main(reader=args.input)
-
-
-    import os
-    from matplotlib import pyplot
-    crsd_file = r'R:\sar\Data_SomeDomestic\CRSD\AmazonRainforest\S1A_IW_RAW__0SDV_20161110T095516_20161110T095548_013878_01653D_8571_0_5000.crsd'
-
-    # reader = open_received(crsd_file)
-    # canvas_reader = STFTCanvasImageReader(reader)
-
-    canvas_reader = STFTCanvasImageReader(crsd_file)
-    data = canvas_reader[:, :]
-    tims = canvas_reader.times
-    freqs = canvas_reader.frequencies
-
-    fig, ax = pyplot.subplots()
-    ax.pcolormesh(tims, freqs, data, shading='auto')
-
-    pyplot.show()
+    # canvas_reader = STFTCanvasImageReader(crsd_file)
+    # data = canvas_reader[:, :]
+    # tims = canvas_reader.times
+    # freqs = canvas_reader.frequencies
+    #
+    # fig, ax = pyplot.subplots()
+    # ax.pcolormesh(tims, freqs, data, shading='auto')
+    #
+    # pyplot.show()

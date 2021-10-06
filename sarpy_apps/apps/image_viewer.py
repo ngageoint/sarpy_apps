@@ -24,7 +24,6 @@ from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
     GeneralCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
-from sarpy.compliance import string_types
 from sarpy.io.general.base import BaseReader
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.product.base import SIDDTypeReader
@@ -37,8 +36,6 @@ class AppVariables(object):
     browse_directory = StringDescriptor(
         'browse_directory', default_value=os.path.expanduser('~'),
         docstring='The directory for browsing for file selection.')  # type: str
-    remap_type = StringDescriptor(
-        'remap_type', default_value='nrl', docstring='')  # type: str
     image_reader = TypedDescriptor(
         'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
 
@@ -171,10 +168,10 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
-        elif isinstance(the_reader, string_types):
+        elif isinstance(the_reader, str):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
-        if isinstance(the_reader, string_types):
+        if isinstance(the_reader, str):
             the_reader = open_general(the_reader)
 
         if isinstance(the_reader, SICDTypeReader):
