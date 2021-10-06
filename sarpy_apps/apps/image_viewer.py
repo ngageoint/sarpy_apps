@@ -11,7 +11,6 @@ import os
 import tkinter
 from tkinter import ttk
 from tkinter.filedialog import askopenfilenames, askdirectory
-from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import CanvasImageReader
@@ -20,12 +19,17 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
-from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
-    DerivedCanvasImageReader, GeneralCanvasImageReader
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
+    DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \
+    GeneralCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.compliance import string_types
-from sarpy.io.general.base import BaseReader, SarpyIOError
+from sarpy.io.general.base import BaseReader
+from sarpy.io.complex.base import SICDTypeReader
+from sarpy.io.product.base import SIDDTypeReader
+from sarpy.io.phase_history.base import CPHDTypeReader
+from sarpy.io.received.base import CRSDTypeReader
 from sarpy.io.general.converter import open_general
 
 
@@ -173,13 +177,16 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         if isinstance(the_reader, string_types):
             the_reader = open_general(the_reader)
 
-        if isinstance(the_reader, BaseReader):
-            if the_reader.reader_type in ['SICD', 'CPHD']:
-                the_reader = ComplexCanvasImageReader(the_reader)
-            elif the_reader.reader_type == 'SIDD':
-                the_reader = DerivedCanvasImageReader(the_reader)
-            else:
-                the_reader = GeneralCanvasImageReader(the_reader)
+        if isinstance(the_reader, SICDTypeReader):
+            the_reader = SICDTypeCanvasImageReader(the_reader)
+        elif isinstance(the_reader, SIDDTypeReader):
+            the_reader = DerivedCanvasImageReader(the_reader)
+        elif isinstance(the_reader, CPHDTypeReader):
+            the_reader = CPHDTypeCanvasImageReader(the_reader)
+        elif isinstance(the_reader, CRSDTypeReader):
+            the_reader = CRSDTypeCanvasImageReader(the_reader)
+        elif isinstance(the_reader, BaseReader):
+            the_reader = GeneralCanvasImageReader(the_reader)
 
         if not isinstance(the_reader, CanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
@@ -201,30 +208,18 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         if fnames is None or fnames in ['', ()]:
             return
 
-        the_reader = None
         if len(fnames) > 1:
-            the_reader = ComplexCanvasImageReader(fnames)
-        if the_reader is None:
-            try:
-                the_reader = ComplexCanvasImageReader(fnames[0])
-            except SarpyIOError:
-                the_reader = None
-
-        if the_reader is None:
-            the_reader = DerivedCanvasImageReader(fnames[0])
-        if the_reader is None:
-            showinfo('Opener not found',
-                     message='File {} was not successfully opened as a SICD type '
-                             'or SIDD type file.'.format(fnames))
-            return
-        self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
+            the_reader = SICDTypeCanvasImageReader(fnames)
+            self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
+        else:
+            self.update_reader(fnames[0], update_browse=os.path.split(fnames[0])[0])
 
     def callback_select_directory(self):
         dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
         if dirname is None or dirname in [(), '']:
             return
         # NB: handle non-complex data possibilities here?
-        the_reader = ComplexCanvasImageReader(dirname)
+        the_reader = SICDTypeCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
     def display_canvas_rect_selection_in_pyplot_frame(self):

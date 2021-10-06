@@ -9,7 +9,7 @@ import logging
 import os
 
 import numpy
-from scipy.signal import stft, resample
+from scipy.signal import spectrogram, resample
 
 import tkinter
 from tkinter import ttk
@@ -29,7 +29,6 @@ from sarpy.io.received.converter import open_received
 from sarpy.io.received.base import CRSDTypeReader
 from sarpy.processing.windows import kaiser
 from sarpy.processing.fft_base import fftshift
-from sarpy.visualization.remap import NRL, LUT8bit
 
 from sarpy_apps.supporting_classes.image_reader import CRSDTypeCanvasImageReader
 
@@ -91,11 +90,10 @@ def _stft(data, sampling_rate):
     nperseg = int(0.97*nfft)
     window = kaiser(nperseg, 5)
     noverlap = int(0.9*nfft)
-    frequencies, times, trans_data = stft(
+    frequencies, times, trans_data = spectrogram(
         data, sampling_rate, window=window, nperseg=nperseg, noverlap=noverlap,
         nfft=nfft, return_onesided=False)
-    # todo: anything to do with frequencies and times?
-    return times, frequencies, fftshift(trans_data, axes=0)
+    return times, fftshift(frequencies, axes=0), fftshift(trans_data, axes=0)
 
 
 def _rf_signal(reader, index, pulse):
@@ -131,7 +129,7 @@ def _rf_signal(reader, index, pulse):
             params.F0Ref + dfic0 + \
             0.5*fic_rate*pulse_data.size/reramped_sampling_rate - \
             0.5*reramped_sampling_rate
-    return times, fftshift(frequencies, axes=0), stft_data
+    return times, frequencies, stft_data
 
 
 class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
@@ -505,19 +503,8 @@ if __name__ == '__main__':
     data = canvas_reader[:, :]
     tims = canvas_reader.times
     freqs = canvas_reader.frequencies
-    times = numpy.zeros((tims.size + 1))
-    times[:-1] = tims[:]
-    times[-1] = tims[-1]
-    frequencies = numpy.zeros((freqs.size + 1))
-    frequencies[:-1] = freqs[:]
-    frequencies[-1] = freqs[-1]
 
-    print(f'times shape = {times.shape}, freqs shape = {freqs.shape}, data shape = {data.shape}')
     fig, ax = pyplot.subplots()
-    ax.pcolormesh(times, frequencies, data)
-
-    # fig, ax = pyplot.subplots(nrows=2)
-    # ax[0].plot(times)
-    # ax[1].plot(frequencies)
+    ax.pcolormesh(tims, freqs, data, shading='auto')
 
     pyplot.show()
