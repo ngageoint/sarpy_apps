@@ -5,29 +5,37 @@ A tool for creating basic annotations on an image
 __classification__ = "UNCLASSIFIED"
 __author__ = "Thomas McCullough"
 
-from typing import Union, List
+import logging
+from typing import Union, List, Sequence
 
 import tkinter
-from tkinter import ttk
+from tkinter import ttk, Button as tk_button
 from tkinter.messagebox import showinfo, askyesno, askyesnocancel
 
-from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.panel_builder import WidgetPanelNoLabel
+from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button, \
+    Combobox, Notebook
+from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
+from tkinter.scrolledtext import ScrolledText
+from tk_builder.widgets.widget_descriptors import LabelDescriptor, ButtonDescriptor, \
+    EntryDescriptor, ComboboxDescriptor, TypedDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 
-from sarpy.annotation.base import AnnotationCollection, AnnotationFeature, GeometryProperties
+from sarpy.annotation.base import AnnotationCollection, AnnotationFeature, \
+    GeometryProperties
 
 
-class NamePanel(WidgetPanelNoLabel):
+logger = logging.getLogger(__name__)
+
+
+class NamePanel(Frame):
     """
     A simple panel for name display
     """
 
-    _widget_list = ('name_label', 'name_value')
-    name_label = widget_descriptors.LabelDescriptor(
-        'name_label', default_text='Name:')  # type: basic_widgets.Label
-    name_value = widget_descriptors.EntryDescriptor(
-        'name_value', default_text='<no name>')  # type: basic_widgets.Entry
+    name_label = LabelDescriptor(
+        'name_label', default_text='Name:')  # type: Label
+    name_value = EntryDescriptor(
+        'name_value', default_text='<no name>')  # type: Entry
 
     def __init__(self, master, annotation_feature=None):
         """
@@ -41,8 +49,18 @@ class NamePanel(WidgetPanelNoLabel):
 
         self.default_name = '<no name>'
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
-        WidgetPanelNoLabel.__init__(self, master)
-        self.init_w_horizontal_layout()
+        Frame.__init__(self, master)
+        self.config(borderwidth=2, relief=tkinter.RIDGE)
+
+        self.name_label = Label(self, text='Name:', width=12)
+        self.name_label.grid(row=0, column=0, sticky='NW')
+
+        self.name_value = Entry(self, text=self.default_name, width=12)
+        self.name_value.grid(row=0, column=1, sticky='NEW')
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+
         self.set_annotation_feature(annotation_feature)
 
     def set_annotation_feature(self, annotation_feature):
@@ -77,29 +95,25 @@ class NamePanel(WidgetPanelNoLabel):
         self.annotation_feature.properties.name = self._get_name_value()
 
 
-class AnnotateDetailsPanel(WidgetPanelNoLabel):
+class AnnotateDetailsPanel(Frame):
     """
     A panel for displaying the basic details of the annotation
     """
 
-    _widget_list = (
-        ('directory_label', 'directory_value'),
-        ('applicable_label', 'applicable_value'),
-        ('description_label', 'description_value'))
-    directory_label = widget_descriptors.LabelDescriptor(
-        'directory_label', default_text='Directory:')  # type: basic_widgets.Label
-    directory_value = widget_descriptors.ComboboxDescriptor(
-        'directory_value', default_text='')  # type: basic_widgets.Combobox
+    directory_label = LabelDescriptor(
+        'directory_label', default_text='Directory:')  # type: Label
+    directory_value = ComboboxDescriptor(
+        'directory_value', default_text='')  # type: Combobox
 
-    applicable_label = widget_descriptors.LabelDescriptor(
-        'applicable_label', default_text='Applicable\nIndices:')  # type: basic_widgets.Label
-    applicable_value = widget_descriptors.EntryDescriptor(
-        'applicable_value', default_text='')  # type: basic_widgets.Entry
+    applicable_label = LabelDescriptor(
+        'applicable_label', default_text='Applicable\nIndices:')  # type: Label
+    applicable_value = EntryDescriptor(
+        'applicable_value', default_text='')  # type: Entry
 
-    description_label = widget_descriptors.LabelDescriptor(
-        'description_label', default_text='Description:')  # type: basic_widgets.Label
-    description_value = widget_descriptors.TextDescriptor(
-        'description_value')  # type: basic_widgets.Text
+    description_label = LabelDescriptor(
+        'description_label', default_text='Description:')  # type: Label
+    description_value = TypedDescriptor(
+        'description_value', ScrolledText)  # type: ScrolledText
 
     def __init__(self, master, annotation_feature=None, annotation_collection=None):
         """
@@ -115,8 +129,26 @@ class AnnotateDetailsPanel(WidgetPanelNoLabel):
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
         self.annotation_collection = None  # type: Union[None, AnnotationCollection]
         self.directory_values = set()
-        WidgetPanelNoLabel.__init__(self, master)
-        self.init_w_rows()
+        Frame.__init__(self, master)
+        self.config(borderwidth=2, relief=tkinter.RIDGE)
+
+        self.directory_label = Label(self, text='Directory:', width=12)
+        self.directory_label.grid(row=0, column=0, sticky='NW', padx=5, pady=5)
+        self.directory_value = Combobox(self, text='')
+        self.directory_value.grid(row=0, column=1, sticky='NEW', padx=5, pady=5)
+
+        self.applicable_label = Label(self, text='Applicable\nIndices:', width=12)
+        self.applicable_label.grid(row=1, column=0, sticky='NW', padx=5, pady=5)
+        self.applicable_value = Entry(self, text='')
+        self.applicable_value.grid(row=1, column=1, sticky='NEW', padx=5, pady=5)
+
+        self.description_label = Label(self, text='Description:', width=12)
+        self.description_label.grid(row=2, column=0, sticky='NW', padx=5, pady=5)
+        self.description_value = ScrolledText(self)
+        self.description_value.grid(row=2, column=1, sticky='NSEW', padx=5, pady=5)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+
         self.set_annotation_collection(annotation_feature, annotation_collection)
 
     def _set_directory(self, value):
@@ -229,35 +261,122 @@ class AnnotateDetailsPanel(WidgetPanelNoLabel):
 ###########
 # Geometry details parts
 
-class GeometryButtons(WidgetPanelNoLabel):
-    _widget_list = ('label', 'point', 'line', 'rectangle', 'ellipse', 'polygon')
-    label = widget_descriptors.LabelDescriptor(
-        'label', default_text='Add Geometry:')  # type: basic_widgets.Label
-    point = widget_descriptors.ButtonDescriptor(
-        'point', default_text='Point')  # type: basic_widgets.Button
-    line = widget_descriptors.ButtonDescriptor(
-        'line', default_text='Line')  # type: basic_widgets.Button
-    rectangle = widget_descriptors.ButtonDescriptor(
-        'rectangle', default_text='Rectangle')  # type: basic_widgets.Button
-    ellipse = widget_descriptors.ButtonDescriptor(
-        'ellipse', default_text='Ellipse')  # type: basic_widgets.Button
-    polygon = widget_descriptors.ButtonDescriptor(
-        'polygon', default_text='Polygon')  # type: basic_widgets.Button
+class GeometryButtons(Frame):
+    _shapes = ('point', 'line', 'rectangle', 'ellipse', 'polygon')
+    label = LabelDescriptor(
+        'label', default_text='Add Geometry:')  # type: Label
+    point = ButtonDescriptor(
+        'point', default_text='Point')  # type: Button
+    line = ButtonDescriptor(
+        'line', default_text='Line')  # type: Button
+    rectangle = ButtonDescriptor(
+        'rectangle', default_text='Rectangle')  # type: Button
+    ellipse = ButtonDescriptor(
+        'ellipse', default_text='Ellipse')  # type: Button
+    polygon = ButtonDescriptor(
+        'polygon', default_text='Polygon')  # type: Button
 
-    def __init__(self, master):
+    def __init__(self, master, active_shapes=None):
         """
 
         Parameters
         ----------
         master
             The parent widget
+        active_shapes : None|Sequence[str]
+            The active shapes.
         """
 
-        WidgetPanelNoLabel.__init__(self, master)
-        self.init_w_horizontal_layout()
+        self.active_shapes = None
+        Frame.__init__(self, master)
+        self.config(borderwidth=2, relief=tkinter.RIDGE)
+
+        self.label = Label(self, text='Add Geometry:')
+        self.label.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.point = Button(self, text='Point')
+        self.point.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.line = Button(self, text='Line')
+        self.line.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.rectangle = Button(self, text='Rectangle')
+        self.rectangle.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.ellipse = Button(self, text='Ellipse')
+        self.ellipse.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.polygon = Button(self, text='Polygon')
+        self.polygon.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.set_active_shapes(active_shapes)
+
+    def _check_shapes_list(self, shape_list):
+        """
+        Check the entries versus proper shape names.
+
+        Parameters
+        ----------
+        shape_list : None|Sequence[str]
+
+        Returns
+        -------
+        Sequence[str]
+        """
+
+        if shape_list is None:
+            return self._shapes
+
+        if isinstance(shape_list, str):
+            shape_list = [shape_list, ]
+
+        out_list = []
+        for entry in shape_list:
+            val = entry.lower().strip()
+            if val in self._shapes:
+                out_list.append(val)
+            else:
+                logger.warning('Got an invalid shape name `{}`. Skipping.'.format(entry))
+        return out_list
+
+    def set_active_shapes(self, shape_list=None):
+        """
+        Sets the collection of shapes which should be active.
+
+        Parameters
+        ----------
+        shape_list : None|Sequence[str]
+        """
+
+        self.active_shapes = self._check_shapes_list(shape_list)
+        missing = [entry for entry in self._shapes if entry not in self.active_shapes]
+        if len(missing) > 0:
+            self.disable_shapes(missing)
+
+    def disable_shapes(self, shape_list=None):
+        """
+        Disable the shapes buttons.
+
+        Parameters
+        ----------
+        shape_list : None|Sequence[str]
+            Defaults to disabling all shapes.
+        """
+
+        shapes = self._check_shapes_list(shape_list)
+        for name in shapes:
+            getattr(self, name).state(['disabled'])
+
+    def enable_shapes(self, shape_list=None):
+        """
+        Enable the provided shapes.
+
+        Parameters
+        ----------
+        shape_list : None|Sequence[str]
+            Defaults to enabling the active shapes.
+        """
+
+        shapes = self.active_shapes if shape_list is None else self._check_shapes_list(shape_list)
+        for name in shapes:
+            getattr(self, name).state(['!disabled'])
 
 
-class GeometryPropertiesPanel(WidgetPanelNoLabel):
+class GeometryPropertiesPanel(Frame):
     """
     A panel for displaying the basic geometry properties
     """
@@ -265,20 +384,20 @@ class GeometryPropertiesPanel(WidgetPanelNoLabel):
         ('uid_label', 'uid_value'),
         ('name_label', 'name_value'),
         ('color_label', 'color_button'))
-    uid_label = widget_descriptors.LabelDescriptor(
-        'uid_label', default_text='UID:')  # type: basic_widgets.Label
-    uid_value = widget_descriptors.LabelDescriptor(
-        'uid_value', default_text='')  # type: basic_widgets.Label
+    uid_label = LabelDescriptor(
+        'uid_label', default_text='UID:')  # type: Label
+    uid_value = LabelDescriptor(
+        'uid_value', default_text='')  # type: Label
 
-    name_label = widget_descriptors.LabelDescriptor(
-        'name_label', default_text='Name:')  # type: basic_widgets.Label
-    name_value = widget_descriptors.EntryDescriptor(
-        'name_value', default_text='<no name>')  # type: basic_widgets.Entry
+    name_label = LabelDescriptor(
+        'name_label', default_text='Name:')  # type: Label
+    name_value = EntryDescriptor(
+        'name_value', default_text='<no name>')  # type: Entry
 
-    color_label = widget_descriptors.LabelDescriptor(
-        'color_label', default_text='Color:')  # type: basic_widgets.Label
-    color_button = widget_descriptors.ButtonDescriptor(
-        'color_button', default_text='')  # type: basic_widgets.Button
+    color_label = LabelDescriptor(
+        'color_label', default_text='Color:')  # type: Label
+    color_button = TypedDescriptor(
+        'color_button', tk_button)  # type: tk_button
 
     def __init__(self, master, geometry_properties=None):
         """
@@ -290,12 +409,28 @@ class GeometryPropertiesPanel(WidgetPanelNoLabel):
         geometry_properties : None|GeometryProperties
         """
 
-        self.default_color = '#dd0088'
+        self.default_color = '#ff0066'
         self.default_name = '<no name>'
         self.geometry_properties = None  # type: Union[None, GeometryProperties]
         self.color = None  # type: Union[None, str]
-        WidgetPanelNoLabel.__init__(self, master)
-        self.init_w_rows()
+        Frame.__init__(self, master)
+        self.config(borderwidth=2, relief=tkinter.RIDGE)
+
+        self.uid_label = Label(self, text='UID:')
+        self.uid_label.grid(row=0, column=0, padx=3, pady=3, sticky='NW')
+        self.uid_value = Label(self, text='', width=25)
+        self.uid_value.grid(row=0, column=1, padx=3, pady=3, sticky='NEW')
+
+        self.name_label = Label(self, text='Name:')
+        self.name_label.grid(row=1, column=0, padx=3, pady=3, sticky='NW')
+        self.name_value = Entry(self, text=self.default_name, width=25)
+        self.name_value.grid(row=1, column=1, padx=3, pady=3, sticky='NEW')
+
+        self.color_label = Label(self, text='Color:')
+        self.color_label.grid(row=2, column=0, padx=3, pady=3, sticky='NW')
+        self.color_button = tk_button(self, bg=self.default_color, text='')
+        self.color_button.grid(row=2, column=1, padx=3, pady=3, sticky='NEW')
+
         self.set_geometry_properties(geometry_properties)
 
     def _set_uid_value(self, value):
@@ -345,19 +480,16 @@ class GeometryPropertiesPanel(WidgetPanelNoLabel):
         self.geometry_properties.color = self._get_color()
 
 
-class GeometryDetailsPanel(WidgetPanelNoLabel):
+class GeometryDetailsPanel(Frame):
     """
     A panel for displaying the basic geometry details
     """
 
-    _widget_list = (
-        ('geometry_buttons', ),
-        ('geometry_view', 'geometry_properties'))
-    geometry_buttons = widget_descriptors.TypedDescriptor(
+    geometry_buttons = TypedDescriptor(
         'geometry_buttons', GeometryButtons, docstring='the button panel')  # type: GeometryButtons
-    geometry_view = widget_descriptors.TreeviewDescriptor(
-        'geometry_view', docstring='the geometry viewer')  # type: basic_widgets.Treeview
-    geometry_properties = widget_descriptors.TypedDescriptor(
+    geometry_view = TypedDescriptor(
+        'geometry_view', TreeviewWithScrolling, docstring='the geometry viewer')  # type: TreeviewWithScrolling
+    geometry_properties = TypedDescriptor(
         'geometry_properties', GeometryPropertiesPanel,
         docstring='the geometry properties')  # type: GeometryPropertiesPanel
 
@@ -373,9 +505,19 @@ class GeometryDetailsPanel(WidgetPanelNoLabel):
 
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
         self.selected_geometry_uid = None
-        WidgetPanelNoLabel.__init__(self, master)
-        self.init_w_rows()
+        Frame.__init__(self, master)
+        self.geometry_buttons = GeometryButtons(self, active_shapes=None)
+        self.geometry_buttons.grid(row=0, column=0, columnspan=2, sticky='NEW', padx=3, pady=3)
+
+        self.geometry_view = TreeviewWithScrolling(self)
         self.geometry_view.heading('#0', text='Name')
+        self.geometry_view.frame.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)  # NB: reference the frame for packing
+
+        self.geometry_properties = GeometryPropertiesPanel(self)
+        self.geometry_properties.grid(row=1, column=1, sticky='NSEW', padx=3, pady=3)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
         self.set_annotation_feature(annotation_feature)
 
         # configure the callback for treeview element selection
@@ -460,24 +602,163 @@ class GeometryDetailsPanel(WidgetPanelNoLabel):
         self._fill_treeview()
 
 
-class AnnotateTabControl(WidgetPanelNoLabel):
-    # todo: assemble the AnnotateDetailsPanel and GeometryDetailsPanels
-    #  and set up callbacks
-    #   what else am I missing???
-    pass
+class AnnotateTabControl(Frame):
+    """
+    A tab control panel which holds the feature details panels
+    """
+
+    tab_control = TypedDescriptor(
+        'tab_control', Notebook)  # type: Notebook
+
+    def __init__(self, master, annotation_feature=None, annotation_collection=None):
+        Frame.__init__(self, master)
+
+        self.tab_control = Notebook(self)
+        self.details_tab = AnnotateDetailsPanel(
+            self.tab_control,
+            annotation_feature=annotation_feature,
+            annotation_collection=annotation_collection)
+        self.geometry_tab = GeometryDetailsPanel(
+            self.tab_control,
+            annotation_feature=annotation_feature)
+
+        self.tab_control.add(self.details_tab, text='Overall')
+        self.tab_control.add(self.geometry_tab, text='Geometry')
+        self.tab_control.pack(fill=tkinter.BOTH, expand=tkinter.TRUE)
+
+    def set_annotation_feature(self, annotation_feature):
+        """
+
+        Parameters
+        ----------
+        annotation_feature : None|AnnotationFeature
+        """
+
+        self.details_tab.set_annotation_feature(annotation_feature)
+        self.geometry_tab.set_annotation_feature(annotation_feature)
+
+    def set_annotation_collection(self, annotation_feature, annotation_collection):
+        """
+
+        Parameters
+        ----------
+        annotation_feature : None|AnnotationFeature
+        annotation_collection : None|AnnotationCollection
+        """
+
+        self.details_tab.set_annotation_collection(annotation_feature, annotation_collection)
+        self.geometry_tab.set_annotation_feature(annotation_feature)
+
+    def cancel(self):
+        self.details_tab.cancel()
+        self.geometry_tab.cancel()
+
+    def save(self):
+        self.details_tab.save()
+        self.geometry_tab.save()
 
 
-class AnnotationPanel(WidgetPanelNoLabel):
-    _widget_list = (
-        ('name panel', ),
-        ('tab_control', ),
-        ('cancel_button', 'apply_button'))
+class AnnotateButtons(Frame):
+    _widget_list = ('cancel_button', 'apply_button')
+    cancel_button = ButtonDescriptor(
+        'cancel_button', default_text='Cancel', docstring='')  # type: Button
+    save_button = ButtonDescriptor(
+        'save_button', default_text='Save', docstring='')  # type: Button
 
-    cancel_button = widget_descriptors.ButtonDescriptor(
-        'cancel_button', default_text='Cancel', docstring='')  # type: basic_widgets.Button
-    apply_button = widget_descriptors.ButtonDescriptor(
-        'apply_button', default_text='Apply', docstring='')  # type: basic_widgets.Button
+    def __init__(self, master):
+        Frame.__init__(self, master)
+        self.config(borderwidth=2, relief=tkinter.RIDGE)
+
+        self.cancel_button = Button(self, text='Cancel')
+        self.cancel_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
+        self.save_button = Button(self, text='Save')
+        self.save_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
 
 
+class AnnotationPanel(Frame):
+    name_panel = TypedDescriptor('name_panel', NamePanel)  # type: NamePanel
+    tab_panel = TypedDescriptor('tab_panel', AnnotateTabControl)  # type: AnnotateTabControl
+    button_panel = TypedDescriptor('button_panel', AnnotateButtons)  # type: AnnotateButtons
+
+    def __init__(self, master, annotation_feature=None, annotation_collection=None):
+        Frame.__init__(self, master)
+
+        self.name_panel = NamePanel(self, annotation_feature=annotation_feature)
+        self.name_panel.grid(row=0, column=0, sticky='NSEW')
+
+        self.tab_panel = AnnotateTabControl(self, annotation_feature=annotation_feature, annotation_collection=annotation_collection)
+        self.tab_panel.grid(row=1, column=0, sticky='NSEW')
+
+        self.button_panel = AnnotateButtons(self)
+        self.button_panel.grid(row=2, column=0, sticky='NSEW')
+
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # todo: more buttons/bind button commands?
+        self.button_panel.cancel_button.config(command=self.cancel)
+        self.button_panel.save_button.config(command=self.save)
+
+    def set_annotation_feature(self, annotation_feature):
+        """
+
+        Parameters
+        ----------
+        annotation_feature : None|AnnotationFeature
+        """
+        self.name_panel.set_annotation_feature(annotation_feature)
+        self.tab_panel.set_annotation_feature(annotation_feature)
+
+    def set_annotation_collection(self, annotation_feature, annotation_collection):
+        """
+
+        Parameters
+        ----------
+        annotation_feature : None|AnnotationFeature
+        annotation_collection : None|AnnotationCollection
+        """
+        self.name_panel.set_annotation_feature(annotation_feature)
+        self.tab_panel.set_annotation_collection(annotation_feature, annotation_collection)
+
+    def cancel(self):
+        self.name_panel.cancel()
+        self.tab_panel.cancel()
+
+    def save(self):
+        self.name_panel.save()
+        self.tab_panel.save()
 
 
+def main(reader=None):
+    """
+    Main method for initializing the annotation_tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|CanvasImageReader
+    """
+
+    root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('classic')
+
+    # todo: what is the app?
+    # app = RegionSelection(root)
+    # root.geometry("1000x800")
+    # if reader is not None:
+    #     app.update_reader(reader)
+    #
+    # root.mainloop()
+
+
+if __name__ == '__main__':
+    root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('classic')
+
+    app = AnnotationPanel(root)
+    app.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
+    root.geometry("600x600")
+    root.mainloop()
