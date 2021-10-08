@@ -14,7 +14,7 @@ from tkinter.messagebox import showinfo, askyesno, askyesnocancel
 
 from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button, \
     Combobox, Notebook
-from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
+from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling
 from tkinter.scrolledtext import ScrolledText
 from tk_builder.widgets.widget_descriptors import LabelDescriptor, ButtonDescriptor, \
     EntryDescriptor, ComboboxDescriptor, TypedDescriptor
@@ -113,7 +113,7 @@ class AnnotateDetailsPanel(Frame):
     description_label = LabelDescriptor(
         'description_label', default_text='Description:')  # type: Label
     description_value = TypedDescriptor(
-        'description_value', ScrolledText)  # type: ScrolledText
+        'description_value', TextWithScrolling)  # type: TextWithScrolling
 
     def __init__(self, master, annotation_feature=None, annotation_collection=None):
         """
@@ -144,8 +144,8 @@ class AnnotateDetailsPanel(Frame):
 
         self.description_label = Label(self, text='Description:', width=12)
         self.description_label.grid(row=2, column=0, sticky='NW', padx=5, pady=5)
-        self.description_value = ScrolledText(self)
-        self.description_value.grid(row=2, column=1, sticky='NSEW', padx=5, pady=5)
+        self.description_value = TextWithScrolling(self)
+        self.description_value.frame.grid(row=2, column=1, sticky='NSEW', padx=5, pady=5)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
@@ -191,14 +191,12 @@ class AnnotateDetailsPanel(Frame):
     def _set_description(self, value):
         # type: (Union[None, str]) -> None
         if value is None:
-            self.description_value.delete('1.0', 'end')
-        else:
-            self.description_value.delete('1.0', 'end')
-            self.description_value.insert(tkinter.END, value)
+            value = ''
+        self.description_value.set_value(value)
 
     def _get_description(self):
         # type: () -> Union[None, str]
-        value = self.description_value.get("1.0", 'end').strip()
+        value = self.description_value.get_value().strip()
         return None if value == '' else value
 
     def set_annotation_feature(self, annotation_feature):
