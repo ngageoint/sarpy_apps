@@ -7,30 +7,57 @@ __author__ = "Thomas McCullough"
 
 import logging
 from typing import Union, List, Sequence
+from collections import defaultdict
+import os
 
 import tkinter
-from tkinter import ttk, Button as tk_button
-from tkinter.messagebox import showinfo, askyesno, askyesnocancel
+from tkinter import ttk, Button as tk_button, PanedWindow
+from tkinter.messagebox import showinfo
+from tkinter.colorchooser import askcolor
+
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
+from tk_builder.image_reader import CanvasImageReader
+from tk_builder.panels.image_panel import ImagePanel
 
 from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button, \
     Combobox, Notebook
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling
-from tkinter.scrolledtext import ScrolledText
 from tk_builder.widgets.widget_descriptors import LabelDescriptor, ButtonDescriptor, \
     EntryDescriptor, ComboboxDescriptor, TypedDescriptor
-from tk_builder.panels.image_panel import ImagePanel
 
-from sarpy.annotation.base import AnnotationCollection, AnnotationFeature, \
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
+    DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \
+    GeneralCanvasImageReader
+
+
+from sarpy.annotation.base import FileAnnotationCollection, AnnotationCollection, AnnotationFeature, \
     GeometryProperties
+
+from sarpy.io.general.base import BaseReader
+from sarpy.io.complex.base import SICDTypeReader
+from sarpy.io.product.base import SIDDTypeReader
+from sarpy.io.phase_history.base import CPHDTypeReader
+from sarpy.io.received.base import CRSDTypeReader
+from sarpy.io import open as open_general
 
 
 logger = logging.getLogger(__name__)
 
 
+##############
+# GUI Panel for viewing and manipulating the annotation details
+#   this should probably have it's own top level
+
 class NamePanel(Frame):
     """
     A simple panel for name display
     """
+
+    id_label = LabelDescriptor(
+        'id_label', default_text='ID:')  # type: Label
+    id_value = LabelDescriptor(
+        'id_value', default_text='')  # type: Label
 
     name_label = LabelDescriptor(
         'name_label', default_text='Name:')  # type: Label
@@ -52,14 +79,20 @@ class NamePanel(Frame):
         Frame.__init__(self, master)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
+        self.id_label = Label(self, text='ID:', width=12)
+        self.id_label.grid(row=0, column=0, sticky='NW')
+        self.id_value = Label(self, text='', width=12)
+        self.id_value.grid(row=0, column=1, sticky='NEW')
+
         self.name_label = Label(self, text='Name:', width=12)
-        self.name_label.grid(row=0, column=0, sticky='NW')
-
+        self.name_label.grid(row=1, column=0, sticky='NW')
         self.name_value = Entry(self, text=self.default_name, width=12)
-        self.name_value.grid(row=0, column=1, sticky='NEW')
+        self.name_value.grid(row=1, column=1, sticky='NEW')
 
-        self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
+
+        # setup the appearance of label
+        self.id_value.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=3)
 
         self.set_annotation_feature(annotation_feature)
 
@@ -72,10 +105,17 @@ class NamePanel(Frame):
         """
 
         self.annotation_feature = annotation_feature
-        if annotation_feature is None or annotation_feature.properties is None:
+        if annotation_feature is None:
+            self._set_id_value(None)
             self._set_name_value(None)
-            return
-        self._set_name_value(annotation_feature.properties.name)
+        else:
+            self._set_id_value(annotation_feature.uid)
+            self._set_name_value(annotation_feature.get_name())
+
+    def _set_id_value(self, value):
+        if value is None:
+            value = ''
+        self.id_value.set_text(value)
 
     def _set_name_value(self, value):
         if value is None:
@@ -92,7 +132,26 @@ class NamePanel(Frame):
     def save(self):
         if self.annotation_feature is None:
             return
-        self.annotation_feature.properties.name = self._get_name_value()
+        name_value = self._get_name_value()
+        if name_value is not None and name_value != self.annotation_feature.get_name():
+            self.annotation_feature.properties.name = name_value
+
+
+class AnnotateButtons(Frame):
+    _widget_list = ('cancel_button', 'apply_button')
+    cancel_button = ButtonDescriptor(
+        'cancel_button', default_text='Cancel', docstring='')  # type: Button
+    save_button = ButtonDescriptor(
+        'save_button', default_text='Save', docstring='')  # type: Button
+
+    def __init__(self, master):
+        Frame.__init__(self, master)
+        self.config(borderwidth=2, relief=tkinter.RIDGE)
+
+        self.cancel_button = Button(self, text='Cancel')
+        self.cancel_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
+        self.save_button = Button(self, text='Save')
+        self.save_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
 
 
 class AnnotateDetailsPanel(Frame):
@@ -150,6 +209,19 @@ class AnnotateDetailsPanel(Frame):
         self.grid_rowconfigure(2, weight=1)
 
         self.set_annotation_collection(annotation_feature, annotation_collection)
+
+    def _set_directory_values(self):
+        self.directory_values = set()
+        if self.annotation_collection is None:
+            return
+
+        for entry in self.annotation_collection.features:
+            dir_value = entry.properties.directory
+            dir_parts = dir_value.split('/')
+            root = ''
+            for part in dir_parts:
+                element = root + part if root != '' else root + '/' + part
+                self.directory_values.add(element)
 
     def _set_directory(self, value):
         # type: (Union[None, str]) -> None
@@ -212,7 +284,11 @@ class AnnotateDetailsPanel(Frame):
             self._set_directory(None)
             self._set_applicable_value(None)
             self._set_description(None)
+            self.directory_value.update_combobox_values([])
             return
+
+        self._set_directory_values()
+        self.directory_value.update_combobox_values(sorted(list(self.directory_values)))
 
         properties = annotation_feature.properties
         self._set_directory(properties.directory)
@@ -229,16 +305,6 @@ class AnnotateDetailsPanel(Frame):
         """
 
         self.annotation_collection = annotation_collection
-        self.directory_values = set()
-        if annotation_collection is not None:
-            for entry in annotation_collection.features:
-                dir_value = entry.properties.directory
-                dir_parts = dir_value.split('/')
-                for i in range(1, len(dir_parts)):
-                    intermediate = '/'.join(dir_parts[:i])
-                    self.directory_values.add(intermediate)
-        self.directory_value.update_combobox_values(sorted(list(self.directory_values)))
-        # populate the combobox values here?
         self.set_annotation_feature(annotation_feature)
 
     def cancel(self):
@@ -255,9 +321,6 @@ class AnnotateDetailsPanel(Frame):
             self.annotation_feature.properties.applicable_indices = app_inds
         self.annotation_feature.properties.description = self._get_description()
 
-
-###########
-# Geometry details parts
 
 class GeometryButtons(Frame):
     _shapes = ('point', 'line', 'rectangle', 'ellipse', 'polygon')
@@ -301,6 +364,7 @@ class GeometryButtons(Frame):
         self.ellipse.pack(side=tkinter.LEFT, padx=5, pady=5)
         self.polygon = Button(self, text='Polygon')
         self.polygon.pack(side=tkinter.LEFT, padx=5, pady=5)
+
         self.set_active_shapes(active_shapes)
 
     def _check_shapes_list(self, shape_list):
@@ -414,22 +478,31 @@ class GeometryPropertiesPanel(Frame):
         Frame.__init__(self, master)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
-        self.uid_label = Label(self, text='UID:')
+        self.uid_label = Label(self, text='Geo UID:')
         self.uid_label.grid(row=0, column=0, padx=3, pady=3, sticky='NW')
-        self.uid_value = Label(self, text='', width=25)
+        self.uid_value = Label(self, text='')
         self.uid_value.grid(row=0, column=1, padx=3, pady=3, sticky='NEW')
 
-        self.name_label = Label(self, text='Name:')
+        self.name_label = Label(self, text='Geo Name:')
         self.name_label.grid(row=1, column=0, padx=3, pady=3, sticky='NW')
-        self.name_value = Entry(self, text=self.default_name, width=25)
+        self.name_value = Entry(self, text=self.default_name)
         self.name_value.grid(row=1, column=1, padx=3, pady=3, sticky='NEW')
 
         self.color_label = Label(self, text='Color:')
         self.color_label.grid(row=2, column=0, padx=3, pady=3, sticky='NW')
-        self.color_button = tk_button(self, bg=self.default_color, text='')
-        self.color_button.grid(row=2, column=1, padx=3, pady=3, sticky='NEW')
+        self.color_button = tk_button(self, bg=self.default_color, text='', width=10, command=self.change_color)
+        self.color_button.grid(row=2, column=1, padx=3, pady=3, sticky='NW')
 
+        # setup the appearance of labels
+        self.uid_value.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=3)
+        self.grid_columnconfigure(1, weight=1)
         self.set_geometry_properties(geometry_properties)
+
+    def change_color(self):
+        result = askcolor(color=self.color, title='Choose Color')
+        if result is None:
+            return
+        self._set_color(result[1])
 
     def _set_uid_value(self, value):
         if value is None:
@@ -574,11 +647,13 @@ class GeometryDetailsPanel(Frame):
                         'and the defined geometry properties. '
                         'You cannot edit any details here.'.format(self.annotation_feature.uid))
             return
+
+        # there will be at least one by this point
         for i, properties in enumerate(self.annotation_feature.properties.geometry_properties):
-            name = properties.name
-            if name is None:
-                name = '<no name>'
+            name = self.annotation_feature.get_geometry_name(i)
             self.geometry_view.insert('', 'end', iid=i, text=name)
+
+        self.geometry_view.selection_set(0)
 
     def set_annotation_feature(self, annotation_feature):
         """
@@ -656,23 +731,6 @@ class AnnotateTabControl(Frame):
         self.geometry_tab.save()
 
 
-class AnnotateButtons(Frame):
-    _widget_list = ('cancel_button', 'apply_button')
-    cancel_button = ButtonDescriptor(
-        'cancel_button', default_text='Cancel', docstring='')  # type: Button
-    save_button = ButtonDescriptor(
-        'save_button', default_text='Save', docstring='')  # type: Button
-
-    def __init__(self, master):
-        Frame.__init__(self, master)
-        self.config(borderwidth=2, relief=tkinter.RIDGE)
-
-        self.cancel_button = Button(self, text='Cancel')
-        self.cancel_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
-        self.save_button = Button(self, text='Save')
-        self.save_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
-
-
 class AnnotationPanel(Frame):
     name_panel = TypedDescriptor('name_panel', NamePanel)  # type: NamePanel
     tab_panel = TypedDescriptor('tab_panel', AnnotateTabControl)  # type: AnnotateTabControl
@@ -727,6 +785,551 @@ class AnnotationPanel(Frame):
         self.tab_panel.save()
 
 
+##################
+# Annotation collection panel for display and interaction
+
+class AnnotationCollectionViewer(TreeviewWithScrolling):
+    """
+    A treeview for viewing and selecting form the annotation list.
+
+    This does not modify the annotation collection itself, and maintains
+    it's own parallel internal state which should be synced on changes using
+    the provided methods.
+    """
+
+    def __init__(self, master, annotation_collection=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        master
+            The tkinter parent element
+        annotation_list : None|FileAnnotationCollection
+        kwargs
+            Optional keywords for the treeview initialization
+        """
+
+        self._annotation_collection = None  # type: Union[None, FileAnnotationCollection]
+        self._directory_structure = None
+        self._element_association = None
+
+        TreeviewWithScrolling.__init__(master, **kwargs)
+        self.heading('#0', text='Name')
+
+        self.set_annotation_collection(annotation_collection)
+
+    def set_annotation_collection(self, annotation_collection):
+        """
+        Sets the annotation collection.
+
+        Parameters
+        ----------
+        annotation_collection : None|FileAnnotationCollection
+        """
+
+        self._annotation_collection = annotation_collection
+        self._directory_structure = None
+        self._element_association = None
+        self._build_directory_structure()
+
+    @staticmethod
+    def _get_parent_direct(directory):
+        """
+        Gets the parent directory of the given directory.
+
+        Parameters
+        ----------
+        directory : str
+
+        Returns
+        -------
+        str
+        """
+
+        if directory == '':
+            return ''
+        return os.path.split(directory)[0]
+
+    @staticmethod
+    def _get_directory_value(annotation):
+        """
+        Gets the usable directory value.
+
+        Parameters
+        ----------
+        annotation : AnnotationFeature
+
+        Returns
+        -------
+        str
+        """
+
+        dval = annotation.properties.directory
+        return '' if dval is None else dval
+
+    def _directory_definition_check(self, directory):
+        """
+        Verifies/defines that all parts of the directory are previously defined, and
+        return the first element NOT defined.
+
+        Parameters
+        ----------
+        directory
+
+        Returns
+        -------
+        None|str
+        """
+
+        if directory == '':
+            return
+        parts = directory.split('/')
+
+        first_not_defined = None
+        root = ''
+
+        for part in parts:
+            direct_list = self._directory_structure[root]['directories']
+            element = root + part if root != '' else root + '/' + part
+            if element not in direct_list:
+                if first_not_defined is None:
+                    first_not_defined = element
+            direct_list.append(element)
+            root = element
+        return first_not_defined
+
+    def _is_empty(self, directory):
+        """
+        Checks if the given directory has an children at all.
+
+        Parameters
+        ----------
+        directory : str
+
+        Returns
+        -------
+        bool
+        """
+
+        state = self._directory_structure[directory]
+        return len(state['directories']) == 0 and len(state['elements']) == 0
+
+    def _directory_empty_check(self, directory):
+        """
+        Walks up the tree starting at directory to find the first empty
+        directory. This will remove any empty directories from the state.
+
+        Parameters
+        ----------
+        directory : str
+
+        Returns
+        -------
+        None|str
+        """
+
+        root = directory
+        first_empty = None
+        while True:
+            if not self._is_empty(root):
+                return first_empty
+
+            first_empty = root
+            # this directory is totally empty, so delete it from the state
+            del self._directory_structure[root]
+            new_root, _ = os.path.split(root)
+            if root == '':
+                break
+            # remove the empty directory from the parent
+            self._directory_structure[new_root]['directories'].remove(root)
+        return first_empty
+
+    def _build_directory_structure(self):
+        def _default_value():
+            return {'directories': [], 'elements': []}
+
+        self._element_association = {}
+        self._directory_structure = defaultdict(_default_value)
+
+        if self._annotation_collection is None:
+            return
+
+        # construct all the elements entries
+        direct_set = set()
+        for entry in self._annotation_collection.annotations:
+            dval = self._get_directory_value(entry)
+            direct_set.add(dval)
+            self._directory_structure[dval]['elements'].append(entry.uid)
+            self._element_association[entry.uid] = dval
+        # populate all the directory information
+        for entry in list(direct_set):
+            self._directory_definition_check(entry)
+        # now, sort all the directories lists
+        for key, value in self._directory_structure.items():
+            value['directories'] = sorted(value['directories'])
+
+    def _empty_entries(self):
+        """
+        Empty all entries - for the purpose of (re)initializing.
+
+        Returns
+        -------
+        None
+        """
+
+        self.delete(*self.get_children())
+
+    def _render_directory(self, directory, at_index='end'):
+        if directory != '' and not self.exists(directory):
+            stem, leaf = os.path.split(directory)
+            self.insert(stem, at_index, directory, text=leaf)
+        direct_info = self._directory_structure[directory]
+        # render all the child directories
+        for child_dir in direct_info['directories']:
+            self._render_directory(child_dir)
+        # render all the annotations
+        for annotation_id in direct_info['elements']:
+            self._render_annotation(annotation_id)
+
+    def _render_annotation(self, the_id, at_index='end'):
+        annotation = self._annotation_collection.annotations[the_id]
+        parent = self._element_association[the_id]
+        self.insert(parent, at_index, the_id, text=annotation.get_name())
+
+    def _populate_tree(self):
+        self._empty_entries()
+        self._render_directory('')
+
+    def rerender_directory(self, directory, maintain_focus=True):
+        """
+        Rerender everything below the given directory.
+
+        Parameters
+        ----------
+        directory : str
+        maintain_focus : bool
+            maintain the current selection, if any?
+        """
+
+        selection = self.selection_get()
+        # delete any children
+        item = self.item(directory)
+        self.delete(*item.get_children())
+        self._render_directory(directory)
+        if maintain_focus:
+            self.selection_set(selection)
+
+    def rerender_annotation(self, the_id, set_focus=False):
+        """
+        Rerender the given annotation.
+
+        Parameters
+        ----------
+        the_id : str
+        set_focus : bool
+        """
+
+        def update_state():
+            self._element_association[the_id] = current_directory
+            new_state['elements'].append(the_id)
+
+        previous_directory = self._element_association.get(the_id, None)
+
+        annotation = self._annotation_collection.annotations[the_id]
+
+        current_directory = self._get_directory_value(annotation)
+        new_state = self._directory_structure[current_directory]
+        # verify the directory definition, and get any missing value parts
+        missing_dir = self._directory_definition_check(current_directory)
+        missing_parent = None if missing_dir is None else self._get_parent_direct(missing_dir)
+
+        if previous_directory is None:
+            # we have not previously rendered this annotation
+            update_state()
+            if missing_parent is None:
+                self._render_annotation(the_id)
+            else:
+                self.rerender_directory(self._get_parent_direct(missing_dir), maintain_focus=True)
+            return
+
+        # delete the old element
+        self.delete(the_id)
+
+        if previous_directory != current_directory:
+            # we have previously rendered this element in a different directory
+
+            # update our previous treeview state
+            previous_state = self._directory_structure[previous_directory]
+            try:
+                previous_state['elements'].remove(the_id)
+            except ValueError:
+                logger.warning(
+                    'The internal annotation treeview appears to have an inconsistent state definition?')
+                pass  # it was somehow in an inconsistent state
+
+            # check for and eliminate empty directories above previous from the state
+            remove_directory = self._directory_empty_check(previous_directory)
+            if remove_directory is not None:
+                # there is an empty directory, delete the whole thing from the treeview
+                self.delete(remove_directory)
+
+        # we update the new internal state
+        update_state()
+
+        # any necessary items are deleted from the tree, and the internal state has been update
+        # render the new items
+        if missing_parent is not None:
+            self._render_directory(missing_parent)
+        else:
+            at_index = new_state['elements'].index(the_id) + len(new_state['directories'])
+            self._render_annotation(the_id, at_index=at_index)
+        if set_focus:
+            self.selection_set(the_id)
+
+    def delete_entry(self, the_id):
+        """
+        Removes the entry from the treeview and treeview metadata. This does not
+        modify the underlying annotation collection, which should be done elsewhere.
+
+        Parameters
+        ----------
+        the_id : str
+        """
+
+        directory = self._element_association.get(the_id, None)
+        if directory is None:
+            if self.exists(the_id):
+                self.delete(the_id)
+            return
+
+        state = self._directory_structure[directory]
+        try:
+            state['elements'].remove(the_id)
+        except ValueError:
+            pass  # it was somehow in an old or inconsistent state
+
+        remove_directory = self._directory_empty_check(directory)
+        if remove_directory is not None:
+            # there is an empty directory, delete the whole thing from the treeview
+            self.delete(remove_directory)
+        else:
+            # delete the old element
+            self.delete(the_id)
+
+
+class AnnotationCollectionPanel(Frame):
+    """
+    Buttons for the annotation panel.
+    """
+
+    def __init__(self, master, **kwargs):
+        Frame.__init__(self, master, **kwargs)
+
+        self.button_panel = Frame(self, relief=tkinter.RIDGE, borderwidth=2)  # type: Frame
+        self.new_button = Button(self.button_panel, text='New Annotation', width=18)  # type: Button
+        self.new_button.grid(row=0, column=0, sticky='NW')
+        self.edit_button = Button(self.button_panel, text='Edit Selected', width=18)  # type: Button
+        self.edit_button.grid(row=1, column=0, sticky='NW')
+        self.zoom_button = Button(self.button_panel, text='Zoom to Selected', width=18)  # type: Button
+        self.zoom_button.grid(row=2, column=0, sticky='NW')
+        self.zoom_button = Button(self.button_panel, text='Delete Selected', width=18)  # type: Button
+        self.zoom_button.grid(row=3, column=0, sticky='NW')
+        self.button_panel.grid(row=0, column=0, sticky='NW')
+
+        self.viewer = AnnotationCollectionViewer(self, annotation_collection=None)
+        self.viewer.frame.grid(row=1, column=0, sticky='NSEW')
+        self.grid_rowconfigure(1, weight=1)
+
+
+###################
+# the main tool
+
+class AppVariables(object):
+    browse_directory = StringDescriptor(
+        'browse_directory', default_value=os.path.expanduser('~'),
+        docstring='The directory for browsing for file selection.')  # type: str
+    unsaved_changes = BooleanDescriptor(
+        'unsaved_changes', default_value=False,
+        docstring='Are there unsaved annotation changes to be saved?')  # type: bool
+    image_reader = TypedDescriptor(
+        'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
+
+    # todo:
+    pass
+
+
+class AnnotationTool(PanedWindow, WidgetWithMetadata):
+    """
+    The main annotation tool
+    """
+
+    def __init__(self, master, reader=None, **kwargs):
+        self.root = master
+        self.variables = AppVariables()
+
+        if 'sashrelief' not in kwargs:
+            kwargs['sashrelief'] = tkinter.RIDGE
+        if 'orient' not in kwargs:
+            kwargs['orient'] = tkinter.HORIZONTAL
+        PanedWindow.__init__(self, master, **kwargs)
+        WidgetWithMetadata.__init__(self, master)
+
+        self.image_panel = ImagePanel(self)
+        self.image_panel.canvas.set_canvas_size(400, 500)
+        self.add(
+            self.image_panel, width=400, height=700, padx=3, pady=3, sticky='NSEW', stretch=tkinter.FIRST)
+
+        self.collection_panel = AnnotationCollectionPanel(self)
+        self.add(self.collection_panel, width=200, height=700, padx=3, pady=3, sticky='NSEW')
+
+        # file menu
+        menu_bar = tkinter.Menu()
+        file_menu = tkinter.Menu(menu_bar, tearoff=0)
+        file_menu.add_command(label="Open Image", command=self.select_image_file)
+        file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
+        file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
+        file_menu.add_separator()
+        file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.exit)
+        # metadata popup menu
+        metadata_menu = tkinter.Menu(menu_bar, tearoff=0)
+        metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # configure menubar
+        menu_bar.add_cascade(label="File", menu=file_menu)
+        menu_bar.add_cascade(label="Metadata", menu=metadata_menu)
+        self.root.config(menu=menu_bar)
+
+        # hide unwanted elements on the panel toolbars
+        self.image_panel.hide_tools('select')
+        self.image_panel.hide_shapes(['arrow', 'text'])
+        self.image_panel.hide_select_index()
+        # disable tools until an image is selected
+        self.image_panel.disable_tools()
+        self.image_panel.disable_shapes()
+
+        # todo: setup listeners
+        # todo: bind button callbacks
+
+        if reader is not None:
+            self.set_reader(reader)
+
+    def set_title(self):
+        """
+        Sets the window title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = "Annotation Tool"
+        else:
+            the_title = "Annotation Tool for {}".format(os.path.split(file_name)[1])
+        self.winfo_toplevel().title(the_title)
+
+    def exit(self):
+        """
+        The tool exit function
+        """
+
+        response = self._prompt_unsaved()
+        if response:
+            self.root.destroy()
+
+    def set_reader(self, the_reader, update_browse=None):
+        """
+        Update the reader.
+
+        Parameters
+        ----------
+        the_reader : str|BaseReader|CanvasImageReader
+        update_browse : None|str
+        """
+
+        if update_browse is not None:
+            self.variables.browse_directory = update_browse
+        elif isinstance(the_reader, str):
+            self.variables.browse_directory = os.path.split(the_reader)[0]
+
+        if isinstance(the_reader, str):
+            the_reader = open_general(the_reader)
+
+        if isinstance(the_reader, SICDTypeReader):
+            the_reader = SICDTypeCanvasImageReader(the_reader)
+        elif isinstance(the_reader, SIDDTypeReader):
+            the_reader = DerivedCanvasImageReader(the_reader)
+        elif isinstance(the_reader, CPHDTypeReader):
+            the_reader = CPHDTypeCanvasImageReader(the_reader)
+        elif isinstance(the_reader, CRSDTypeReader):
+            the_reader = CRSDTypeCanvasImageReader(the_reader)
+        elif isinstance(the_reader, BaseReader):
+            the_reader = GeneralCanvasImageReader(the_reader)
+
+        if not isinstance(the_reader, CanvasImageReader):
+            raise TypeError('Got unexpected input for the reader')
+
+        # change the tool to view
+        self.image_panel.canvas.current_tool = 'VIEW'
+        self.image_panel.canvas.current_tool = 'VIEW'
+        # update the reader
+        self.variables.image_reader = the_reader
+        self.image_panel.set_image_reader(the_reader)
+        self.set_title()
+
+        # todo: what about the annotation panel?
+
+        self.my_populate_metaicon()
+        self.my_populate_metaviewer()
+
+    def my_populate_metaicon(self):
+        """
+        Populate the metaicon.
+        """
+
+        if self.variables.image_reader is None:
+            image_reader = None
+            the_index = 0
+        else:
+            image_reader = self.variables.image_reader
+            the_index = self.image_panel.canvas.get_image_index()
+        self.populate_metaicon(image_reader, the_index)
+
+    def my_populate_metaviewer(self):
+        """
+        Populate the metaviewer.
+        """
+
+        self.populate_metaviewer(self.variables.image_reader)
+
+
+    def set_annotation_file(self, annotation_collection):
+        # todo:
+        pass
+
+    def _prompt_unsaved(self):
+        """
+        Check for any unsaved changes, and prompt for action.
+
+        Returns
+        -------
+        bool
+            True if underlying action to continue, False if it should not.
+        """
+
+        if not self.variables.unsaved_changes:
+            return True
+
+        response = askyesnocancel(
+            'Save Changes?',
+            message='There are unsaved changes for your annotations. Do you want to save them?')
+        if response is True:
+            self.save_annotation_file()
+        elif response is None:
+            return False  # cancel
+        return True
+
+
+
 def main(reader=None):
     """
     Main method for initializing the annotation_tool
@@ -756,7 +1359,7 @@ if __name__ == '__main__':
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = AnnotationPanel(root)
+    app = AnnotationCollectionButtons(root)
     app.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
     root.geometry("600x600")
     root.mainloop()

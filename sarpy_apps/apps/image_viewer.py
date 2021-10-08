@@ -16,7 +16,7 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets import basic_widgets
+from tk_builder.widgets.basic_widgets import Frame
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
@@ -40,17 +40,19 @@ class AppVariables(object):
         'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
 
 
-class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
-    def __init__(self, primary):
+class ImageViewer(Frame, WidgetWithMetadata):
+    def __init__(self, primary, reader=None, **kwargs):
         """
 
         Parameters
         ----------
         primary : tkinter.Toplevel|tkinter.Tk
+        reader
+        kwargs
         """
 
         self.root = primary
-        basic_widgets.Frame.__init__(self, primary)
+        Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.primary = tkinter.PanedWindow(self, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
@@ -99,6 +101,9 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+        if reader is not None:
+            self.update_reader(reader, update_browse=None)
 
     def set_title(self):
         """
@@ -286,10 +291,8 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = ImageViewer(root)
+    app = ImageViewer(root, reader=reader)
     root.geometry("1000x800")
-    if reader is not None:
-        app.update_reader(reader)
 
     root.mainloop()
 
