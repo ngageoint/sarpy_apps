@@ -19,7 +19,9 @@ from sarpy.annotation.label import LabelSchema
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets.widget_descriptors import ButtonDescriptor, LabelDescriptor, \
     EntryDescriptor, TypedDescriptor
-from tk_builder.widgets import basic_widgets
+
+from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button
+from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
 
 from sarpy_apps.supporting_classes import file_filters
 
@@ -52,7 +54,7 @@ def _validate_schema(schema):
 ###########
 # Treeview for a label schema, and associated widget
 
-class SchemaViewer(basic_widgets.Frame):
+class SchemaViewer(Frame):
     """
     For the purpose of viewing the schema definition.
     """
@@ -73,28 +75,22 @@ class SchemaViewer(basic_widgets.Frame):
         """
 
         self._label_schema = None
+        self.root = master
         super(SchemaViewer, self).__init__(master, **kwargs)
-        self.parent = master
         if geometry_size is not None:
-            self.parent.geometry(geometry_size)
+            self.root.geometry(geometry_size)
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         try:
-            self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+            self.root.protocol("WM_DELETE_WINDOW", self.close_window)
         except AttributeError:
             pass
 
         # instantiate the treeview
-        self.treeview = basic_widgets.Treeview(self, columns=('Name', ))
+        self.treeview = TreeviewWithScrolling(self, columns=('Name', ))  # type: TreeviewWithScrolling
+        self.treeview.frame.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         # define the column headings
         self.treeview.heading('#0', text='Name')
         self.treeview.heading('#1', text='ID')
-        # instantiate the scroll bar and bind commands
-        self.scroll_bar = basic_widgets.Scrollbar(
-            self.treeview.master, orient=tkinter.VERTICAL, command=self.treeview.yview)
-        self.treeview.configure(xscrollcommand=self.scroll_bar.set)
-        # pack these components into the frame
-        self.treeview.pack(side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
-        self.scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self.fill_from_label_schema(label_schema)
 
     def _empty_entries(self):
@@ -109,7 +105,7 @@ class SchemaViewer(basic_widgets.Frame):
         self.treeview.delete(*self.treeview.get_children())
 
     def close_window(self):
-        self.parent.withdraw()
+        self.root.withdraw()
 
     def delete_entry(self, the_id):
         """
@@ -205,7 +201,7 @@ class _SchemaSelectionWidget(object):
         self.root = tkinter.Toplevel()
         self.root.wm_title('Select Label Schema Entry')
         self.viewer = SchemaViewer(self.root, label_schema=label_schema, geometry_size='250x400')
-        self.submit_button = basic_widgets.Button(self.root, text='Submit', command=self.set_value)
+        self.submit_button = Button(self.root, text='Submit', command=self.set_value)
         self.submit_button.pack()
         self.root.mainloop()
 
@@ -297,34 +293,34 @@ class _LabelEntryPanel(WidgetPanel):
         ('cancel_button', 'okay_button'))
     header_message = LabelDescriptor(
         'header_message', default_text='',
-        docstring='The header message.')  # type: basic_widgets.Label
+        docstring='The header message.')  # type: Label
     id_label = LabelDescriptor(
         'id_label', default_text='ID:',
-        docstring='The id label')  # type: basic_widgets.Label
+        docstring='The id label')  # type: Label
     id_entry = EntryDescriptor(
         'id_entry', default_text='',
-        docstring='The id value')  # type: basic_widgets.Entry
+        docstring='The id value')  # type: Entry
 
     name_label = LabelDescriptor(
         'name_label', default_text='Name:',
-        docstring='The name label')  # type: basic_widgets.Label
+        docstring='The name label')  # type: Label
     name_entry = EntryDescriptor(
         'name_entry', default_text='',
-        docstring='The name value')  # type: basic_widgets.Entry
+        docstring='The name value')  # type: Entry
 
     parent_label = LabelDescriptor(
         'parent_label', default_text='Parent ID:',
-        docstring='The parent label')  # type: basic_widgets.Label
+        docstring='The parent label')  # type: Label
     parent_button = ButtonDescriptor(
         'parent_button', default_text='<Choose>',
-        docstring='The parent value')  # type: basic_widgets.Button
+        docstring='The parent value')  # type: Button
 
     cancel_button = ButtonDescriptor(
         'cancel_button', default_text='Cancel',
-        docstring='The cancel button')  # type: basic_widgets.Button
+        docstring='The cancel button')  # type: Button
     okay_button = ButtonDescriptor(
         'okay_button', default_text='Okay',
-        docstring='The okay button')  # type: basic_widgets.Button
+        docstring='The okay button')  # type: Button
 
     def __init__(self, parent):
         """
@@ -471,55 +467,55 @@ class SchemaEditor(WidgetPanel):
 
     version_label = LabelDescriptor(
         'version_label', default_text='Version:',
-        docstring='The version label')  # type: basic_widgets.Label
+        docstring='The version label')  # type: Label
     version_entry = EntryDescriptor(
         'version_entry', default_text='',
-        docstring='The version value')  # type: basic_widgets.Entry
+        docstring='The version value')  # type: Entry
 
     version_date_label = LabelDescriptor(
         'version_date_label', default_text='Version Date:',
-        docstring='The version_date label')  # type: basic_widgets.Label
+        docstring='The version_date label')  # type: Label
     version_date_entry = EntryDescriptor(
         'version_date_entry', default_text='',
-        docstring='The version_date value')  # type: basic_widgets.Entry
+        docstring='The version_date value')  # type: Entry
 
     classification_label = LabelDescriptor(
         'classification_label', default_text='Classification:',
-        docstring='The classification label')  # type: basic_widgets.Label
+        docstring='The classification label')  # type: Label
     classification_entry = EntryDescriptor(
         'classification_entry', default_text='',
-        docstring='The classification value')  # type: basic_widgets.Entry
+        docstring='The classification value')  # type: Entry
 
     confidence_label = LabelDescriptor(
         'confidence_label', default_text='Confidence Values:',
-        docstring='The confidence label')  # type: basic_widgets.Label
+        docstring='The confidence label')  # type: Label
     confidence_entry = EntryDescriptor(
         'confidence_entry', default_text='',
-        docstring='The confidence value')  # type: basic_widgets.Entry
+        docstring='The confidence value')  # type: Entry
 
     geometries_label = LabelDescriptor(
         'geometries_label', default_text='Geometries:',
-        docstring='The geometries label')  # type: basic_widgets.Label
+        docstring='The geometries label')  # type: Label
     geometries_entry = EntryDescriptor(
         'geometries_entry', default_text='',
-        docstring='The geometries value')  # type: basic_widgets.Entry
+        docstring='The geometries value')  # type: Entry
 
     new_button = ButtonDescriptor(
         'new_button', default_text='New Entry',
-        docstring='The new entry button')  # type: basic_widgets.Button
+        docstring='The new entry button')  # type: Button
     edit_button = ButtonDescriptor(
         'edit_button', default_text='Edit Entry',
-        docstring='The edit button')  # type: basic_widgets.Button
+        docstring='The edit button')  # type: Button
     delete_button = ButtonDescriptor(
         'delete_button', default_text='Delete Entry',
-        docstring='The delete entry button')  # type: basic_widgets.Button
+        docstring='The delete entry button')  # type: Button
 
     move_up_button = ButtonDescriptor(
         'move_up_button', default_text='Move Entry Up',
-        docstring='The move up entry button')  # type: basic_widgets.Button
+        docstring='The move up entry button')  # type: Button
     move_down_button = ButtonDescriptor(
         'move_down_button', default_text='Move Entry Down',
-        docstring='The move down entry button')  # type: basic_widgets.Button
+        docstring='The move down entry button')  # type: Button
 
     schema_viewer = TypedDescriptor(
         'schema_viewer', SchemaViewer,
@@ -539,7 +535,7 @@ class SchemaEditor(WidgetPanel):
         self.label_schema = LabelSchema()  # type: LabelSchema
         self._unsaved_edits = None
 
-        self.primary = basic_widgets.Frame(root)
+        self.primary = Frame(root)
         WidgetPanel.__init__(self, self.primary)
         self.init_w_rows()
         # self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
