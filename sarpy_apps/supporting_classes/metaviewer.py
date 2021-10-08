@@ -10,8 +10,12 @@ import tkinter
 from tk_builder.widgets import basic_widgets
 
 from sarpy.compliance import integer_types, string_types
-from sarpy.io.general.base import BaseReader
+from sarpy.io.general.base import BaseReader, AbstractReader
 from sarpy.io.general.nitf import NITFDetails, NITFReader
+from sarpy.io.complex.base import SICDTypeReader
+from sarpy.io.phase_history.base import CPHDTypeReader
+from sarpy.io.received.base import CRSDTypeReader
+from sarpy.io.product.base import SIDDTypeReader
 
 
 def _primitive_list(the_list):
@@ -109,62 +113,48 @@ class Metaviewer(basic_widgets.Treeview):
 
         Parameters
         ----------
-        reader : BaseReader
-
-        Returns
-        -------
-        None
+        reader : AbstractReader
         """
-
-        def do_sicds():
-            try:
-                sicds = reader.get_sicds_as_tuple()
-                if sicds is None:
-                    return
-                elif len(sicds) == 1:
-                    self.add_node("", "SICD", sicds[0].to_dict())
-                else:
-                    for i, entry in enumerate(sicds):
-                        self.add_node("", "SICD_{}".format(i), entry.to_dict())
-            except AttributeError:
-                pass
-
-        def do_sidds():
-            try:
-                sidds = reader.sidd_meta
-                if sidds is None:
-                    pass
-                elif isinstance(sidds, (list, tuple)):
-                    for i, entry in enumerate(sidds):
-                        self.add_node("", "SIDD_{}".format(i), entry.to_dict())
-                else:
-                    self.add_node("", "SIDD", sidds.to_dict())
-            except AttributeError:
-                pass
-
-        def do_cphd():
-            try:
-                cphd = reader.cphd_meta
-                if cphd is None:
-                    pass
-                else:
-                    self.add_node("", "CPHD", cphd.to_dict())
-            except AttributeError:
-                pass
-
-        def do_nitf():
-            if isinstance(reader, NITFReader):
-                nitf_details = reader.nitf_details  # type: NITFDetails
-                self.add_node("", "NITF", nitf_details.get_headers_json())
 
         # empty any present entries
         self.empty_entries()
-        # populate relevant meta-data structures
-        if reader.reader_type == "SICD":
-            do_sicds()
-        elif reader.reader_type == "SIDD":
-            do_sidds()
-            do_sicds()
-        elif reader.reader_type == "CPHD":
-            do_cphd()
-        do_nitf()
+
+        if isinstance(reader, (SICDTypeReader, SIDDTypeReader)):
+            sicds = reader.get_sicds_as_tuple()
+            if sicds is None:
+                return
+            elif len(sicds) == 1:
+                self.add_node("", "SICD", sicds[0].to_dict())
+            else:
+                for i, entry in enumerate(sicds):
+                    self.add_node("", "SICD_{}".format(i), entry.to_dict())
+        elif isinstance(reader, SIDDTypeReader):
+            sidds = reader.get_sidds_as_tuple()
+            if sidds is None:
+                pass
+            elif len(sidds) == 1:
+                self.add_node("", "SIDD", sidds[0].to_dict())
+            else:
+                for i, entry in enumerate(sidds):
+                    self.add_node("", "SIDD_{}".format(i), entry.to_dict())
+
+            sicds = reader.sicd_meta
+            if sicds is not None:
+                for i, entry in enumerate(sicds):
+                    self.add_node("", "SICD_{}".format(i), entry.to_dict())
+        elif isinstance(reader, CPHDTypeReader):
+            cphd = reader.cphd_meta
+            if cphd is None:
+                pass
+            else:
+                self.add_node("", "CPHD", cphd.to_dict())
+        elif isinstance(reader, CRSDTypeReader):
+            crsd = reader.crsd_meta
+            if crsd is None:
+                pass
+            else:
+                self.add_node("", "CRSD", crsd.to_dict())
+
+        if isinstance(reader, NITFReader):
+            nitf_details = reader.nitf_details  # type: NITFDetails
+            self.add_node("", "NITF", nitf_details.get_headers_json())

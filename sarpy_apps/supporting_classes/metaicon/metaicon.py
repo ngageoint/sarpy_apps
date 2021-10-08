@@ -50,10 +50,11 @@ class MetaIcon(ImagePanel):
     """
 
     def __init__(self, parent):
+        self.parent = parent
         super(MetaIcon, self).__init__(parent)
         self._metadata_container = MetaIconDataContainer()
 
-        self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
+        self._margin_percent = 5
         self._font_family = 'Times New Roman'
         self.canvas.set_canvas_size(10, 10)
 
@@ -303,6 +304,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The layover arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.layover_arrow_angle)
 
     @property
@@ -312,6 +314,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.shadow_arrow_angle)
 
     @property
@@ -321,6 +324,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The multipath arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.multipath_arrow_angle)
 
     @property
@@ -330,6 +334,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The north arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.north_arrow_angle)
 
     def _get_arrow_coords(self, arrow_angle):
@@ -349,6 +354,7 @@ class MetaIcon(ImagePanel):
         if arrow_angle is None:
             return 0., 0., 0., 0.
 
+        # noinspection PyTypeChecker
         return self._adjust_arrow_aspect_ratio(self.arrows_origin, self.arrow_lengths, arrow_angle)
 
     def draw_layover_arrow(self):
