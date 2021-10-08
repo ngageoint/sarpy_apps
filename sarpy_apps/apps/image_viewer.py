@@ -29,7 +29,7 @@ from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.product.base import SIDDTypeReader
 from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.received.base import CRSDTypeReader
-from sarpy.io.general.converter import open_general
+from sarpy.io import open as open_general
 
 
 class AppVariables(object):
