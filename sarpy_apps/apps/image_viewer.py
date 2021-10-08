@@ -50,18 +50,22 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         """
 
         self.root = primary
-        self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
-
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary = tkinter.PanedWindow(self, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
+
         self.variables = AppVariables()
 
         self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
         self.image_panel.config(borderwidth=0)
-        self.primary.add(self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(
+            self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
+            stretch=tkinter.FIRST)
 
         self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
-        self.primary.add(self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(
+            self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
