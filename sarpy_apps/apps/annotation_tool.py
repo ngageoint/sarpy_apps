@@ -12,8 +12,10 @@ import os
 
 import tkinter
 from tkinter import ttk, Button as tk_button, PanedWindow
-from tkinter.messagebox import showinfo
+from tkinter.messagebox import showinfo, askyesnocancel
 from tkinter.colorchooser import askcolor
+from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
+
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 from tk_builder.image_reader import CanvasImageReader
@@ -25,6 +27,7 @@ from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithSc
 from tk_builder.widgets.widget_descriptors import LabelDescriptor, ButtonDescriptor, \
     EntryDescriptor, ComboboxDescriptor, TypedDescriptor
 
+from sarpy_apps.supporting_classes.file_filters import common_use_collection, all_files, json_files
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
     DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \
@@ -1153,6 +1156,12 @@ class AppVariables(object):
         docstring='Are there unsaved annotation changes to be saved?')  # type: bool
     image_reader = TypedDescriptor(
         'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
+    file_annotation_collection = TypedDescriptor(
+        'file_annotation_collection', FileAnnotationCollection,
+        docstring='The file annotation collection.')  # type: FileAnnotationCollection
+    annotation_file_name = StringDescriptor(
+        'annotation_file_name',
+        docstring='The path for the annotation results file.')  # type: str
 
     # todo:
     pass
@@ -1163,7 +1172,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
     The main annotation tool
     """
 
-    def __init__(self, master, reader=None, **kwargs):
+    def __init__(self, master, reader=None, annotation_collection=None, **kwargs):
         self.root = master
         self.variables = AppVariables()
 
@@ -1186,6 +1195,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         menu_bar = tkinter.Menu()
         file_menu = tkinter.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="Open Image", command=self.select_image_file)
+        file_menu.add_command(label="Open Directory", command=self.select_image_directory)
+        file_menu.add_separator()
         file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
         file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
         file_menu.add_separator()
@@ -1214,6 +1225,17 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         if reader is not None:
             self.set_reader(reader)
+            self.set_annotations(annotation_collection)
+
+    @property
+    def image_file_name(self):
+        """
+        None|str: The image file name.
+        """
+
+        if self.variables.image_reader is None:
+            return None
+        return self.variables.image_reader.file_name
 
     def set_title(self):
         """
@@ -1275,11 +1297,11 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
         self.set_title()
-
-        # todo: what about the annotation panel?
-
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+
+        # todo: what about the annotation panel information and all that?
+
 
     def my_populate_metaicon(self):
         """
@@ -1301,10 +1323,159 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         self.populate_metaviewer(self.variables.image_reader)
 
+    def set_annotations(self, annotation_collection):
+        if self.variables.image_reader is None:
+            return  # nothing to be done
 
-    def set_annotation_file(self, annotation_collection):
+        annotation_filename = None
+        if isinstance(annotation_collection, str):
+            if not os.path.isfile(annotation_collection):
+                showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_collection))
+                annotation_collection = None
+            else:
+                try:
+                    annotation_filename = annotation_collection
+                    annotation_collection = FileAnnotationCollection.from_file(annotation_filename)
+                except Exception as e:
+                    showinfo('File Annotation Error',
+                             message='Opening annotation file {} failed with error {}.'.format(
+                                 annotation_filename, e))
+                    annotation_filename = None
+                    annotation_collection = None
+
+        if annotation_collection is None:
+            annotation_collection = FileAnnotationCollection(image_file_name=self.image_file_name)
+
+        if not isinstance(annotation_collection, FileAnnotationCollection):
+            raise TypeError('annotation collection must be of type FileAnnotationCollection')
+
+        # finish initialization
+        self._initialize_annotation_file(annotation_filename, annotation_collection)
+
+    def select_image_file(self):
+        """
+        Select the image callback.
+
+        Returns
+        -------
+        None
+        """
+
+        # prompt for any unsaved changes
+        response = self._prompt_unsaved()
+        if not response:
+            return
+
+        fname = askopenfilename(
+            title='Select image file',
+            iinitialdir=self.variables.browse_directory,
+            filetypes=common_use_collection)
+
+        if fname in ['', ()]:
+            return
+
+        self.set_reader(fname, update_browse=os.path.split(fname)[0])
+
+    def select_image_directory(self):
+        dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
+        if dirname is None or dirname in [(), '']:
+            return
+        # NB: handle non-complex data possibilities here?
+        the_reader = SICDTypeCanvasImageReader(dirname)
+        self.set_reader(the_reader, update_browse=os.path.split(dirname)[0])
+
+    def _insert_feature_from_file(self, feature):
+        """
+        This is creating all shapes from the given geometry. This short-circuits
+        the event listeners, so must handle all tracking updates itself.
+
+        Parameters
+        ----------
+        feature : AnnotationFeature
+        """
+
         # todo:
         pass
+
+    def _initialize_geometry(self, annotation_file_name, annotation_collection):
+        """
+        Initialize the geometry elements from the annotation.
+
+        Parameters
+        ----------
+        annotation_file_name : None|str
+        annotation_collection : FileAnnotationCollection
+
+        Returns
+        -------
+        None
+        """
+
+        # set our appropriate variables
+        self.variables.annotation_file_name = annotation_file_name
+        self.variables.file_annotation_collection = annotation_collection
+        self.set_current_feature_id(None)  # todo
+
+        # dump all the old shapes
+        self._modifying_shapes_on_canvas = True
+        self.image_panel.canvas.reinitialize_shapes()
+
+        # reinitialize dictionary relating canvas shapes and annotation shapes
+        self.variables.reinitialize_features()  # todo
+
+        # populate all the shapes
+        if annotation_collection.annotations is not None:
+            for feature in annotation_collection.annotations.features:
+                self._insert_feature_from_file(feature)
+
+    def _initialize_annotation_file(self, annotation_fname, annotation_collection):
+        """
+        The final initialization steps for the annotation file.
+
+        Parameters
+        ----------
+        annotation_fname : None|str
+        annotation_collection : FileLabelCollection
+        """
+
+        self.collection_panel.viewer.set_annotation_collection(annotation_collection)
+
+        self._initialize_geometry(annotation_fname, annotation_collection)
+        self.image_panel.enable_tools()
+        self.variables.unsaved_changes = False
+
+    def _prompt_annotation_file_name(self):
+        if self.image_file_name is not None:
+            browse_dir, image_fname = os.path.split(self.image_file_name)
+        else:
+            browse_dir = self.variables.browse_directory
+            image_fname = 'Unknown_Image'
+
+        annotation_fname = asksaveasfilename(
+            title='Select output annotation file name for image file {}'.format(image_fname),
+            initialdir=browse_dir,
+            initialfile='{}.annotation.json'.format(image_fname),
+            filetypes=[json_files, all_files])
+
+        if annotation_fname in ['', ()]:
+            annotation_fname = None
+        return annotation_fname
+
+    def save_annotation_file(self):
+        """
+        Save the annotation file.
+        """
+
+        if self.variables.file_annotation_collection is None:
+            self.variables.unsaved_changes = False
+            return  # nothing to be done
+
+        if self.variables.annotation_file_name is None:
+            self.variables.annotation_file_name = self._prompt_annotation_file_name()
+            return  # they didn't provide anything
+
+        self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
+        self.variables.unsaved_changes = False
 
     def _prompt_unsaved(self):
         """
