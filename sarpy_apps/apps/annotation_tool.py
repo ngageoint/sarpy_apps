@@ -1597,10 +1597,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.annotate.tab_panel.geometry_tab.geometry_buttons.ellipse.config(command=self.callback_new_ellipse)
         self.annotate.tab_panel.geometry_tab.geometry_buttons.polygon.config(command=self.callback_new_polygon)
 
-        if reader is not None:
-            self.set_reader(reader)
-            self.set_annotations(annotation_collection)
-            self.annotate.update_annotation_collection()
+        self.set_reader(reader)
+        self.set_annotations(annotation_collection)
+        self.annotate.update_annotation_collection()
 
     @property
     def image_file_name(self):
@@ -1639,9 +1638,12 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|GeneralCanvasImageReader
+        the_reader : None|str|BaseReader|GeneralCanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -2469,7 +2471,6 @@ def main(reader=None, annotation=None):
     the_style.theme_use('classic')
 
     app = AnnotationTool(root, reader=reader, annotation_collection=annotation)
-
     root.mainloop()
 
 

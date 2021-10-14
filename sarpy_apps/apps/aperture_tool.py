@@ -26,7 +26,12 @@ from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.image_utils import frame_sequence_utils
-from tk_builder.widgets import widget_descriptors, basic_widgets
+
+from tk_builder.widgets.widget_descriptors import RadioButtonDescriptor, \
+    PanelDescriptor, ImagePanelDescriptor, CheckButtonDescriptor, LabelDescriptor, \
+    EntryDescriptor, ButtonDescriptor
+from tk_builder.widgets.basic_widgets import Frame, RadioButton, CheckButton, \
+    Label, Entry, Button
 
 from sarpy.visualization.remap import NRL
 from sarpy.processing.subaperture import ApertureFilter
@@ -35,25 +40,18 @@ from sarpy.io.complex.base import SICDTypeReader
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
-from sarpy.compliance import string_types
 
 ##################
 # Animation panel
 
-
 class ModeSelections(RadioButtonPanel):
-    _widget_list = ("slow_time",
-                    "fast_time",
-                    "aperture_percent",
-                    "full_range_bandwidth",
-                    "full_az_bandwidth")
-    slow_time = widget_descriptors.RadioButtonDescriptor("slow_time")  # type: basic_widgets.RadioButton
-    fast_time = widget_descriptors.RadioButtonDescriptor("fast_time")  # type: basic_widgets.RadioButton
-    aperture_percent = widget_descriptors.RadioButtonDescriptor("aperture_percent")   # type: basic_widgets.RadioButton
-    full_range_bandwidth = \
-        widget_descriptors.RadioButtonDescriptor("full_range_bandwidth")  # type: basic_widgets.RadioButton
-    full_az_bandwidth = \
-        widget_descriptors.RadioButtonDescriptor("full_az_bandwidth")  # type: basic_widgets.RadioButton
+    _widget_list = (
+        "slow_time", "fast_time", "aperture_percent", "full_range_bandwidth", "full_az_bandwidth")
+    slow_time = RadioButtonDescriptor("slow_time")  # type: RadioButton
+    fast_time = RadioButtonDescriptor("fast_time")  # type: RadioButton
+    aperture_percent = RadioButtonDescriptor("aperture_percent")   # type: RadioButton
+    full_range_bandwidth = RadioButtonDescriptor("full_range_bandwidth")  # type: RadioButton
+    full_az_bandwidth = RadioButtonDescriptor("full_az_bandwidth")  # type: RadioButton
 
     def __init__(self, parent):
         RadioButtonPanel.__init__(self, parent)
@@ -62,10 +60,9 @@ class ModeSelections(RadioButtonPanel):
 
 
 class ModePanel(WidgetPanel):
-    _widget_list = ("mode_selections",
-                    "reverse")
-    mode_selections = widget_descriptors.PanelDescriptor("mode_selections", ModeSelections)  # type: ModeSelections
-    reverse = widget_descriptors.CheckButtonDescriptor("reverse")              # type: basic_widgets.CheckButton
+    _widget_list = ("mode_selections", "reverse")
+    mode_selections = PanelDescriptor("mode_selections", ModeSelections)  # type: ModeSelections
+    reverse = CheckButtonDescriptor("reverse")  # type: CheckButton
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -74,27 +71,20 @@ class ModePanel(WidgetPanel):
 
 class FastSlowSettingsPanel(WidgetPanel):
     _widget_list = ("label", "aperture_fraction")
-    label = widget_descriptors.LabelDescriptor(
-        "label", default_text="Aperture Fraction:")  # type: basic_widgets.Label
-    aperture_fraction = widget_descriptors.EntryDescriptor(
-        "aperture_fraction", default_text="0.25")  # type: basic_widgets.Entry
+    label = LabelDescriptor("label", default_text="Aperture Fraction:")  # type: Label
+    aperture_fraction = EntryDescriptor("aperture_fraction", default_text="0.25")  # type: Entry
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-
         self.init_w_box_layout(n_columns=2, column_widths=[20, 10])
 
 
 class ResolutionSettingsPanel(WidgetPanel):
     _widget_list = ("min_res_label", "min_res", "max_res_label", "max_res")
-    min_res_label = widget_descriptors.LabelDescriptor(
-        "min_res_label", default_text="Min Res")  # type: basic_widgets.Label
-    max_res_label = widget_descriptors.LabelDescriptor(
-        "max_res_label", default_text="Max Res")  # type: basic_widgets.Label
-    min_res = widget_descriptors.EntryDescriptor(
-        "min_res", default_text="10")  # type: basic_widgets.Entry
-    max_res = widget_descriptors.EntryDescriptor(
-        "max_res", default_text="100")  # type: basic_widgets.Entry
+    min_res_label = LabelDescriptor("min_res_label", default_text="Min Res")  # type: Label
+    max_res_label = LabelDescriptor("max_res_label", default_text="Max Res")  # type: Label
+    min_res = EntryDescriptor("min_res", default_text="10")  # type: Entry
+    max_res = EntryDescriptor("max_res", default_text="100")  # type: Entry
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -102,70 +92,54 @@ class ResolutionSettingsPanel(WidgetPanel):
 
 
 class AnimationSettingsPanel(WidgetPanel):
+    _widget_list = (
+        "number_of_frames_label", "number_of_frames", "r1c3", "r1c4",
+        "frame_rate_label", "frame_rate", "fps_label", "r2c4",
+        "step_back", "step_forward", "play", "stop",
+        "cycle_continuously")
 
-    _widget_list = ("number_of_frames_label", "number_of_frames", "r1c3", "r1c4",
-                    "frame_rate_label", "frame_rate", "fps_label", "r2c4",
-                    "step_back", "step_forward", "play", "stop",
-                    "cycle_continuously")
+    number_of_frames_label = LabelDescriptor(
+        "number_of_frames_label", default_text="Number of Frames:")  # type: Label
+    frame_rate_label = LabelDescriptor(
+        "frame_rate_label", default_text="Frame Rate:")  # type: Label
+    fps_label = LabelDescriptor("fps_label", default_text="fps")  # type: Label
 
-    number_of_frames_label = \
-        widget_descriptors.LabelDescriptor(
-            "number_of_frames_label", default_text="Number of Frames:")  # type: basic_widgets.Label
-    frame_rate_label = widget_descriptors.LabelDescriptor(
-        "frame_rate_label", default_text="Frame Rate:")  # type: basic_widgets.Label
-    fps_label = widget_descriptors.LabelDescriptor(
-        "fps_label", default_text="fps")  # type: basic_widgets.Label
+    r1c3 = LabelDescriptor("r1c3", default_text="")  # type: Label
+    r1c4 = LabelDescriptor("r1c4", default_text="")  # type: Label
+    r2c4 = LabelDescriptor("r2c4", default_text="")  # type: Label
 
-    r1c3 = widget_descriptors.LabelDescriptor(
-        "r1c3", default_text="")  # type: basic_widgets.Label
-    r1c4 = widget_descriptors.LabelDescriptor(
-        "r1c4", default_text="")  # type: basic_widgets.Label
-    r2c4 = widget_descriptors.LabelDescriptor(
-        "r2c4", default_text="")  # type: basic_widgets.Label
-
-    number_of_frames = widget_descriptors.EntryDescriptor(
-        "number_of_frames")  # type: basic_widgets.Entry
-    aperture_fraction = widget_descriptors.EntryDescriptor(
-        "aperture_fraction")  # type: basic_widgets.Entry
-    frame_rate = widget_descriptors.EntryDescriptor(
-        "frame_rate")  # type: basic_widgets.Entry
-    cycle_continuously = widget_descriptors.CheckButtonDescriptor(
-        "cycle_continuously")  # type: basic_widgets.CheckButton
-    step_forward = widget_descriptors.ButtonDescriptor(
-        "step_forward")  # type: basic_widgets.Button
-    step_back = widget_descriptors.ButtonDescriptor(
-        "step_back")  # type: basic_widgets.Button
-    play = widget_descriptors.ButtonDescriptor(
-        "play")  # type: basic_widgets.Button
-    stop = widget_descriptors.ButtonDescriptor(
-        "stop")  # type: basic_widgets.Button
+    number_of_frames = EntryDescriptor("number_of_frames")  # type: Entry
+    aperture_fraction = EntryDescriptor("aperture_fraction")  # type: Entry
+    frame_rate = EntryDescriptor("frame_rate")  # type: Entry
+    cycle_continuously = CheckButtonDescriptor("cycle_continuously")  # type: CheckButton
+    step_forward = ButtonDescriptor("step_forward")  # type: Button
+    step_back = ButtonDescriptor("step_back")  # type: Button
+    play = ButtonDescriptor("play")  # type: Button
+    stop = ButtonDescriptor("stop")  # type: Button
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-
         self.init_w_box_layout(n_columns=4, column_widths=[20, 10, 3, 3])
-
         self.number_of_frames.set_text("7")
         self.frame_rate.set_text("5")
 
 
 class AnimationPanel(WidgetPanel):
-    _widget_list = ("mode_panel", "animation_settings", "fast_slow_settings", "resolution_settings", "save")
+    _widget_list = (
+        "mode_panel", "animation_settings", "fast_slow_settings", "resolution_settings", "save")
 
-    mode_panel = widget_descriptors.TypedDescriptor(
-        "mode_panel", ModePanel)  # type: ModePanel
-    animation_settings = widget_descriptors.TypedDescriptor(
+    mode_panel = TypedDescriptor("mode_panel", ModePanel)  # type: ModePanel
+    animation_settings = TypedDescriptor(
         "animation_settings", AnimationSettingsPanel)  # type: AnimationSettingsPanel
-    fast_slow_settings = widget_descriptors.TypedDescriptor(
+    fast_slow_settings = TypedDescriptor(
         "fast_slow_settings", FastSlowSettingsPanel)  # type: FastSlowSettingsPanel
-    resolution_settings = widget_descriptors.TypedDescriptor(
+    resolution_settings = TypedDescriptor(
         "resolution_settings", ResolutionSettingsPanel)  # type: ResolutionSettingsPanel
-    save = widget_descriptors.ButtonDescriptor("save")  # type: basic_widgets.Button
+    save = ButtonDescriptor("save")  # type: Button
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self.parent = parent
-
         self.init_w_vertical_layout()
         self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
 
@@ -175,8 +149,8 @@ class AnimationPanel(WidgetPanel):
 
 class DeskewFastSlow(RadioButtonPanel):
     _widget_list = ("fast", "slow",)
-    fast = widget_descriptors.RadioButtonDescriptor("fast")  # type: basic_widgets.RadioButton
-    slow = widget_descriptors.RadioButtonDescriptor("slow")  # type: basic_widgets.RadioButton
+    fast = RadioButtonDescriptor("fast")  # type: RadioButton
+    slow = RadioButtonDescriptor("slow")  # type: RadioButton
 
     def __init__(self, primary):
         self.primary = primary
@@ -185,13 +159,12 @@ class DeskewFastSlow(RadioButtonPanel):
 
 
 class PhdOptionsPanel(WidgetPanel):
-
     _widget_list = ("apply_deskew", "uniform_weighting", "deskew_fast_slow")
-    apply_deskew = widget_descriptors.CheckButtonDescriptor(
-        "apply_deskew", default_text="apply deskew")  # type: basic_widgets.CheckButton
-    uniform_weighting = widget_descriptors.CheckButtonDescriptor(
-        "uniform_weighting", default_text="apply uniform weighting")  # type: basic_widgets.CheckButton
-    deskew_fast_slow = widget_descriptors.PanelDescriptor(
+    apply_deskew = CheckButtonDescriptor(
+        "apply_deskew", default_text="apply deskew")  # type: CheckButton
+    uniform_weighting = CheckButtonDescriptor(
+        "uniform_weighting", default_text="apply uniform weighting")  # type: CheckButton
+    deskew_fast_slow = PanelDescriptor(
         "deskew_fast_slow", DeskewFastSlow, default_text="direction")  # type: DeskewFastSlow
 
     def __init__(self, parent):
@@ -201,29 +174,26 @@ class PhdOptionsPanel(WidgetPanel):
 
 class ChipSizePanel(WidgetPanel):
     _widget_list = ("nx_label", "nx", "ny_label", "ny")
-    nx_label = widget_descriptors.LabelDescriptor("nx_label")          # type: basic_widgets.Label
-    nx = widget_descriptors.EntryDescriptor("nx")                # type: basic_widgets.Entry
-    ny_label = widget_descriptors.LabelDescriptor("ny_label")          # type: basic_widgets.Label
-    ny = widget_descriptors.EntryDescriptor("ny")                # type: basic_widgets.Entry
+    nx_label = LabelDescriptor("nx_label")  # type: Label
+    nx = EntryDescriptor("nx")  # type: Entry
+    ny_label = LabelDescriptor("ny_label")  # type: Label
+    ny = EntryDescriptor("ny")  # type: Entry
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self.init_w_box_layout(n_columns=2)
         self.nx.config(state="disabled")
         self.ny.config(state="disabled")
-
         self.nx_label.set_text("nx: ")
         self.ny_label.set_text("ny: ")
 
 
 class ImageInfoPanel(WidgetPanel):
     _widget_list = ("file_label", "chip_size_panel", "phd_options")
-    file_label = widget_descriptors.LabelDescriptor(
-        "file_label", default_text='', docstring='The file name label.')  # type: basic_widgets.Label
-    chip_size_panel = widget_descriptors.PanelDescriptor(
-        "chip_size_panel", ChipSizePanel)  # type: ChipSizePanel
-    phd_options = widget_descriptors.PanelDescriptor(
-        "phd_options", PhdOptionsPanel)  # type: PhdOptionsPanel
+    file_label = LabelDescriptor(
+        "file_label", default_text='', docstring='The file name label.')  # type: Label
+    chip_size_panel = PanelDescriptor("chip_size_panel", ChipSizePanel)  # type: ChipSizePanel
+    phd_options = PanelDescriptor("phd_options", PhdOptionsPanel)  # type: PhdOptionsPanel
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
@@ -246,81 +216,54 @@ class PhaseHistoryPanel(WidgetPanel):
         "ground_resolution_cross_units", "ground_resolution_range", "ground_resolution_range_units",
         "full_aperture_button", "english_units_checkbox")
 
-    r1c1 = widget_descriptors.LabelDescriptor("r1c1", default_text="")
-    r1c3 = widget_descriptors.LabelDescriptor("r1c3", default_text="")
-    r1c5 = widget_descriptors.LabelDescriptor("r1c5", default_text="")
+    r1c1 = LabelDescriptor("r1c1", default_text="")  # type: Label
+    r1c3 = LabelDescriptor("r1c3", default_text="")  # type: Label
+    r1c5 = LabelDescriptor("r1c5", default_text="")  # type: Label
 
-    r2c3 = widget_descriptors.LabelDescriptor("r2c3", default_text="")
-    r2c5 = widget_descriptors.LabelDescriptor("r2c5", default_text="")
+    r2c3 = LabelDescriptor("r2c3", default_text="")  # type: Label
+    r2c5 = LabelDescriptor("r2c5", default_text="")  # type: Label
 
-    r3c3 = widget_descriptors.LabelDescriptor("r3c3", default_text="")
-    r3c5 = widget_descriptors.LabelDescriptor("r3c5", default_text="")
+    r3c3 = LabelDescriptor("r3c3", default_text="")  # type: Label
+    r3c5 = LabelDescriptor("r3c5", default_text="")  # type: Label
 
-    r4c3 = widget_descriptors.LabelDescriptor("r4c3", default_text="")
-    r4c5 = widget_descriptors.LabelDescriptor("r4c5", default_text="")
+    r4c3 = LabelDescriptor("r4c3", default_text="")  # type: Label
+    r4c5 = LabelDescriptor("r4c5", default_text="")  # type: Label
 
-    cross_range_label = widget_descriptors.LabelDescriptor(
-        "cross_range_label", default_text="Cross-Range")
-    range_label = widget_descriptors.LabelDescriptor(
-        "range_label", default_text="Range")
+    cross_range_label = LabelDescriptor("cross_range_label", default_text="Cross-Range")  # type: Label
+    range_label = LabelDescriptor("range_label", default_text="Range")  # type: Label
 
-    start_percent_label = widget_descriptors.LabelDescriptor(
-        "start_percent_label", default_text="Start %")
-    stop_percent_label = widget_descriptors.LabelDescriptor(
-        "stop_percent_label", default_text="Stop %")
-    fraction_label = widget_descriptors.LabelDescriptor(
-        "fraction_label", default_text="Fraction")
-    resolution_label = widget_descriptors.LabelDescriptor(
-        "resolution_label", default_text="Resolution")
-    sample_spacing_label = widget_descriptors.LabelDescriptor(
-        "sample_spacing_label", default_text="Sample Spacing")
-    ground_resolution_label = widget_descriptors.LabelDescriptor(
-        "ground_resolution_label", default_text="Ground Resolution")
+    start_percent_label = LabelDescriptor("start_percent_label", default_text="Start %")  # type: Label
+    stop_percent_label = LabelDescriptor("stop_percent_label", default_text="Stop %")  # type: Label
+    fraction_label = LabelDescriptor("fraction_label", default_text="Fraction")  # type: Label
+    resolution_label = LabelDescriptor("resolution_label", default_text="Resolution")  # type: Label
+    sample_spacing_label = LabelDescriptor("sample_spacing_label", default_text="Sample Spacing")  # type: Label
+    ground_resolution_label = LabelDescriptor(
+        "ground_resolution_label", default_text="Ground Resolution")  # type: Label
 
-    start_percent_cross = widget_descriptors.EntryDescriptor(
-        "start_percent_cross")  # type: basic_widgets.Entry
-    stop_percent_cross = widget_descriptors.EntryDescriptor(
-        "stop_percent_cross")  # type: basic_widgets.Entry
-    fraction_cross = widget_descriptors.EntryDescriptor(
-        "fraction_cross")  # type: basic_widgets.Entry
-    resolution_cross = widget_descriptors.EntryDescriptor(
-        "resolution_cross")  # type: basic_widgets.Entry
-    sample_spacing_cross = widget_descriptors.EntryDescriptor(
-        "sample_spacing_cross")  # type: basic_widgets.Entry
-    ground_resolution_cross = widget_descriptors.EntryDescriptor(
-        "ground_resolution_cross")  # type: basic_widgets.Entry
+    start_percent_cross = EntryDescriptor("start_percent_cross")  # type: Entry
+    stop_percent_cross = EntryDescriptor("stop_percent_cross")  # type: Entry
+    fraction_cross = EntryDescriptor("fraction_cross")  # type: Entry
+    resolution_cross = EntryDescriptor("resolution_cross")  # type: Entry
+    sample_spacing_cross = EntryDescriptor("sample_spacing_cross")  # type: Entry
+    ground_resolution_cross = EntryDescriptor("ground_resolution_cross")  # type: Entry
 
-    start_percent_range = widget_descriptors.EntryDescriptor(
-        "start_percent_range")  # type: basic_widgets.Entry
-    stop_percent_range = widget_descriptors.EntryDescriptor(
-        "stop_percent_range")  # type: basic_widgets.Entry
-    fraction_range = widget_descriptors.EntryDescriptor(
-        "fraction_range")  # type: basic_widgets.Entry
-    resolution_range = widget_descriptors.EntryDescriptor(
-        "resolution_range")  # type: basic_widgets.Entry
-    sample_spacing_range = widget_descriptors.EntryDescriptor(
-        "sample_spacing_range")  # type: basic_widgets.Entry
-    ground_resolution_range = widget_descriptors.EntryDescriptor(
-        "ground_resolution_range")  # type: basic_widgets.Entry
+    start_percent_range = EntryDescriptor("start_percent_range")  # type: Entry
+    stop_percent_range = EntryDescriptor("stop_percent_range")  # type: Entry
+    fraction_range = EntryDescriptor("fraction_range")  # type: Entry
+    resolution_range = EntryDescriptor("resolution_range")  # type: Entry
+    sample_spacing_range = EntryDescriptor("sample_spacing_range")  # type: Entry
+    ground_resolution_range = EntryDescriptor("ground_resolution_range")  # type: Entry
 
-    resolution_cross_units = widget_descriptors.LabelDescriptor(
-        "resolution_cross_units")  # type: basic_widgets.Label
-    sample_spacing_cross_units = widget_descriptors.LabelDescriptor(
-        "sample_spacing_cross_units")  # type: basic_widgets.Label
-    ground_resolution_cross_units = widget_descriptors.LabelDescriptor(
-        "ground_resolution_cross_units")  # type: basic_widgets.Label
+    resolution_cross_units = LabelDescriptor("resolution_cross_units")  # type: Label
+    sample_spacing_cross_units = LabelDescriptor("sample_spacing_cross_units")  # type: Label
+    ground_resolution_cross_units = LabelDescriptor("ground_resolution_cross_units")  # type: Label
 
-    resolution_range_units = widget_descriptors.LabelDescriptor(
-        "resolution_range_units")  # type: basic_widgets.Label
-    sample_spacing_range_units = widget_descriptors.LabelDescriptor(
-        "sample_spacing_range_units")  # type: basic_widgets.Label
-    ground_resolution_range_units = widget_descriptors.LabelDescriptor(
-        "ground_resolution_range_units")  # type: basic_widgets.Label
+    resolution_range_units = LabelDescriptor("resolution_range_units")  # type: Label
+    sample_spacing_range_units = LabelDescriptor("sample_spacing_range_units")  # type: Label
+    ground_resolution_range_units = LabelDescriptor("ground_resolution_range_units")  # type: Label
 
-    full_aperture_button = widget_descriptors.ButtonDescriptor(
-        "full_aperture_button")  # type: basic_widgets.Button
-    english_units_checkbox = widget_descriptors.CheckButtonDescriptor(
-        "english_units_checkbox")  # type: basic_widgets.CheckButton
+    full_aperture_button = ButtonDescriptor("full_aperture_button")  # type: Button
+    english_units_checkbox = CheckButtonDescriptor("english_units_checkbox")  # type: CheckButton
 
     def __init__(self, parent):
         self.parent = parent
@@ -347,8 +290,7 @@ class PhaseHistoryPanel(WidgetPanel):
 
 
 ###########
-# The aperture tool, depends on selecting a region
-
+# The aperture tool
 
 class AnimationProperties(object):
     """
@@ -386,22 +328,23 @@ class ApertureTool(WidgetPanel):
 
     _widget_list = ("phase_history_panel", "filtered_panel")
 
-    phase_history_panel = widget_descriptors.ImagePanelDescriptor(
+    phase_history_panel = ImagePanelDescriptor(
         "phase_history_panel")  # type: ImagePanel
-    filtered_panel = widget_descriptors.ImagePanelDescriptor(
+    filtered_panel = ImagePanelDescriptor(
         "filtered_panel")  # type: ImagePanel
 
-    image_info_panel = widget_descriptors.PanelDescriptor("image_info_panel", ImageInfoPanel)  # type: ImageInfoPanel
-    phase_history = widget_descriptors.PanelDescriptor("phase_history", PhaseHistoryPanel)  # type: PhaseHistoryPanel
-    animation_panel = widget_descriptors.PanelDescriptor("animation_panel", AnimationPanel)   # type: AnimationPanel
+    image_info_panel = PanelDescriptor("image_info_panel", ImageInfoPanel)  # type: ImageInfoPanel
+    phase_history = PanelDescriptor("phase_history", PhaseHistoryPanel)  # type: PhaseHistoryPanel
+    animation_panel = PanelDescriptor("animation_panel", AnimationPanel)   # type: AnimationPanel
 
-    def __init__(self, primary, app_variables):
+    def __init__(self, primary, app_variables, **kwargs):
         """
 
         Parameters
         ----------
         primary : tkinter.Tk|tkinter.Toplevel
         app_variables : AppVariables
+        kwargs
         """
 
         self.app_variables = app_variables
@@ -410,8 +353,7 @@ class ApertureTool(WidgetPanel):
         self._update_on_changed = True
         self._skip_update = False
 
-        self.primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, self.primary_frame)
+        WidgetPanel.__init__(self, primary, **kwargs)
         self.init_w_horizontal_layout()
 
         # define some informational popups
@@ -435,7 +377,6 @@ class ApertureTool(WidgetPanel):
         menubar.add_cascade(label="Details", menu=popups_menu)
 
         primary.config(menu=menubar)
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.phase_history_panel.master.pack(side='left', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.master.pack(side='right', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.canvas.set_canvas_size(300, 400)
@@ -467,6 +408,7 @@ class ApertureTool(WidgetPanel):
         self.image_info_panel.phd_options.deskew_fast_slow.slow.config(command=self.callback_update_deskew_direction)
         self.image_info_panel.phd_options.deskew_fast_slow.fast.config(command=self.callback_update_deskew_direction)
         self.primary.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
     def close_window(self):
         self.primary.withdraw()
@@ -1071,42 +1013,48 @@ class AppVariables(object):
         self.animation = AnimationProperties()
 
 
-class RegionSelection(WidgetPanel, WidgetWithMetadata):
+class RegionSelection(Frame, WidgetWithMetadata):
     """
     The widget for selecting the Area of Interest for the aperture tool.
     """
 
     _widget_list = ("instructions", "image_panel")
-    instructions = widget_descriptors.LabelDescriptor(
+    instructions = LabelDescriptor(
         "instructions",
         default_text='First, open a complex type image file using the File Menu.\n'
                      'Then, selecting a region, using the select tool, which '
                      'will open the aperture tool for that region.',
-        docstring='The basic instructions.')   # type: basic_widgets.Label
-    image_panel = widget_descriptors.ImagePanelDescriptor(
-        "image_panel", docstring='The image panel.')  # type: ImagePanel
+        docstring='The basic instructions.')   # type: Label
+    image_panel = ImagePanelDescriptor("image_panel", docstring='The image panel.')  # type: ImagePanel
 
-    def __init__(self, parent):
+    def __init__(self, parent, reader=None, **kwargs):
         """
 
         Parameters
         ----------
         parent : tkinter.Tk|tkinter.Toplevel
+        reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
+        kwargs
         """
 
         # set the parent frame
         self.root = parent
-        self.primary_frame = basic_widgets.Frame(parent)
-        WidgetPanel.__init__(self, self.primary_frame)
+        Frame.__init__(self, parent, **kwargs)
         WidgetWithMetadata.__init__(self, parent)
 
         self.variables = AppVariables()
 
-        self.init_w_vertical_layout()
         self.set_title()
-        # adjust packing so the image panel takes all the space
-        self.instructions.master.pack(side='top', expand=tkinter.NO)
-        self.image_panel.master.pack(side='bottom', fill=tkinter.BOTH, expand=tkinter.YES)
+        self.instructions = Label(
+            self, text='First, open a complex type image file using the File Menu.\n'
+                       'Then, selecting a region, using the select tool, which '
+                       'will open the aperture tool for that region.')  # type: Label
+        self.instructions.pack(side=tkinter.TOP, expand=tkinter.NO, fill=tkinter.X)
+
+        self.image_panel = ImagePanel(self)  # type: ImagePanel
+        self.image_panel.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
+        self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
+
         # jazz up the instruction a little
         self.instructions.config(
             font=('Arial', '12'), anchor=tkinter.CENTER, relief=tkinter.RIDGE,
@@ -1138,12 +1086,14 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
 
         # handle packing
         parent.config(menu=menubar)
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # define the callbacks
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+        self.update_reader(reader)
 
     # callbacks
     def set_title(self):
@@ -1268,16 +1218,19 @@ class RegionSelection(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
+        the_reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
 
+        if the_reader is None:
+            return
+
         if update_browse is not None:
             self.variables.browse_directory = update_browse
-        elif isinstance(the_reader, string_types):
+        elif isinstance(the_reader, str):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
-        if isinstance(the_reader, string_types):
+        if isinstance(the_reader, str):
             the_reader = SICDTypeCanvasImageReader(the_reader)
 
         if isinstance(the_reader, SICDTypeReader):
@@ -1337,11 +1290,8 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = RegionSelection(root)
+    app = RegionSelection(root, reader=reader)
     root.geometry("1000x800")
-    if reader is not None:
-        app.update_reader(reader)
-
     root.mainloop()
 
 

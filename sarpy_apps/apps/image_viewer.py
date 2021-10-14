@@ -59,8 +59,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         self.variables = AppVariables()
 
-        self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
-        self.image_panel.config(borderwidth=0)
+        self.image_panel = ImagePanel(self.primary, borderwidth=0)  # type: ImagePanel
         self.primary.add(
             self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
             stretch=tkinter.FIRST)
@@ -102,8 +101,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
-        if reader is not None:
-            self.update_reader(reader, update_browse=None)
+        self.update_reader(reader, update_browse=None)
 
     def set_title(self):
         """
@@ -171,9 +169,12 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|CanvasImageReader
+        the_reader : None|str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse

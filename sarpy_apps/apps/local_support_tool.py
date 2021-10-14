@@ -19,9 +19,7 @@ from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, StringDescriptor
 from tk_builder.image_reader import NumpyCanvasImageReader
-from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
@@ -68,20 +66,39 @@ class AppVariables(object):
         docstring='The id of the frequency_panel of the column deltak2.')  # type: Union[None, int]
 
 
-class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
-    _widget_list = ("image_panel", "frequency_panel")
-    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
-    frequency_panel = widget_descriptors.ImagePanelDescriptor("frequency_panel")   # type: ImagePanel
+class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
+    def __init__(self, primary, reader=None, **kwargs):
+        """
 
-    def __init__(self, primary):
+        Parameters
+        ----------
+        primary
+            tkinter.Tk|tkinter.TopLevel
+        reader : None|str|SICDTypeReader|SICDTypeImageCanvasReader
+        kwargs
+        """
+
         self.root = primary
-        self.primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, self.primary_frame)
-        WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
         self.phase_remap = NRL()
 
-        self.init_w_horizontal_layout()
+        if 'sashrelief' not in kwargs:
+            kwargs['sashrelief'] = tkinter.RIDGE
+        if 'orient' not in kwargs:
+            kwargs['orient'] = tkinter.HORIZONTAL
+
+        tkinter.PanedWindow.__init__(self, primary, **kwargs)
+        WidgetWithMetadata.__init__(self, primary)
+
+        self.image_panel = ImagePanel(self, borderwidth=0)  # type: ImagePanel
+        self.add(
+            self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
+            stretch=tkinter.FIRST)
+        self.frequency_panel = ImagePanel(self, borderwidth=0)  # type: ImagePanel
+        self.add(
+            self.frequency_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
         self.set_title()
 
         # define menus
@@ -101,7 +118,6 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         # handle packing
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
@@ -115,6 +131,8 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+        self.update_reader(reader)
 
     def set_title(self):
         """
@@ -194,9 +212,12 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
+        the_reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -418,12 +439,8 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = LocalFrequencySupportTool(root)
+    app = LocalFrequencySupportTool(root, reader=reader)
     root.geometry("1000x1000")
-
-    if reader is not None:
-        app.update_reader(reader)
-
     root.mainloop()
 
 
