@@ -431,6 +431,7 @@ class NamePanel(Frame):
         self.update_annotation()
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         current_feature_id = self._app_variables.current_feature_id
         if self._app_variables.file_annotation_collection is None or current_feature_id is None:
             self.set_annotation_feature(None)
@@ -586,6 +587,7 @@ class AnnotateDetailsPanel(Frame):
         return None if value == '' else value
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         annotation = self._app_variables.get_current_annotation_object()
         self.set_annotation_feature(annotation)
 
@@ -908,8 +910,11 @@ class GeometryDetailsPanel(Frame):
         self.geometry_view.selection_set(index)
 
     def _set_geometry_index(self, index):
-        current_id = self._app_variables.current_geometry_id
+        if index == '':
+            return
 
+        current_id = self._app_variables.current_geometry_id
+        index = int(index)
         geometry_property = self.annotation_feature.properties.geometry_properties[index]
         self.geometry_properties.update_geometry_properties()
         if current_id != geometry_property.uid:
@@ -922,8 +927,12 @@ class GeometryDetailsPanel(Frame):
             name = '<no name>'
         self.geometry_view.item(index, text=name)
 
-    def geometry_selected_on_viewer(self):
+    # noinspection PyUnusedLocal
+    def geometry_selected_on_viewer(self, event):
         geometry_index = self.geometry_view.focus()
+        if geometry_index == '':
+            return
+
         self._set_geometry_index(geometry_index)
 
     def _empty_entries(self):
@@ -938,13 +947,15 @@ class GeometryDetailsPanel(Frame):
         self.geometry_view.delete(*self.geometry_view.get_children())
 
     def _fill_treeview(self):
+        print(f'_fill_treeview, annotation_feature - {self.annotation_feature}')
         if self.annotation_feature is None or self.annotation_feature.geometry_count == 0:
             self._empty_entries()
             self.geometry_properties.set_geometry_properties(None)
             return
+
         if self.annotation_feature.properties.geometry_properties is None:
-            self.geometry_properties.set_geometry_properties(None)
             self._empty_entries()
+            self.geometry_properties.set_geometry_properties(None)
             showinfo(
                 'No geometry properties defined',
                 message='Feature id `{}` has no geometry properties,\n\t'
@@ -953,8 +964,8 @@ class GeometryDetailsPanel(Frame):
             return
 
         if self.annotation_feature.geometry_count != len(self.annotation_feature.properties.geometry_properties):
-            self.geometry_properties.set_geometry_properties(None)
             self._empty_entries()
+            self.geometry_properties.set_geometry_properties(None)
             showinfo(
                 'geometry properties does not match geometry elements',
                 message='Feature id `{}` has a mismatch between the geometry elements\n\t'
@@ -963,6 +974,7 @@ class GeometryDetailsPanel(Frame):
             return
 
         # there will be at least one by this point
+        self._empty_entries()
         for i, properties in enumerate(self.annotation_feature.properties.geometry_properties):
             name = self.annotation_feature.get_geometry_name(i)
             self.geometry_view.insert('', 'end', iid=i, text=name)
@@ -970,6 +982,7 @@ class GeometryDetailsPanel(Frame):
         self.geometry_view.selection_set(0)
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         annotation_feature = self._app_variables.get_current_annotation_object()
         self.set_annotation_feature(annotation_feature)
 
@@ -1026,6 +1039,7 @@ class AnnotateTabControl(Frame):
         self.geometry_tab.update_geometry_properties()
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         self.details_tab.update_annotation()
         self.geometry_tab.update_annotation()
 
@@ -1078,6 +1092,7 @@ class AnnotationPanel(Frame):
         self.tab_panel.update_geometry_properties()
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         self.name_panel.update_annotation()
         self.tab_panel.update_annotation()
 
@@ -1439,6 +1454,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
             self.delete(the_id)
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         annotation_id = self._app_variables.current_feature_id
         if annotation_id is not None:
             self.focus(annotation_id)
@@ -1488,6 +1504,7 @@ class AnnotationCollectionPanel(Frame):
         self.viewer.update_annotation_collection()
 
     def update_annotation(self):
+        print(f'{self.__class__.__name__}, update_annotation')
         self.viewer.update_annotation()
 
 
@@ -1963,7 +1980,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             return self._get_geometry_from_shape(canvas_ids[0])
         else:
             return basic_assemble_from_collection(
-                [self._get_geometry_from_shape(entry) for entry in canvas_ids])
+                *[self._get_geometry_from_shape(entry) for entry in canvas_ids])
 
     def _create_shape_from_geometry(self, feature, the_geometry, geometry_properties):
         """
@@ -2075,6 +2092,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         annotation = self.variables.file_annotation_collection.annotations[feature_id]
         self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
         self.collection_panel.viewer.rerender_annotation(annotation.uid, set_focus=set_focus)
+        self.annotate.update_annotation()
         self.variables.unsaved_changes = True
 
     def _add_shape_to_feature(self, feature_id, canvas_id, set_focus=False, set_current=False):
@@ -2094,7 +2112,6 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         # NB: this assumes that the context shape has already been synced from
         # the event listener method
-
         # create a new geometry property with the given color
         vector_object = self.image_panel.canvas.get_vector_object(canvas_id)
         the_color = vector_object.color
@@ -2111,6 +2128,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self._update_feature_geometry(feature_id, set_focus=set_focus)
         if set_current:
             self.set_current_geometry_id(geometry_property.uid)
+            self.collection_panel.update_annotation()
+            self.annotate.update_annotation()
 
     def _initialize_geometry(self, annotation_file_name, annotation_collection):
         """
@@ -2142,6 +2161,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         if annotation_collection.annotations is not None:
             for feature in annotation_collection.annotations.features:
                 self._insert_feature_from_file(feature)
+        self._modifying_shapes_on_canvas = False
 
     def _initialize_annotation_file(self, annotation_fname, annotation_collection):
         """
@@ -2155,6 +2175,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         self._initialize_geometry(annotation_fname, annotation_collection)
         self.collection_panel.update_annotation_collection()
+        self.annotate.update_annotation_collection()
         self.image_panel.enable_tools()
         self.variables.unsaved_changes = False
 
@@ -2238,6 +2259,14 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             return False  # cancel
         return True
 
+    def _set_focus_on_annotation_popup(self):
+        self.annotate_popup.focus_set()
+        self.annotate_popup.lift()
+
+    def _set_focus_on_main(self):
+        self.root.focus_set()
+        self.root.lift()
+
     def callback_zoom_to_feature(self):
         """
         Handles pressing the zoom to feature button.
@@ -2302,25 +2331,31 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             self.collection_panel.viewer.rerender_annotation(annotation.uid, set_focus=False)
             # make it current
             self.set_current_feature_id(annotation.uid)
-        self.annotate_popup.deiconify()
+        self.callback_popup_annotation()
 
     def callback_new_point(self):
         self.image_panel.canvas.set_current_tool_to_draw_point()
+        self._set_focus_on_main()
 
     def callback_new_line(self):
         self.image_panel.canvas.set_current_tool_to_draw_line()
+        self._set_focus_on_main()
 
     def callback_new_rect(self):
         self.image_panel.canvas.set_current_tool_to_draw_rect()
+        self._set_focus_on_main()
 
     def callback_new_ellipse(self):
         self.image_panel.canvas.set_current_tool_to_draw_ellipse()
+        self._set_focus_on_main()
 
     def callback_new_polygon(self):
         self.image_panel.canvas.set_current_tool_to_draw_polygon()
+        self._set_focus_on_main()
 
     def callback_popup_annotation(self):
         self.annotate_popup.deiconify()
+        self._set_focus_on_annotation_popup()
 
     def callback_popup_apply(self):
         self.annotate.save()
@@ -2356,10 +2391,10 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         if self._modifying_shapes_on_canvas:
             return  # nothing required, and avoid recursive loop
 
-        # if the current_feature is set, ask whether to add, or create new?
         if self.variables.current_feature_id is None:
             raise ValueError('No current feature')
 
+        self.image_panel.canvas.current_shape_id = event.x
         self._add_shape_to_feature(
             self.variables.current_feature_id, event.x, set_focus=True, set_current=True)
 
@@ -2432,9 +2467,11 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             The event.
         """
 
-        old_feature_id = self.variables.current_feature_id
-
         feature_id = self.collection_panel.viewer.focus()
+        if feature_id == '':
+            return
+
+        old_feature_id = self.variables.current_feature_id
         if feature_id == old_feature_id:
             return  # nothing needs to be done
 
