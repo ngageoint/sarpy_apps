@@ -1544,7 +1544,7 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
                     message='Annotation file {} already exists'.format(annotation_fname))
                 return None
         else:
-            annotation_fname = askopenfilename(
+            annotation_fname = asksaveasfilename(
                 title='Select annotation file for image file {}'.format(image_fname),
                 initialdir=browse_dir,
                 initialfile=init_file,
