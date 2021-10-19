@@ -6,7 +6,7 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Thomas McCullough"
 
 import logging
-from typing import Union, Sequence, Dict
+from typing import Union, Sequence, Dict, List
 from collections import defaultdict
 import os
 
@@ -80,7 +80,7 @@ class AppVariables(object):
 
     @property
     def feature_to_canvas(self):
-        # type: () -> Dict[str, Dict]
+        # type: () -> Dict[str, List]
         """
         dict: The dictionary of feature_id to corresponding items on annotate canvas.
         """
@@ -344,6 +344,42 @@ class AppVariables(object):
         del self._feature_to_canvas[feature_id]
         return delete_shapes
 
+    def delete_geometry_from_tracking(self, geometry_id):
+        """
+        Remove the geometry id from tracking against the feature and canvas id.
+
+        Parameters
+        ----------
+        geometry_id : str
+
+        Returns
+        -------
+        None|int
+            Any associated canvas id that must be deleted.
+        """
+
+        if geometry_id not in self._geometry_to_canvas:
+            return
+
+        canvas_id = self.get_canvas_for_geometry(geometry_id)
+        feature_id = self.get_feature_for_canvas(canvas_id)
+
+        if geometry_id in self._geometry_to_canvas:
+            del self._geometry_to_canvas[geometry_id]
+        if geometry_id in self._geometry_type:
+            del self._geometry_type[geometry_id]
+
+        if canvas_id is not None:
+            del self._canvas_to_geometry[canvas_id]
+            del self._canvas_to_feature[canvas_id]
+
+        if feature_id is not None:
+            try:
+                self._feature_to_canvas[feature_id].remove(canvas_id)
+            except ValueError:
+                pass
+        return canvas_id
+
     def delete_shape_from_tracking(self, canvas_id):
         """
         Remove the canvas id from tracking against the feature and geometry id.
@@ -368,8 +404,6 @@ class AppVariables(object):
                 "We can't delete canvas id {}, because it is still associated "
                 "with geometry {}".format(canvas_id, geom_id))
 
-        if geom_id in self._geometry_to_canvas:
-            del self._geometry_to_canvas[geom_id]
         # actually remove the tracking entries
         del self._canvas_to_feature[canvas_id]
         del self._canvas_to_geometry[canvas_id]
@@ -511,19 +545,17 @@ class NamePanel(Frame):
 
 
 class AnnotateButtons(Frame):
-    _widget_list = ('cancel_button', 'apply_button')
-    cancel_button = ButtonDescriptor(
-        'cancel_button', default_text='Cancel', docstring='')  # type: Button
-    apply_button = ButtonDescriptor(
-        'apply_button', default_text='Apply', docstring='')  # type: Button
-
     def __init__(self, master, **kwargs):
         Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
-        self.cancel_button = Button(self, text='Cancel')
+        self.delete_button = Button(self, text='Delete Shape')  # type: Button
+        self.delete_button.pack(side=tkinter.LEFT, padx=3, pady=3)
+
+        self.cancel_button = Button(self, text='Cancel')  # type: Button
         self.cancel_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
-        self.apply_button = Button(self, text='Apply')
+
+        self.apply_button = Button(self, text='Apply')  # type: Button
         self.apply_button.pack(side=tkinter.RIGHT, padx=3, pady=3)
 
 
@@ -1256,6 +1288,9 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         str
         """
 
+        if annotation.properties is None:
+            return ''
+
         dval = annotation.properties.directory
         return '' if dval is None else dval
 
@@ -1264,6 +1299,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
             return
         self.focus(the_id)
         self.selection_set(the_id)
+        self.focus_force()
 
     def _directory_definition_check(self, directory):
         """
@@ -1514,7 +1550,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
             pass  # it was somehow in an old or inconsistent state
 
         remove_directory = self._directory_empty_check(directory)
-        if remove_directory is not None:
+        if remove_directory is not None and remove_directory != '':
             # there is an empty directory, delete the whole thing from the treeview
             self.delete(remove_directory)
         else:
@@ -1549,13 +1585,13 @@ class AnnotationCollectionPanel(Frame):
         Frame.__init__(self, master, **kwargs)
 
         self.button_panel = Frame(self, relief=tkinter.RIDGE, borderwidth=2)  # type: Frame
-        self.new_button = Button(self.button_panel, text='New Annotation', width=18)  # type: Button
+        self.new_button = Button(self.button_panel, text='New Annotation', width=28)  # type: Button
         self.new_button.grid(row=0, column=0, sticky='NW')
-        self.edit_button = Button(self.button_panel, text='Edit Selected', width=18)  # type: Button
+        self.edit_button = Button(self.button_panel, text='Edit Selected Annotation', width=28)  # type: Button
         self.edit_button.grid(row=1, column=0, sticky='NW')
-        self.zoom_button = Button(self.button_panel, text='Zoom to Selected', width=18)  # type: Button
+        self.zoom_button = Button(self.button_panel, text='Zoom to Selected Annotation', width=28)  # type: Button
         self.zoom_button.grid(row=2, column=0, sticky='NW')
-        self.move_button = Button(self.button_panel, text='Move Selected', width=18)  # type: Button
+        self.move_button = Button(self.button_panel, text='Move Selected Annotation', width=28)  # type: Button
         self.move_button.grid(row=3, column=0, sticky='NW')
         self.button_panel.grid(row=0, column=0, sticky='NSEW')
 
@@ -1671,6 +1707,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         # bind actions/listeners from annotate popup
         self.annotate.tab_panel.geometry_tab.bind('<<GeometryPropertyChanged>>', self.geometry_selected_on_viewer)
+        self.annotate.button_panel.delete_button.config(command=self.callback_delete_geometry)
         self.annotate.button_panel.cancel_button.config(command=self.callback_popup_cancel)
         self.annotate.button_panel.apply_button.config(command=self.callback_popup_apply)
 
@@ -2243,6 +2280,34 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.image_panel.enable_tools()
         self.variables.unsaved_changes = False
 
+    def _delete_geometry(self, geometry_id):
+        """
+        Removes the given geometry.
+
+        Parameters
+        ----------
+        geometry_id : str
+        """
+
+        if self.variables.current_geometry_id == geometry_id:
+            self.set_current_geometry_id(None)
+
+        canvas_id = self.variables.get_canvas_for_geometry(geometry_id)
+        if canvas_id is not None:
+            # get the feature and get rid of the geometry
+            feature_id = self.variables.get_feature_for_canvas(canvas_id)
+            feature = self.variables.file_annotation_collection.annotations[feature_id]
+            feature.remove_geometry_element(geometry_id)
+        # remove geometry from tracking
+        canvas_id = self.variables.delete_geometry_from_tracking(geometry_id)
+        # remove canvas id from tracking, and delete the shape
+        if canvas_id is not None:
+            self.variables.delete_shape_from_tracking(canvas_id)
+            self.image_panel.canvas.delete_shape(canvas_id)
+
+        self.collection_panel.update_annotation()
+        self.annotate.update_annotation()
+
     def _delete_feature(self, feature_id):
         """
         Removes the given feature.
@@ -2267,6 +2332,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.variables.unsaved_changes = True
         # drop for the file annotation collection
         self.variables.file_annotation_collection.delete_annotation(feature_id)
+
+        self.collection_panel.update_annotation_collection()
+        self.annotate.update_annotation_collection()
 
     def _prompt_annotation_file_name(self):
         if self.image_file_name is not None:
@@ -2379,11 +2447,27 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             showinfo('No feature is selected', message="No feature is selected to delete.")
             return
 
-        response = askyesnocancel('Confirm deletion?', message='Confirm shape deletion.')
+        response = askyesnocancel('Confirm deletion?', message='Confirm feature deletion.')
         if response is None or response is False:
             return
 
         self._delete_feature(feature_id)
+
+    def callback_delete_geometry(self):
+        """
+        Deletes the currently selected geometry.
+        """
+
+        geometry_id = self.variables.current_geometry_id
+        if geometry_id is None:
+            showinfo('No geometry is selected', message="No geometry is selected to delete.")
+            return
+
+        response = askyesnocancel('Confirm deletion?', message='Confirm geometry deletion.')
+        if response is None or response is False:
+            return
+
+        self._delete_geometry(geometry_id)
 
     def callback_new_annotation(self):
         if self.variables.file_annotation_collection is not None:
