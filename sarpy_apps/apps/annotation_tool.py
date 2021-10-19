@@ -18,6 +18,7 @@ from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
 
 
 from tk_builder.base_elements import StringDescriptor, BooleanDescriptor
+from tk_builder.widgets.image_canvas_tool import ShapeTypeConstants
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.image_panel import ImagePanel
 
@@ -73,6 +74,7 @@ class AppVariables(object):
         self._canvas_to_feature = {}  # a dictionary mapping canvas id to feature.uid
         self._canvas_to_geometry = {}  # a dictionary mapping canvas id to geometry.uid
         self._geometry_to_canvas = {}  # a dictionary mapping geometry.uid to canvas id
+        self._geometry_type = {}  # dictionary mapping geometry.uid to shape type
         self._current_geometry_id = None
         self._current_feature_id = None
 
@@ -105,12 +107,21 @@ class AppVariables(object):
 
     @property
     def geometry_to_canvas(self):
-        # type: () -> Dict[int, str]
+        # type: () -> Dict[str, int]
         """
         dict: The dictionary of geometry id to annotate canvas id.
         """
 
         return self._geometry_to_canvas
+
+    @property
+    def geometry_type(self):
+        # type: () -> Dict[str, str]
+        """
+        dict: The dictionary of geometry id to shape type.
+        """
+
+        return self._geometry_type
 
     @property
     def current_canvas_id(self):
@@ -196,6 +207,21 @@ class AppVariables(object):
 
         return self._geometry_to_canvas.get(geometry_id, None)
 
+    def get_geometry_type(self, geometry_id):
+        """
+        Gets the shape type for the given geometry id.
+
+        Parameters
+        ----------
+        geometry_id : str
+
+        Returns
+        -------
+        None|str
+        """
+
+        return self._geometry_type.get(geometry_id, None)
+
     def reinitialize_features(self):
         """
         Reinitialize the feature tracking dictionaries. Note that this assumes that
@@ -210,6 +236,7 @@ class AppVariables(object):
         self._canvas_to_feature = {}
         self._canvas_to_geometry = {}
         self._geometry_to_canvas = {}
+        self._geometry_type = {}
         self._current_geometry_id = None
         self._current_feature_id = None
 
@@ -227,7 +254,7 @@ class AppVariables(object):
 
         self._feature_to_canvas[feature_id] = []
 
-    def set_canvas_tracking(self, canvas_id, feature_id, geometry_id):
+    def set_canvas_tracking(self, canvas_id, feature_id, geometry_id, geometry_type):
         """
         Initialize feature tracking between the given feature id, the given annotate
         id, and the geometry properties.
@@ -237,6 +264,7 @@ class AppVariables(object):
         feature_id : str
         canvas_id : int
         geometry_id : str
+        geometry_type : str
         """
 
         if feature_id not in self._feature_to_canvas:
@@ -268,6 +296,7 @@ class AppVariables(object):
             self._canvas_to_geometry[canvas_id] = geometry_id
         if current_canvas is None:
             self._geometry_to_canvas[geometry_id] = canvas_id
+            self._geometry_type[geometry_id] = geometry_type
 
     def delete_feature_from_tracking(self, feature_id, geometry_ids):
         """
@@ -745,14 +774,15 @@ class GeometryPropertiesPanel(Frame):
     """
     A panel for displaying the basic geometry properties
     """
-    _widget_list = (
-        ('uid_label', 'uid_value'),
-        ('name_label', 'name_value'),
-        ('color_label', 'color_button'))
     uid_label = LabelDescriptor(
         'uid_label', default_text='UID:')  # type: Label
     uid_value = LabelDescriptor(
         'uid_value', default_text='')  # type: Label
+
+    geom_type_label = LabelDescriptor(
+        'geom_type_label', default_text='Type:')  # type: Label
+    geom_type_value = LabelDescriptor(
+        'geom_type_value', default_text='')  # type: Label
 
     name_label = LabelDescriptor(
         'name_label', default_text='Name:')  # type: Label
@@ -778,7 +808,7 @@ class GeometryPropertiesPanel(Frame):
 
         self._app_variables = app_variables  # type: AppVariables
         self.default_color = '#ff0066'
-        self.default_name = '<no name>'
+        self.default_name = '<NONE>'
         self.geometry_properties = None  # type: Union[None, GeometryProperties]
         self.color = None  # type: Union[None, str]
         Frame.__init__(self, master, **kwargs)
@@ -789,15 +819,20 @@ class GeometryPropertiesPanel(Frame):
         self.uid_value = Label(self, text='')
         self.uid_value.grid(row=0, column=1, padx=3, pady=3, sticky='NEW')
 
+        self.geom_type_label = Label(self, text='Shape Type:')
+        self.geom_type_label.grid(row=1, column=0, padx=3, pady=3, sticky='NW')
+        self.geom_type_value = Label(self, text='')
+        self.geom_type_value.grid(row=1, column=1, padx=3, pady=3, sticky='NEW')
+
         self.name_label = Label(self, text='Geo Name:')
-        self.name_label.grid(row=1, column=0, padx=3, pady=3, sticky='NW')
+        self.name_label.grid(row=2, column=0, padx=3, pady=3, sticky='NW')
         self.name_value = Entry(self, text=self.default_name)
-        self.name_value.grid(row=1, column=1, padx=3, pady=3, sticky='NEW')
+        self.name_value.grid(row=2, column=1, padx=3, pady=3, sticky='NEW')
 
         self.color_label = Label(self, text='Color:')
-        self.color_label.grid(row=2, column=0, padx=3, pady=3, sticky='NW')
+        self.color_label.grid(row=3, column=0, padx=3, pady=3, sticky='NW')
         self.color_button = tkButton(self, bg=self.default_color, text='', width=10, command=self.change_color)
-        self.color_button.grid(row=2, column=1, padx=3, pady=3, sticky='NW')
+        self.color_button.grid(row=3, column=1, padx=3, pady=3, sticky='NW')
 
         # setup the appearance of labels
         self.uid_value.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=3)
@@ -814,6 +849,11 @@ class GeometryPropertiesPanel(Frame):
         if value is None:
             value = ''
         self.uid_value.set_text(value)
+
+    def _set_geom_type_value(self, value):
+        if value is None:
+            value = ''
+        self.geom_type_value.set_text(value)
 
     def _set_name_value(self, value):
         if value is None:
@@ -846,10 +886,15 @@ class GeometryPropertiesPanel(Frame):
         self.geometry_properties = geometry_properties
         if geometry_properties is None:
             self._set_uid_value(None)
+            self._set_geom_type_value(None)
+            self.default_name = '<NONE>'
             self._set_name_value(None)
             self._set_color(None)
         else:
             self._set_uid_value(geometry_properties.uid)
+            geom_type = self._app_variables.get_geometry_type(geometry_properties.uid)
+            self._set_geom_type_value(geom_type)
+            self.default_name = '<{}>'.format(geom_type)
             self._set_name_value(geometry_properties.name)
             self._set_color(geometry_properties.color)
 
@@ -892,7 +937,7 @@ class GeometryDetailsPanel(Frame):
         self.geometry_buttons = GeometryButtons(self, active_shapes=None)
         self.geometry_buttons.grid(row=0, column=0, columnspan=2, sticky='NEW', padx=3, pady=3)
 
-        self.geometry_view = TreeviewWithScrolling(self)
+        self.geometry_view = TreeviewWithScrolling(self, selectmode=tkinter.BROWSE)
         self.geometry_view.heading('#0', text='Name')
         self.geometry_view.frame.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)
         # NB: reference the frame for packing, since it's already packed into a frame
@@ -921,11 +966,15 @@ class GeometryDetailsPanel(Frame):
             self._app_variables._current_geometry_id = uid
             self.emit_geometry_changed()
 
+    def _get_name_string(self, properties):
+        # type: (GeometryProperties) -> str
+        name = properties.name if properties.name is not None else \
+            '<{}>'.format(self._app_variables.get_geometry_type(properties.uid))
+        return name
+
     def _render_entry(self, uid):
-        name = self.annotation_feature.get_geometry_property(uid).name
-        if name is None:
-            name = '<no name>'
-        self.geometry_view.item(uid, text=name)
+        properties = self.annotation_feature.get_geometry_property(uid)
+        self.geometry_view.item(uid, text=self._get_name_string(properties))
 
     # noinspection PyUnusedLocal
     def geometry_selected_on_viewer(self, event):
@@ -972,15 +1021,17 @@ class GeometryDetailsPanel(Frame):
                         'You cannot edit any details here.'.format(self.annotation_feature.uid))
             return
 
+        current_choice = self._app_variables.current_geometry_id
         # there will be at least one by this point
         self._empty_entries()
         default_choice = None
         for properties in self.annotation_feature.properties.geometry_properties:
             if default_choice is None:
                 default_choice = properties.uid
-            name = self.annotation_feature.get_geometry_name(properties.uid)
+            name = self._get_name_string(properties)
             self.geometry_view.insert('', 'end', iid=properties.uid, text=name)
-        self._set_focus(default_choice)
+
+        self._set_focus(default_choice if current_choice is None else current_choice)
 
     def update_annotation(self):
         annotation_feature = self._app_variables.get_current_annotation_object()
@@ -1619,7 +1670,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.annotate_popup.withdraw()
 
         # bind actions/listeners from annotate popup
-        self.annotate.tab_panel.geometry_tab.bind('<<GeometryPropertyChanged>>')
+        self.annotate.tab_panel.geometry_tab.bind('<<GeometryPropertyChanged>>', self.geometry_selected_on_viewer)
         self.annotate.button_panel.cancel_button.config(command=self.callback_popup_cancel)
         self.annotate.button_panel.apply_button.config(command=self.callback_popup_apply)
 
@@ -1770,7 +1821,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         annotation_filename = None
         if isinstance(annotation_collection, str):
             if not os.path.isfile(annotation_collection):
-                showinfo('File does not exist', message='Annotation file {} does not exist'.format(annotation_collection))
+                showinfo(
+                    'File does not exist',
+                    message='Annotation file {} does not exist'.format(annotation_collection))
                 annotation_collection = None
             else:
                 try:
@@ -1914,16 +1967,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             return
 
         self.variables._current_feature_id = feature_id
+        self.variables._current_geometry_id = geometry_id
         self.collection_panel.update_annotation()
         self.annotate.update_annotation()
-
-        if geometry_id is None:
-            # do we have any shapes?
-            canvas_shape = self.variables.get_canvas_shapes_for_feature(feature_id)
-            if canvas_shape is not None and len(canvas_shape) > 0:
-                geometry_id = self.variables.get_geometry_for_canvas(canvas_shape[0])
-        if geometry_id is not None:
-            self.set_current_geometry_id(geometry_id)
 
     def zoom_to_feature(self, feature_id):
         """
@@ -2017,27 +2063,27 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         """
 
         def insert_point():
-            # type: () -> int
+            # type: () -> (int, str)
             image_coords = the_geometry.coordinates[:2].tolist()
             # create the shape on the annotate panel
             canvas_id = self.image_panel.canvas.create_new_point(
                 (0, 0), make_current=False, color=geometry_properties.color)
             self.image_panel.canvas.modify_existing_shape_using_image_coords(
                 canvas_id, image_coords)
-            return canvas_id
+            return canvas_id, 'POINT'
 
         def insert_line():
-            # type: () -> int
+            # type: () -> (int, str)
             image_coords = the_geometry.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
             canvas_id = self.image_panel.canvas.create_new_line(
                 (0, 0, 0, 0), make_current=False, color=geometry_properties.color)
             self.image_panel.canvas.modify_existing_shape_using_image_coords(
                 canvas_id, image_coords)
-            return canvas_id
+            return canvas_id, 'LINE'
 
         def insert_polygon():
-            # type: () -> int
+            # type: () -> (int, str)
 
             # this will only render an outer ring
             image_coords = the_geometry.outer_ring.coordinates[:, :2].flatten().tolist()
@@ -2045,27 +2091,28 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             canvas_id = self.image_panel.canvas.create_new_polygon(
                 (0, 0, 0, 0), make_current=False, color=geometry_properties.color)
             self.image_panel.canvas.modify_existing_shape_using_image_coords(canvas_id, image_coords)
-            return canvas_id
+            return canvas_id, 'POLYGON'
 
         self._modifying_shapes_on_canvas = True
         if isinstance(the_geometry, Point):
-            annotate_shape_id, shape_color = insert_point()
+            annotate_shape_id, geom_type = insert_point()
         elif isinstance(the_geometry, LineString):
-            annotate_shape_id, shape_color = insert_line()
+            annotate_shape_id, geom_type = insert_line()
         elif isinstance(the_geometry, Polygon):
-            annotate_shape_id, shape_color = insert_polygon()
+            annotate_shape_id, geom_type = insert_polygon()
         else:
             showinfo(
                 'Unhandled Geometry',
-                message='LabelFeature id {} has unsupported feature component of type {} which '
-                        'will be omitted from display. Any save of the annotation '
-                        'will not contain this feature.'.format(feature.uid, type(the_geometry)))
+                message='Feature id {} has unsupported feature component of type {}\n'
+                        'which will be omitted from display.\n'
+                        'Any save of the annotation will not contain this feature.'.format(
+                            feature.uid, type(the_geometry)))
             self._modifying_shapes_on_canvas = False
-            return None, None
+            return None
 
         self._modifying_shapes_on_canvas = False
         # set up the tracking for the new shapes
-        self.variables.set_canvas_tracking(annotate_shape_id, feature.uid, geometry_properties.uid)
+        self.variables.set_canvas_tracking(annotate_shape_id, feature.uid, geometry_properties.uid, geom_type)
         return annotate_shape_id
 
     def _insert_feature_from_file(self, feature):
@@ -2138,7 +2185,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         annotation.properties.add_geometry_property(geometry_property)
 
         # update feature tracking
-        self.variables.set_canvas_tracking(canvas_id, feature_id, geometry_property.uid)
+        self.variables.set_canvas_tracking(
+            canvas_id, feature_id, geometry_property.uid, ShapeTypeConstants.get_name(vector_object.type))
 
         # update the entry of our annotation object
         self._update_feature_geometry(feature_id, set_focus=set_focus)
@@ -2430,7 +2478,6 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             the shape type (int) enum value.
         """
 
-
         # extract the appropriate feature, and sync changes to the list
         feature_id = self.variables.get_feature_for_canvas(event.x)
         self._update_feature_geometry(feature_id)
@@ -2474,7 +2521,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         if self.variables.current_canvas_id == event.x:
             return  # nothing needs to be done
         geometry_id = self.variables.get_geometry_for_canvas(event.x)
-        self.set_current_geometry_id(geometry_id)
+        self.set_current_geometry_id(geometry_id, check_popup=True)
 
     # noinspection PyUnusedLocal
     def feature_selected_on_viewer(self, event):
@@ -2527,6 +2574,7 @@ def main(reader=None, annotation=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
+    # noinspection PyUnusedLocal
     app = AnnotationTool(root, reader=reader, annotation_collection=annotation)
     root.mainloop()
 
