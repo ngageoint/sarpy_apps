@@ -11,7 +11,7 @@ from collections import defaultdict
 import os
 
 import tkinter
-from tkinter import ttk, Button as tk_button, PanedWindow
+from tkinter import ttk, Button as tkButton, PanedWindow
 from tkinter.messagebox import showinfo, askyesnocancel
 from tkinter.colorchooser import askcolor
 from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
@@ -376,6 +376,7 @@ class AppVariables(object):
         try:
             return annotation.properties.get_geometry_property(self._current_geometry_id)
         except KeyError:
+            logger.warning('unknown geometry id {}, so no geometry can be returned'.format(self._current_geometry_id))
             return None
 
 
@@ -431,7 +432,6 @@ class NamePanel(Frame):
         self.update_annotation()
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         current_feature_id = self._app_variables.current_feature_id
         if self._app_variables.file_annotation_collection is None or current_feature_id is None:
             self.set_annotation_feature(None)
@@ -587,7 +587,6 @@ class AnnotateDetailsPanel(Frame):
         return None if value == '' else value
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         annotation = self._app_variables.get_current_annotation_object()
         self.set_annotation_feature(annotation)
 
@@ -622,7 +621,6 @@ class AnnotateDetailsPanel(Frame):
     def save(self):
         if self.annotation_feature is None or self.annotation_feature.properties is None:
             return
-
         self.annotation_feature.properties.directory = self._get_directory()
         self.annotation_feature.properties.description = self._get_description()
 
@@ -764,7 +762,8 @@ class GeometryPropertiesPanel(Frame):
     color_label = LabelDescriptor(
         'color_label', default_text='Color:')  # type: Label
     color_button = TypedDescriptor(
-        'color_button', tk_button)  # type: tk_button
+        'color_button', tkButton,
+        docstring='button to display the color choice, hence plain tk button')  # type: tkButton
 
     def __init__(self, master, app_variables, **kwargs):
         """
@@ -797,7 +796,7 @@ class GeometryPropertiesPanel(Frame):
 
         self.color_label = Label(self, text='Color:')
         self.color_label.grid(row=2, column=0, padx=3, pady=3, sticky='NW')
-        self.color_button = tk_button(self, bg=self.default_color, text='', width=10, command=self.change_color)
+        self.color_button = tkButton(self, bg=self.default_color, text='', width=10, command=self.change_color)
         self.color_button.grid(row=2, column=1, padx=3, pady=3, sticky='NW')
 
         # setup the appearance of labels
@@ -858,6 +857,8 @@ class GeometryPropertiesPanel(Frame):
         self.set_geometry_properties(self.geometry_properties)
 
     def save(self):
+        if self.geometry_properties is None:
+            return
         self.geometry_properties.name = self._get_name_value()
         self.geometry_properties.color = self._get_color()
 
@@ -871,8 +872,8 @@ class GeometryDetailsPanel(Frame):
         'geometry_buttons', GeometryButtons, docstring='the button panel')  # type: GeometryButtons
     geometry_view = TypedDescriptor(
         'geometry_view', TreeviewWithScrolling, docstring='the geometry viewer')  # type: TreeviewWithScrolling
-    geometry_properties = TypedDescriptor(
-        'geometry_properties', GeometryPropertiesPanel,
+    geometry_properties_panel = TypedDescriptor(
+        'geometry_properties_panel', GeometryPropertiesPanel,
         docstring='the geometry properties')  # type: GeometryPropertiesPanel
 
     def __init__(self, master, app_variables, **kwargs):
@@ -887,17 +888,17 @@ class GeometryDetailsPanel(Frame):
 
         self._app_variables = app_variables  # type: AppVariables
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
-        self.selected_geometry_uid = None
         Frame.__init__(self, master, **kwargs)
         self.geometry_buttons = GeometryButtons(self, active_shapes=None)
         self.geometry_buttons.grid(row=0, column=0, columnspan=2, sticky='NEW', padx=3, pady=3)
 
         self.geometry_view = TreeviewWithScrolling(self)
         self.geometry_view.heading('#0', text='Name')
-        self.geometry_view.frame.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)  # NB: reference the frame for packing
+        self.geometry_view.frame.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)
+        # NB: reference the frame for packing, since it's already packed into a frame
 
-        self.geometry_properties = GeometryPropertiesPanel(self, app_variables)
-        self.geometry_properties.grid(row=1, column=1, sticky='NSEW', padx=3, pady=3)
+        self.geometry_properties_panel = GeometryPropertiesPanel(self, app_variables)
+        self.geometry_properties_panel.grid(row=1, column=1, sticky='NSEW', padx=3, pady=3)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -906,34 +907,33 @@ class GeometryDetailsPanel(Frame):
         # configure the callback for treeview element selection
         self.geometry_view.bind('<<TreeviewSelect>>', self.geometry_selected_on_viewer)
 
-    def _set_focus(self, index):
-        self.geometry_view.selection_set(index)
+    def _set_focus(self, uid):
+        self.geometry_view.focus(uid)
+        self.geometry_view.selection_set(uid)
 
-    def _set_geometry_index(self, index):
-        if index == '':
+    def _set_geometry_uid(self, uid):
+        if uid == '':
             return
 
         current_id = self._app_variables.current_geometry_id
-        index = int(index)
-        geometry_property = self.annotation_feature.properties.geometry_properties[index]
-        self.geometry_properties.update_geometry_properties()
-        if current_id != geometry_property.uid:
-            self._app_variables._current_geometry_id = geometry_property.uid
+        self.geometry_properties_panel.update_geometry_properties()
+        if current_id != uid:
+            self._app_variables._current_geometry_id = uid
             self.emit_geometry_changed()
 
-    def _render_entry(self, index):
-        name = self.annotation_feature.properties.geometry_properties[index].name
+    def _render_entry(self, uid):
+        name = self.annotation_feature.get_geometry_property(uid).name
         if name is None:
             name = '<no name>'
-        self.geometry_view.item(index, text=name)
+        self.geometry_view.item(uid, text=name)
 
     # noinspection PyUnusedLocal
     def geometry_selected_on_viewer(self, event):
-        geometry_index = self.geometry_view.focus()
-        if geometry_index == '':
+        geometry_uid = self.geometry_view.focus()
+        if geometry_uid == '':
             return
 
-        self._set_geometry_index(geometry_index)
+        self._set_geometry_uid(geometry_uid)
 
     def _empty_entries(self):
         """
@@ -947,15 +947,14 @@ class GeometryDetailsPanel(Frame):
         self.geometry_view.delete(*self.geometry_view.get_children())
 
     def _fill_treeview(self):
-        print(f'_fill_treeview, annotation_feature - {self.annotation_feature}')
         if self.annotation_feature is None or self.annotation_feature.geometry_count == 0:
             self._empty_entries()
-            self.geometry_properties.set_geometry_properties(None)
+            self.geometry_properties_panel.set_geometry_properties(None)
             return
 
         if self.annotation_feature.properties.geometry_properties is None:
             self._empty_entries()
-            self.geometry_properties.set_geometry_properties(None)
+            self.geometry_properties_panel.set_geometry_properties(None)
             showinfo(
                 'No geometry properties defined',
                 message='Feature id `{}` has no geometry properties,\n\t'
@@ -965,7 +964,7 @@ class GeometryDetailsPanel(Frame):
 
         if self.annotation_feature.geometry_count != len(self.annotation_feature.properties.geometry_properties):
             self._empty_entries()
-            self.geometry_properties.set_geometry_properties(None)
+            self.geometry_properties_panel.set_geometry_properties(None)
             showinfo(
                 'geometry properties does not match geometry elements',
                 message='Feature id `{}` has a mismatch between the geometry elements\n\t'
@@ -975,19 +974,23 @@ class GeometryDetailsPanel(Frame):
 
         # there will be at least one by this point
         self._empty_entries()
-        for i, properties in enumerate(self.annotation_feature.properties.geometry_properties):
-            name = self.annotation_feature.get_geometry_name(i)
-            self.geometry_view.insert('', 'end', iid=i, text=name)
-
-        self.geometry_view.selection_set(0)
+        default_choice = None
+        for properties in self.annotation_feature.properties.geometry_properties:
+            if default_choice is None:
+                default_choice = properties.uid
+            name = self.annotation_feature.get_geometry_name(properties.uid)
+            self.geometry_view.insert('', 'end', iid=properties.uid, text=name)
+        self._set_focus(default_choice)
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         annotation_feature = self._app_variables.get_current_annotation_object()
         self.set_annotation_feature(annotation_feature)
 
     def update_geometry_properties(self):
-        self.geometry_properties.update_geometry_properties()
+        self.geometry_properties_panel.update_geometry_properties()
+        if self._app_variables.current_geometry_id is not None:
+            self._render_entry(self._app_variables.current_geometry_id)
+            self._set_focus(self._app_variables.current_geometry_id)
 
     def set_annotation_feature(self, annotation_feature):
         """
@@ -1001,11 +1004,11 @@ class GeometryDetailsPanel(Frame):
         self._fill_treeview()
 
     def cancel(self):
-        self.geometry_properties.cancel()
+        self.geometry_properties_panel.cancel()
         self._fill_treeview()
 
     def save(self):
-        self.geometry_properties.save()
+        self.geometry_properties_panel.save()
         self._fill_treeview()
 
     def emit_geometry_changed(self):
@@ -1039,7 +1042,6 @@ class AnnotateTabControl(Frame):
         self.geometry_tab.update_geometry_properties()
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         self.details_tab.update_annotation()
         self.geometry_tab.update_annotation()
 
@@ -1092,7 +1094,6 @@ class AnnotationPanel(Frame):
         self.tab_panel.update_geometry_properties()
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         self.name_panel.update_annotation()
         self.tab_panel.update_annotation()
 
@@ -1147,6 +1148,8 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         self._directory_structure = None
         self._element_association = None
 
+        if 'selectmode' not in kwargs:
+            kwargs['selectmode'] = tkinter.BROWSE
         TreeviewWithScrolling.__init__(self, master, **kwargs)
         self.heading('#0', text='Name')
 
@@ -1168,6 +1171,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         self._directory_structure = None
         self._element_association = None
         self._build_directory_structure()
+        self._populate_tree()
 
     @staticmethod
     def _get_parent_direct(directory):
@@ -1204,6 +1208,12 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         dval = annotation.properties.directory
         return '' if dval is None else dval
 
+    def _set_focus(self, the_id):
+        if the_id is None:
+            return
+        self.focus(the_id)
+        self.selection_set(the_id)
+
     def _directory_definition_check(self, directory):
         """
         Verifies/defines that all parts of the directory are previously defined, and
@@ -1227,7 +1237,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
 
         for part in parts:
             direct_list = self._directory_structure[root]['directories']
-            element = root + part if root != '' else root + '/' + part
+            element = part if root == '' else root + '/' + part
             if element not in direct_list:
                 if first_not_defined is None:
                     first_not_defined = element
@@ -1277,8 +1287,11 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
             new_root, _ = os.path.split(root)
             if root == '':
                 break
+
             # remove the empty directory from the parent
             self._directory_structure[new_root]['directories'].remove(root)
+            root = new_root
+
         return first_empty
 
     def _build_directory_structure(self):
@@ -1296,7 +1309,8 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         for entry in self.annotation_collection.annotations:
             dval = self._get_directory_value(entry)
             direct_set.add(dval)
-            self._directory_structure[dval]['elements'].append(entry.uid)
+            if entry.uid not in self._directory_structure[dval]['elements']:
+                self._directory_structure[dval]['elements'].append(entry.uid)
             self._element_association[entry.uid] = dval
         # populate all the directory information
         for entry in list(direct_set):
@@ -1331,7 +1345,8 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
     def _render_annotation(self, the_id, at_index='end'):
         annotation = self.annotation_collection.annotations[the_id]
         parent = self._element_association[the_id]
-        self.insert(parent, at_index, the_id, text=annotation.get_name())
+        name = annotation.get_name()
+        self.insert(parent, at_index, the_id, text=name)
 
     def _populate_tree(self):
         self._empty_entries()
@@ -1354,7 +1369,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         self.delete(*item.get_children())
         self._render_directory(directory)
         if maintain_focus:
-            self.selection_set(selection)
+            self._set_focus(selection)
 
     def rerender_annotation(self, the_id, set_focus=False):
         """
@@ -1368,7 +1383,8 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
 
         def update_state():
             self._element_association[the_id] = current_directory
-            new_state['elements'].append(the_id)
+            if the_id not in new_state['elements']:
+                new_state['elements'].append(the_id)
 
         previous_directory = self._element_association.get(the_id, None)
 
@@ -1420,8 +1436,9 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         else:
             at_index = new_state['elements'].index(the_id) + len(new_state['directories'])
             self._render_annotation(the_id, at_index=at_index)
+
         if set_focus:
-            self.selection_set(the_id)
+            self._set_focus(the_id)
 
     def delete_entry(self, the_id):
         """
@@ -1454,11 +1471,11 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
             self.delete(the_id)
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         annotation_id = self._app_variables.current_feature_id
         if annotation_id is not None:
-            self.focus(annotation_id)
-            self.selection_set(annotation_id)
+            self.rerender_annotation(annotation_id, set_focus=True)
+        else:
+            self.update_annotation_collection()
 
 
 class AnnotationCollectionPanel(Frame):
@@ -1504,7 +1521,6 @@ class AnnotationCollectionPanel(Frame):
         self.viewer.update_annotation_collection()
 
     def update_annotation(self):
-        print(f'{self.__class__.__name__}, update_annotation')
         self.viewer.update_annotation()
 
 
@@ -2232,7 +2248,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         if self.variables.annotation_file_name is None:
             self.variables.annotation_file_name = self._prompt_annotation_file_name()
-            return  # they didn't provide anything
+            if self.variables.annotation_file_name is None:
+                return  # they didn't provide anything
 
         self.variables.file_annotation_collection.to_file(self.variables.annotation_file_name)
         self.variables.unsaved_changes = False
@@ -2331,6 +2348,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             self.collection_panel.viewer.rerender_annotation(annotation.uid, set_focus=False)
             # make it current
             self.set_current_feature_id(annotation.uid)
+            self.set_current_geometry_id(None, check_popup=False)
+            self.image_panel.current_tool = 'VIEW'
         self.callback_popup_annotation()
 
     def callback_new_point(self):
@@ -2360,6 +2379,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
     def callback_popup_apply(self):
         self.annotate.save()
         self._check_current_shape_color()
+        self.collection_panel.update_annotation()
 
     def callback_popup_cancel(self):
         self.annotate.cancel()

@@ -38,11 +38,21 @@ class WidgetWithMetadata(object):
         self.metaviewer.hide_on_close()
         self.metaviewer_popup_panel.withdraw()
 
-    def metaviewer_popup(self):
-        self.metaviewer_popup_panel.deiconify()
+    def _set_focus_on_metaicon_popup(self):
+        self.metaicon_popup_panel.focus_set()
+        self.metaicon_popup_panel.lift()
 
     def metaicon_popup(self):
         self.metaicon_popup_panel.deiconify()
+        self._set_focus_on_metaicon_popup()
+
+    def _set_focus_on_metaviewer_popup(self):
+        self.metaviewer_popup_panel.focus_set()
+        self.metaviewer_popup_panel.lift()
+
+    def metaviewer_popup(self):
+        self.metaviewer_popup_panel.deiconify()
+        self._set_focus_on_metaviewer_popup()
 
     def populate_metaicon(self, image_reader, the_index):
         """
