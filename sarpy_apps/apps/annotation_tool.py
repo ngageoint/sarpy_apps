@@ -462,20 +462,20 @@ class NamePanel(Frame):
     name_value = EntryDescriptor(
         'name_value', default_text='<no name>')  # type: Entry
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The parent widget
+        master
+            The master widget
         app_variables : AppVariables
         """
 
         self.default_name = '<no name>'
         self._app_variables = app_variables  # type: AppVariables
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
-        Frame.__init__(self, parent, **kwargs)
+        Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
         self.id_label = Label(self, text='ID:', width=12)
@@ -545,8 +545,8 @@ class NamePanel(Frame):
 
 
 class AnnotateButtons(Frame):
-    def __init__(self, parent, **kwargs):
-        Frame.__init__(self, parent, **kwargs)
+    def __init__(self, master, **kwargs):
+        Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
         self.delete_button = Button(self, text='Delete Shape')  # type: Button
@@ -574,13 +574,13 @@ class AnnotateDetailsPanel(Frame):
     description_value = TypedDescriptor(
         'description_value', TextWithScrolling)  # type: TextWithScrolling
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The parent widget
+        master
+            The master widget
         app_variables : AppVariables
         kwargs
         """
@@ -588,7 +588,7 @@ class AnnotateDetailsPanel(Frame):
         self._app_variables = app_variables  # type: AppVariables
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
         self.directory_values = set()
-        Frame.__init__(self, parent, **kwargs)
+        Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
         self.directory_label = Label(self, text='Directory:', width=12)
@@ -701,19 +701,19 @@ class GeometryButtons(Frame):
     polygon = ButtonDescriptor(
         'polygon', default_text='Polygon')  # type: Button
 
-    def __init__(self, parent, active_shapes=None, **kwargs):
+    def __init__(self, master, active_shapes=None, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The parent widget
+        master
+            The master widget
         active_shapes : None|Sequence[str]
             The active shapes.
         """
 
         self.active_shapes = None
-        Frame.__init__(self, parent, **kwargs)
+        Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
         self.label = Label(self, text='Add Geometry:')
@@ -827,13 +827,13 @@ class GeometryPropertiesPanel(Frame):
         'color_button', tkButton,
         docstring='button to display the color choice, hence plain tk button')  # type: tkButton
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The parent widget
+        master
+            The master widget
         app_variables : AppVariables
         kwargs
         """
@@ -843,8 +843,8 @@ class GeometryPropertiesPanel(Frame):
         self.default_name = '<NONE>'
         self.geometry_properties = None  # type: Union[None, GeometryProperties]
         self.color = None  # type: Union[None, str]
-        self.parent = parent
-        Frame.__init__(self, parent, **kwargs)
+
+        Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
         self.uid_label = Label(self, text='Geo UID:')
@@ -873,17 +873,17 @@ class GeometryPropertiesPanel(Frame):
         self.update_geometry_properties()
 
     def _reference_annotation_panel(self):
-        geom_details_panel = self.parent
-        anno_tab_control = geom_details_panel.parent
-        return anno_tab_control.parent
+        geom_details_panel = self.master
+        anno_tab_control = geom_details_panel.master
+        return anno_tab_control.master
 
     def change_color(self):
         result = askcolor(color=self.color, title='Choose Color')
 
         # NB: this screws the focus up, for some reason
         ann_panel = self._reference_annotation_panel()
-        ann_panel.parent.lift()
-        ann_panel.parent.focus_set()
+        ann_panel.master.lift()
+        ann_panel.master.focus_set()
 
         if result is None:
             return
@@ -966,20 +966,20 @@ class GeometryDetailsPanel(Frame):
         'geometry_properties_panel', GeometryPropertiesPanel,
         docstring='the geometry properties')  # type: GeometryPropertiesPanel
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The parent widget
+        master
+            The master widget
         app_variables : AppVariables
         """
 
         self._app_variables = app_variables  # type: AppVariables
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
-        self.parent = parent
-        Frame.__init__(self, parent, **kwargs)
+
+        Frame.__init__(self, master, **kwargs)
         self.geometry_buttons = GeometryButtons(self, active_shapes=None)
         self.geometry_buttons.grid(row=0, column=0, columnspan=2, sticky='NEW', padx=3, pady=3)
 
@@ -999,8 +999,7 @@ class GeometryDetailsPanel(Frame):
         self.geometry_view.bind('<<TreeviewSelect>>', self.geometry_selected_on_viewer)
 
     def _set_focus(self, uid):
-        self.geometry_view.focus(uid)
-        self.geometry_view.selection_set(uid)
+        self.geometry_view.set_selection_with_expansion(uid)
 
     def _set_geometry_uid(self, uid):
         if uid == '':
@@ -1124,9 +1123,9 @@ class AnnotateTabControl(Frame):
     tab_control = TypedDescriptor(
         'tab_control', Notebook)  # type: Notebook
 
-    def __init__(self, parent, app_variables, **kwargs):
-        self.parent = parent
-        Frame.__init__(self, parent, **kwargs)
+    def __init__(self, master, app_variables, **kwargs):
+
+        Frame.__init__(self, master, **kwargs)
 
         self.tab_control = Notebook(self)
         self.details_tab = AnnotateDetailsPanel(self, app_variables)
@@ -1161,20 +1160,19 @@ class AnnotationPanel(Frame):
     tab_panel = TypedDescriptor('tab_panel', AnnotateTabControl)  # type: AnnotateTabControl
     button_panel = TypedDescriptor('button_panel', AnnotateButtons)  # type: AnnotateButtons
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
+        master
             tkinter.Tk|tkinter.TopLevel
         app_variables : AppVariables
         kwargs
         """
 
-        self.parent = parent
         self._app_variables = app_variables  # type: AppVariables
-        Frame.__init__(self, parent, **kwargs)
+        Frame.__init__(self, master, **kwargs)
         self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         self.name_panel = NamePanel(self, app_variables)
@@ -1213,10 +1211,10 @@ class AnnotationPanel(Frame):
         self.tab_panel.save()
 
     def hide_on_close(self):
-        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def close_window(self):
-        self.parent.withdraw()
+        self.master.withdraw()
 
 
 ##################
@@ -1231,13 +1229,13 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
     the provided methods.
     """
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The tkinter parent element
+        master
+            The tkinter master element
         app_variables : AppVariables
         kwargs
             Optional keywords for the treeview initialization
@@ -1249,7 +1247,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
 
         if 'selectmode' not in kwargs:
             kwargs['selectmode'] = tkinter.BROWSE
-        TreeviewWithScrolling.__init__(self, parent, **kwargs)
+        TreeviewWithScrolling.__init__(self, master, **kwargs)
         self.heading('#0', text='Name')
 
         self.update_annotation_collection()
@@ -1311,11 +1309,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         return '' if dval is None else dval
 
     def _set_focus(self, the_id):
-        if the_id is None:
-            return
-        self.focus(the_id)
-        self.selection_set(the_id)
-        self.focus_force()
+        self.set_selection_with_expansion(the_id)
 
     def _directory_definition_check(self, directory):
         """
@@ -1472,7 +1466,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
         self.delete(*item.get_children())
         self._render_directory(directory)
         if maintain_focus:
-            self._set_focus(selection)
+            self.set_selection_with_expansion(selection)
 
     def rerender_annotation(self, the_id, set_focus=False):
         """
@@ -1541,7 +1535,7 @@ class AnnotationCollectionViewer(TreeviewWithScrolling):
             self._render_annotation(the_id, at_index=at_index)
 
         if set_focus:
-            self._set_focus(the_id)
+            self.set_selection_with_expansion(the_id)
 
     def delete_entry(self, the_id):
         """
@@ -1586,19 +1580,19 @@ class AnnotationCollectionPanel(Frame):
     Buttons for the annotation panel.
     """
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The parent widget
+        master
+            The master widget
         app_variables : AppVariables
         kwargs
             keyword arguments passed through to the Frame constructor
         """
 
-        Frame.__init__(self, parent, **kwargs)
+        Frame.__init__(self, master, **kwargs)
 
         self.button_panel = Frame(self, relief=tkinter.RIDGE, borderwidth=2)  # type: Frame
         self.new_button = Button(self.button_panel, text='New Annotation', width=28)  # type: Button
@@ -1637,26 +1631,25 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
     _new_annotation_type = AnnotationFeature
     _new_file_annotation_type = FileAnnotationCollection
 
-    def __init__(self, parent, reader=None, annotation_collection=None, **kwargs):
+    def __init__(self, master, reader=None, annotation_collection=None, **kwargs):
         """
 
         Parameters
         ----------
-        parent
+        master
             tkinter.Tk|tkinter.TopLevel
         reader : None|str|BaseReader|GeneralCanvasImageReader
         annotation_collection : None|str|FileAnnotationCollection
         kwargs
         """
-        self.root = parent
-        self.variables = AppVariables()
 
+        self.variables = AppVariables()
         if 'sashrelief' not in kwargs:
             kwargs['sashrelief'] = tkinter.RIDGE
         if 'orient' not in kwargs:
             kwargs['orient'] = tkinter.HORIZONTAL
-        PanedWindow.__init__(self, parent, **kwargs)
-        WidgetWithMetadata.__init__(self, parent)
+        PanedWindow.__init__(self, master, **kwargs)
+        WidgetWithMetadata.__init__(self, master)
         self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         self.image_panel = ImagePanel(self)
@@ -1692,7 +1685,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         menu_bar.add_cascade(label="File", menu=file_menu)
         menu_bar.add_cascade(label="Edit", menu=edit_menu)
         menu_bar.add_cascade(label="Metadata", menu=metadata_menu)
-        self.root.config(menu=menu_bar)
+        self.master.config(menu=menu_bar)
 
         # hide unwanted elements on the panel toolbars
         self.image_panel.hide_tools('new_shape')
@@ -1716,7 +1709,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         # set up the label_panel viewer event listeners
         self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
-        self.annotate_popup = tkinter.Toplevel(parent)
+        self.annotate_popup = tkinter.Toplevel(master)
         self.annotate = AnnotationPanel(self.annotate_popup, self.variables)
         self.annotate.hide_on_close()
         self.annotate_popup.withdraw()
@@ -1767,7 +1760,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         response = self._prompt_unsaved()
         if response:
-            self.root.destroy()
+            self.master.destroy()
 
     def set_reader(self, the_reader, update_browse=None):
         """
@@ -2413,8 +2406,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.annotate_popup.lift()
 
     def _set_focus_on_main(self):
-        self.root.focus_set()
-        self.root.lift()
+        self.master.focus_set()
+        self.master.lift()
 
     def callback_zoom_to_feature(self):
         """

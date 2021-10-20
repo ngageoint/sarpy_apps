@@ -33,13 +33,13 @@ class SchemaViewer(TreeviewWithScrolling):
     For the purpose of viewing the schema definition.
     """
 
-    def __init__(self, parent, label_schema=None, **kwargs):
+    def __init__(self, master, label_schema=None, **kwargs):
         """
 
         Parameters
         ----------
-        parent
-            The GUI element which is the parent of this node.
+        master
+            The GUI element which is the master of this node.
         label_schema : None|LabelSchema
             The label schema.
         kwargs
@@ -47,10 +47,10 @@ class SchemaViewer(TreeviewWithScrolling):
         """
 
         self._label_schema = None
-        self.parent = parent
+        self.master = master
 
         kwargs['column'] = ('Name', )
-        TreeviewWithScrolling.__init__(self, parent, **kwargs)
+        TreeviewWithScrolling.__init__(self, master, **kwargs)
         self.heading('#0', text='Name')
         self.heading('#1', text='ID')
 
@@ -199,15 +199,7 @@ class _SchemaSelectionWidget(object):
         None
         """
 
-        if selected_value is None or selected_value == '':
-            return
-
-        # noinspection PyBroadException
-        try:
-            self.viewer.selection_set(selected_value)
-            self.viewer.item(selected_value, open=True)
-        except Exception:
-            pass
+        self.viewer.set_selection_with_expansion(selected_value)
 
 
 def select_schema_entry(label_schema, start_id=None):
@@ -249,12 +241,12 @@ class LabelEntryPanel(Frame):
     Panel for viewing and editing the details of a given label schema entry.
     """
 
-    def __init__(self, parent, app_variables, **kwargs):
+    def __init__(self, master, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent : tkinter.Tk|tkinter.ToplLevel
+        master : tkinter.Tk|tkinter.ToplLevel
         app_variables : AppVariables
         kwargs
             keyword arguments passed through for frame
@@ -266,8 +258,8 @@ class LabelEntryPanel(Frame):
         self._new_entry = False
         self.id_changed = None  # state variable for external usage
 
-        self.parent = parent
-        Frame.__init__(self, parent, **kwargs)
+        self.master = master
+        Frame.__init__(self, master, **kwargs)
         self.header_message = Label(self, text='', padding=5)
         self.header_message.grid(row=0, column=0, sticky='NSEW', padx=3, pady=3)
 
@@ -390,7 +382,7 @@ class LabelEntryPanel(Frame):
 
         self.update_current_id()
         self.close_window()
-        self.parent.grab_release()
+        self.master.grab_release()
 
     def save_function(self):
         self.id_changed = None
@@ -428,10 +420,10 @@ class LabelEntryPanel(Frame):
         return True
 
     def hide_on_close(self):
-        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def close_window(self):
-        self.parent.withdraw()
+        self.master.withdraw()
 
 
 class SchemaEditor(Frame):
@@ -439,20 +431,20 @@ class SchemaEditor(Frame):
     An editor for a label schema
     """
 
-    def __init__(self, parent, label_schema=None, **kwargs):
+    def __init__(self, master, label_schema=None, **kwargs):
         """
 
         Parameters
         ----------
-        parent : tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.TopLevel
         label_schema : None|str|LabelSchema
         kwargs
             keyword arguments for Frame
         """
 
         self.variables = AppVariables()
-        self.parent = parent
-        Frame.__init__(self, parent, **kwargs)
+        self.master = master
+        Frame.__init__(self, master, **kwargs)
 
         self.frame1 = Frame(self, borderwidth=1, relief=tkinter.RIDGE)
 
@@ -519,7 +511,7 @@ class SchemaEditor(Frame):
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
         menu.add_cascade(label="File", menu=filemenu)
-        self.parent.config(menu=menu)
+        self.master.config(menu=menu)
 
         # setup entry configs and some validation callbacks
         self.schema_viewer.bind('<<TreeviewSelect>>', self.item_selected_on_viewer)
@@ -541,7 +533,7 @@ class SchemaEditor(Frame):
         self.move_down_button.config(command=self.callback_move_down)
 
         # setup the entry panel
-        self.entry_popup = tkinter.Toplevel(self.parent)
+        self.entry_popup = tkinter.Toplevel(self.master)
         self.entry = LabelEntryPanel(self.entry_popup, self.variables)
         self.entry.hide_on_close()
         self.entry_popup.withdraw()
@@ -770,8 +762,7 @@ class SchemaEditor(Frame):
         self.variables.current_id = value
         self.entry.update_current_id()
         if value is not None:
-            self.schema_viewer.focus(value)
-            self.schema_viewer.selection_set(value)
+            self.schema_viewer.set_selection_with_expansion(value)
 
     # callbacks and bound methods
     def save(self):
@@ -799,7 +790,7 @@ class SchemaEditor(Frame):
             save_state = askyesno('Save Progress', message='There are unsaved edits. Save?')
             if save_state is True:
                 self.save()
-        self.parent.destroy()
+        self.master.destroy()
 
     def callback_open(self):
         if not self._check_save_state():

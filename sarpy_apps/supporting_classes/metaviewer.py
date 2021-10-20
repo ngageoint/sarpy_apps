@@ -10,7 +10,7 @@ import tkinter
 from tk_builder.widgets import basic_widgets
 
 from sarpy.compliance import integer_types, string_types
-from sarpy.io.general.base import BaseReader, AbstractReader
+from sarpy.io.general.base import AbstractReader
 from sarpy.io.general.nitf import NITFDetails, NITFReader
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.phase_history.base import CPHDTypeReader
@@ -39,11 +39,10 @@ class Metaviewer(basic_widgets.Treeview):
         Parameters
         ----------
         master : tkinter.Tk|tkinter.Toplevel
-            The GUI element which is the parent or master of this node.
+            The GUI element which is the parent
         """
         basic_widgets.Treeview.__init__(self, master)
-        self.parent = master
-        self.parent.geometry("800x600")
+        self.master.geometry("800x600")
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
     def hide_on_close(self):
@@ -51,7 +50,7 @@ class Metaviewer(basic_widgets.Treeview):
         Sets the condition so that the close button does not destroy the tool.
         """
 
-        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def empty_entries(self):
         """
@@ -65,7 +64,7 @@ class Metaviewer(basic_widgets.Treeview):
         self.delete(*self.get_children())
 
     def close_window(self):
-        self.parent.withdraw()
+        self.master.withdraw()
 
     def add_node(self, the_parent, the_key, the_value):
         """
