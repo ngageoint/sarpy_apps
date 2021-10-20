@@ -8,6 +8,8 @@ __author__ = "Thomas McCullough"
 
 
 import os
+from typing import Union
+
 import tkinter
 from tkinter import ttk
 from tkinter.messagebox import showinfo, askyesno, askyesnocancel
@@ -16,9 +18,7 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from sarpy.compliance import string_types
 from sarpy.annotation.label import LabelSchema
 
-from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets.widget_descriptors import ButtonDescriptor, LabelDescriptor, \
-    EntryDescriptor, TypedDescriptor
+from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
 
 from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
@@ -52,20 +52,20 @@ def _validate_schema(schema):
 
 
 ###########
-# Treeview for a label schema, and associated widget
+# Treeview for a label schema, and associated selection widget
 
 class SchemaViewer(Frame):
     """
     For the purpose of viewing the schema definition.
     """
 
-    def __init__(self, master, label_schema=None, geometry_size=None, **kwargs):
+    def __init__(self, parent, label_schema=None, geometry_size=None, **kwargs):
         """
 
         Parameters
         ----------
-        master : tk.Tk|tk.TopLevel
-            The GUI element which is the parent or master of this node.
+        parent
+            The GUI element which is the parent of this node.
         label_schema : None|LabelSchema
             The label schema.
         geometry_size : None|str
@@ -75,8 +75,8 @@ class SchemaViewer(Frame):
         """
 
         self._label_schema = None
-        self.root = master
-        super(SchemaViewer, self).__init__(master, **kwargs)
+        self.root = parent
+        super(SchemaViewer, self).__init__(parent, **kwargs)
         if geometry_size is not None:
             self.root.geometry(geometry_size)
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
@@ -165,11 +165,7 @@ class SchemaViewer(Frame):
 
         Parameters
         ----------
-        schema : str|LabelSchema
-
-        Returns
-        -------
-        None
+        schema : None|LabelSchema
         """
 
         self._empty_entries()
@@ -278,323 +274,332 @@ def select_schema_entry(label_schema, start_id=None):
     return value
 
 
-########
-# Widget for creating/editing a label schema, and associated elements
+#########
+# the overall schema editor
 
-class _LabelEntryPanel(WidgetPanel):
+class AppVariables(object):
+    current_id = StringDescriptor('current_id', default_value=None)  # type: Union[None, str]
+    unsaved_edits = BooleanDescriptor('unsaved_edits', default_value=False)  # type: bool
+    browse_directory = StringDescriptor(
+        'browse_directory', default_value=os.path.expanduser('~'),
+        docstring='The directory for browsing for file selection.')  # type: str
+    label_file_name = StringDescriptor('label_file_name', default_value=None)  # type: Union[None, str]
+    label_schema = TypedDescriptor('label_schema', LabelSchema)  # type: LabelSchema
+
+
+class LabelEntryPanel(Frame):
     """
-    Tool for editing a label schema entry. This supports creating a new schema entry
-    or modifying a current entry, and modifies the schema in place.
+    Panel for viewing and editing the details of a given label schema entry.
     """
 
-    _widget_list = (
-        ('header_message', ),
-        ('id_label', 'id_entry', 'name_label', 'name_entry', 'parent_label', 'parent_button'),
-        ('cancel_button', 'okay_button'))
-    header_message = LabelDescriptor(
-        'header_message', default_text='',
-        docstring='The header message.')  # type: Label
-    id_label = LabelDescriptor(
-        'id_label', default_text='ID:',
-        docstring='The id label')  # type: Label
-    id_entry = EntryDescriptor(
-        'id_entry', default_text='',
-        docstring='The id value')  # type: Entry
-
-    name_label = LabelDescriptor(
-        'name_label', default_text='Name:',
-        docstring='The name label')  # type: Label
-    name_entry = EntryDescriptor(
-        'name_entry', default_text='',
-        docstring='The name value')  # type: Entry
-
-    parent_label = LabelDescriptor(
-        'parent_label', default_text='Parent ID:',
-        docstring='The parent label')  # type: Label
-    parent_button = ButtonDescriptor(
-        'parent_button', default_text='<Choose>',
-        docstring='The parent value')  # type: Button
-
-    cancel_button = ButtonDescriptor(
-        'cancel_button', default_text='Cancel',
-        docstring='The cancel button')  # type: Button
-    okay_button = ButtonDescriptor(
-        'okay_button', default_text='Okay',
-        docstring='The okay button')  # type: Button
-
-    def __init__(self, parent):
+    def __init__(self, parent, app_variables, **kwargs):
         """
 
         Parameters
         ----------
-        parent : tkinter.Toplevel
+        parent : tkinter.Tk|tkinter.ToplLevel
+        app_variables : AppVariables
+        kwargs
+            keyword arguments passed through for frame
         """
 
-        WidgetPanel.__init__(self, parent)
-        self.init_w_rows()
-
-
-class LabelEntryWidget(object):
-    """
-    The widget element that actually performs the label schema entry edit. This
-    edits the provided label schema in place.
-
-    This object creates a pop-up. So it creates a tkinter.Toplevel which maintains
-    it's own mainloop(), and the TopLevel gets destroyed by this object.
-    """
-
-    def __init__(self, label_schema, edit_id=None):
-        """
-
-        Parameters
-        ----------
-        label_schema : LabelSchema
-            The label schema, to be edited in place.
-        edit_id : None|str
-            The entry to edit. A new entry will be created, if `None`.
-        """
-
-        self.root = tkinter.Toplevel()
-        self.entry_widget = _LabelEntryPanel(self.root)
+        self._app_variables = app_variables
+        self._current_id = None
+        self._parent_id = None
+        self._new_entry = False
         self.id_changed = None
 
-        if not isinstance(label_schema, LabelSchema):
-            raise TypeError('label_schema must be a label_schema type.')
-        self.label_schema = label_schema
-        if edit_id is not None and edit_id not in label_schema.labels:
-            raise KeyError('edit_id is not a label label id.')
-        self._edit_id = edit_id
+        self.parent = parent
+        Frame.__init__(self, parent, **kwargs)
+        self.header_message = Label(self, text='', padding=5)
+        self.header_message.grid(row=0, column=0, sticky='NSEW', padx=3, pady=3)
 
-        if self._edit_id is not None:
-            self.entry_widget.id_entry.config(state='disabled')
-            self.entry_widget.id_entry.set_text(self._edit_id)
-            self.entry_widget.header_message.set_text(
-                'The <ID> is immutable, and <Name> is for simple interpretation.')
-            self._parent_id = self.label_schema.get_parent(self._edit_id)
-            self.entry_widget.name_entry.set_text(self.label_schema.labels[self._edit_id])
-        else:
-            id_suggestion = self.label_schema.suggested_next_id
-            str_id_suggestion = '<SET>' if id_suggestion is None else str(id_suggestion)
-            self.entry_widget.id_entry.set_text(str_id_suggestion)
-            self.entry_widget.header_message.set_text(
-                '<ID> is immutable once finalized, and <Name> is for simple interpretation.')
-            self._parent_id = None
-            self.entry_widget.name_entry.set_text('<SET>')
-        self._set_parent_text()
-        self.entry_widget.parent_button.config(command=self.parent_callback)
-        self.entry_widget.cancel_button.config(command=self.cancel_callback)
-        self.entry_widget.okay_button.config(command=self.okay_callback)
-        self.root.mainloop()
+        self.frame2 = Frame(self, borderwidth=1, relief=tkinter.RIDGE)
+        self.id_label = Label(self.frame2, text='ID:', borderwidth=1, relief=tkinter.RIDGE, padding=5, width=10)
+        self.id_label.grid(row=0, column=0, sticky='NW', padx=3, pady=3)
+        self.id_entry = Entry(self.frame2, text='')
+        self.id_entry.grid(row=0, column=1, sticky='NEW', padx=3, pady=3)
+
+        self.name_label = Label(self.frame2, text='Name:', borderwidth=1, relief=tkinter.RIDGE, padding=5, width=10)
+        self.name_label.grid(row=1, column=0, sticky='NW', padx=3, pady=3)
+        self.name_entry = Entry(self.frame2, text='')
+        self.name_entry.grid(row=1, column=1, sticky='NEW', padx=3, pady=3)
+
+        self.parent_label = Label(self.frame2, text='Parent:', borderwidth=1, relief=tkinter.RIDGE, padding=5, width=10)
+        self.parent_label.grid(row=2, column=0, sticky='NW', padx=3, pady=3)
+        self.parent_button = Button(self.frame2, text='<Choose>')
+        self.parent_button.grid(row=2, column=1, sticky='NEW', padx=3, pady=3)
+
+        self.frame2.grid_columnconfigure(1, weight=1)
+        self.frame2.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)
+
+        self.frame3 = Frame(self, borderwidth=1, relief=tkinter.RIDGE)
+        self.cancel_button = Button(self.frame3, text='Cancel')
+        self.cancel_button.pack(side=tkinter.RIGHT)
+        self.save_button = Button(self.frame3, text='Save')
+        self.save_button.pack(side=tkinter.RIGHT)
+        self.frame3.grid(row=2, column=0, sticky='NSEW', padx=3, pady=3)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.TRUE)
+
+        # callbacks
+        self.parent_button.config(command=self.parent_callback)
+        self.cancel_button.config(command=self.cancel_callback)
+        # save_button bound by controlling parent
+
+        self.update_label_schema()
+
+    @property
+    def label_schema(self):
+        """
+        None|LabelSchema : The label schema.
+        """
+
+        return self._app_variables.label_schema
+
+    def update_label_schema(self):
+        self.update_current_id()
+
+    @property
+    def current_id(self):
+        """
+        None|str: The current id.
+        """
+
+        return self._current_id
 
     def _set_parent_text(self):
-        """
-        Sets the text on the parent selection button.
-        """
-
         if self._parent_id is None or self._parent_id == '':
-            self.entry_widget.parent_button.set_text('<Top Level>')
+            self.parent_button.set_text('<Top Level>')
         else:
-            self.entry_widget.parent_button.set_text(self.label_schema.labels[self._parent_id])
+            self.parent_button.set_text(self.label_schema.labels[self._parent_id])
+
+    def update_current_id(self):
+        self._current_id = self._app_variables.current_id
+        if self.label_schema is None:
+            self._new_entry = False
+            self._parent_id = None
+            self.header_message.set_text('No label schema defined.')
+            self.id_entry.set_text('')
+            self.id_entry.config(state='disabled')
+            self.name_entry.set_text('')
+            self.name_entry.config(state='disabled')
+            self.parent_button.set_text('')
+            self.parent_button.config(state='disabled')
+        elif self._current_id is None:
+            self._parent_id = None
+            self._new_entry = True
+
+            self.header_message.set_text(
+                'New entry - <ID> is immutable once initialized and <Name> is for simple interpretation.')
+
+            id_suggestion = self.label_schema.suggested_next_id
+            str_id_suggestion = '<ID>' if id_suggestion is None else str(id_suggestion)
+
+            self.id_entry.set_text(str_id_suggestion)
+            self.id_entry.config(state='normal')
+            self.name_entry.set_text('<Name>')
+            self.name_entry.config(state='normal')
+            self._set_parent_text()
+            self.parent_button.config(state='normal')
+        else:
+            self._new_entry = False
+            self._parent_id = self.label_schema.get_parent(self._current_id)
+
+            self.header_message.set_text(
+                '<ID> is immutable, <Name> for simple interpretation.')
+            self.id_entry.set_text(self._current_id)
+            self.id_entry.config(state='disabled')
+            self.name_entry.set_text(self.label_schema.labels[self._current_id])
+            self.name_entry.config(state='normal')
+            self._set_parent_text()
+            self.parent_button.config(state='normal')
 
     def parent_callback(self):
         """
         Edit or populate the parent id.
         """
 
+        if self.label_schema is None:
+            return
+
         self._parent_id = select_schema_entry(self.label_schema, start_id=self._parent_id)
         self._set_parent_text()
 
     def cancel_callback(self):
-        """
-        Cancel the editing.
-        """
+        if self.label_schema is None:
+            return
 
-        self.root.quit()
+        self.update_current_id()
+        self.close_window()
+        self.parent.grab_release()
 
-    def okay_callback(self):
-        """
-        Finalize the entry editing and submission.
-        """
+    def save_function(self):
+        self.id_changed = None
+        if self.label_schema is None:
+            return True
 
-        the_id = self.entry_widget.id_entry.get()
-        the_name = self.entry_widget.name_entry.get()
+        the_id = self.id_entry.get()
+        the_name = self.name_entry.get()
         the_parent = '' if self._parent_id is None else self._parent_id
 
-        if self._edit_id is None:
+        if self._new_entry:
             # if this is a new entry, then verify that both id and name are set
-            if the_id == '<SET>' or the_name == '<SET>':
+            if the_id == '<ID>' or the_name == '<Name>':
                 showinfo('Entries Not Initialized', message='Both `ID` and `Name` must be set.')
-                return
+                return False
 
             try:
                 self.label_schema.add_entry(the_id, the_name, the_parent=the_parent)
                 self.id_changed = the_id
             except Exception as e:
                 showinfo("Creation Error", message="Creation error - {}".format(e))
-                return
+                return False
+
+            self._new_entry = False
+            self.update_current_id()
         else:
+
             try:
                 result = self.label_schema.change_entry(the_id, the_name, the_parent)
-                if result:
-                    self.id_changed = the_id
+                self.id_changed = the_id
             except Exception as e:
                 showinfo("Edit Error", message="Editing error - {}".format(e))
-                return
-        self.root.quit()
+                return False
 
-    def destroy(self):
-        """
-        Destroys the widget elements.
-        """
+        return True
 
-        # noinspection PyBroadException
-        try:
-            self.root.destroy()
-        except Exception:
-            pass
+    def hide_on_close(self):
+        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def close_window(self):
+        self.parent.withdraw()
 
 
-class SchemaEditor(WidgetPanel):
-    _widget_list = (
-        ('version_label', 'version_entry'),
-        ('version_date_label', 'version_date_entry'),
-        ('classification_label', 'classification_entry'),
-        ('confidence_label', 'confidence_entry'),
-        ('geometries_label', 'geometries_entry'),
-        ('new_button', 'edit_button', 'delete_button'),
-        ('move_up_button', 'move_down_button'),
-        ('schema_viewer', ))
+class SchemaEditor(Frame):
+    """
+    An editor for a label schema
+    """
 
-    version_label = LabelDescriptor(
-        'version_label', default_text='Version:',
-        docstring='The version label')  # type: Label
-    version_entry = EntryDescriptor(
-        'version_entry', default_text='',
-        docstring='The version value')  # type: Entry
-
-    version_date_label = LabelDescriptor(
-        'version_date_label', default_text='Version Date:',
-        docstring='The version_date label')  # type: Label
-    version_date_entry = EntryDescriptor(
-        'version_date_entry', default_text='',
-        docstring='The version_date value')  # type: Entry
-
-    classification_label = LabelDescriptor(
-        'classification_label', default_text='Classification:',
-        docstring='The classification label')  # type: Label
-    classification_entry = EntryDescriptor(
-        'classification_entry', default_text='',
-        docstring='The classification value')  # type: Entry
-
-    confidence_label = LabelDescriptor(
-        'confidence_label', default_text='Confidence Values:',
-        docstring='The confidence label')  # type: Label
-    confidence_entry = EntryDescriptor(
-        'confidence_entry', default_text='',
-        docstring='The confidence value')  # type: Entry
-
-    geometries_label = LabelDescriptor(
-        'geometries_label', default_text='Geometries:',
-        docstring='The geometries label')  # type: Label
-    geometries_entry = EntryDescriptor(
-        'geometries_entry', default_text='',
-        docstring='The geometries value')  # type: Entry
-
-    new_button = ButtonDescriptor(
-        'new_button', default_text='New Entry',
-        docstring='The new entry button')  # type: Button
-    edit_button = ButtonDescriptor(
-        'edit_button', default_text='Edit Entry',
-        docstring='The edit button')  # type: Button
-    delete_button = ButtonDescriptor(
-        'delete_button', default_text='Delete Entry',
-        docstring='The delete entry button')  # type: Button
-
-    move_up_button = ButtonDescriptor(
-        'move_up_button', default_text='Move Entry Up',
-        docstring='The move up entry button')  # type: Button
-    move_down_button = ButtonDescriptor(
-        'move_down_button', default_text='Move Entry Down',
-        docstring='The move down entry button')  # type: Button
-
-    schema_viewer = TypedDescriptor(
-        'schema_viewer', SchemaViewer,
-        docstring='The viewer widget for the label schema.')  # type: SchemaViewer
-
-    def __init__(self, root):
+    def __init__(self, parent, label_schema=None, **kwargs):
         """
 
         Parameters
         ----------
-        root : tkinter.Toplevel|tkinter.Tk
+        parent : tkinter.Tk|tkinter.TopLevel
+        label_schema : None|str|LabelSchema
+        kwargs
+            keyword arguments for Frame
         """
 
-        self.root = root
-        self.browse_directory = os.path.expanduser('~')
-        self._file_name = None
-        self.label_schema = LabelSchema()  # type: LabelSchema
-        self._unsaved_edits = None
+        self.variables = AppVariables()
+        self.parent = parent
+        Frame.__init__(self, parent, **kwargs)
 
-        self.primary = Frame(root)
-        WidgetPanel.__init__(self, self.primary)
-        self.init_w_rows()
-        # self.init_w_basic_widget_list(7, [2, 2, 2, 2, 2, 2, 1])
-        # modify packing so that the viewer gets the extra space
-        self.version_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.version_date_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.classification_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.confidence_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.geometries_label.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.edit_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.move_up_button.master.pack(expand=tkinter.FALSE, fill=tkinter.X)
-        self.schema_viewer.master.pack(expand=tkinter.TRUE, side=tkinter.BOTTOM)
+        self.frame1 = Frame(self, borderwidth=1, relief=tkinter.RIDGE)
 
-        # setup the appearance of labels
-        self.version_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
-        self.version_date_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
-        self.classification_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
-        self.confidence_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
-        self.geometries_label.config(relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5)
+        self.version_label = Label(
+            self.frame1, text='Version Number:', relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5, width=18)
+        self.version_label.grid(row=0, column=0, sticky='NEW')
+        self.version_entry = Entry(self.frame1, text='')
+        self.version_entry.grid(row=0, column=1, sticky='NEW')
 
-        # setup the GUI callbacks and appearance of labels
-        self.version_entry.config(
-            state='disabled', validate='focusout', validatecommand=self._version_entry_validate)
-        self.version_date_entry.config(state='disabled')
-        self.classification_entry.config(
-            state='disabled', validate='focusout', validatecommand=self._classification_validate)
-        self.confidence_entry.config(
-            state='disabled', validate='focusout', validatecommand=self._confidence_validate)
-        self.geometries_entry.config(state='disabled')
-        self.edit_button.config(command=self.edit_entry)
-        self.new_button.config(command=self.new_entry)
-        self.delete_button.config(command=self.delete_entry)
-        self.move_up_button.config(command=self.move_up)
-        self.move_down_button.config(command=self.move_down)
+        self.version_date_label = Label(
+            self.frame1, text='Version Date:', relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5, width=18)
+        self.version_date_label.grid(row=1, column=0, sticky='NEW')
+        self.version_date_entry = Entry(self.frame1, text='')
+        self.version_date_entry.grid(row=1, column=1, sticky='NEW')
+
+        self.classification_label = Label(
+            self.frame1, text='Classification:', relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5, width=18)
+        self.classification_label.grid(row=2, column=0, sticky='NEW')
+        self.classification_entry = Entry(self.frame1, text='')
+        self.classification_entry.grid(row=2, column=1, sticky='NEW')
+
+        self.confidence_label = Label(
+            self.frame1, text='Confidence Values:', relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5, width=18)
+        self.confidence_label.grid(row=3, column=0, sticky='NEW')
+        self.confidence_entry = Entry(self.frame1, text='')
+        self.confidence_entry.grid(row=3, column=1, sticky='NEW')
+
+        self.geometries_label = Label(
+            self.frame1, text='Geometries:', relief=tkinter.RIDGE, justify=tkinter.LEFT, padding=5, width=18)
+        self.geometries_label.grid(row=4, column=0, sticky='NEW')
+        self.geometries_entry = Entry(self.frame1, text='')
+        self.geometries_entry.grid(row=4, column=1, sticky='NEW')
+
+        self.frame1.grid_columnconfigure(1, weight=1)
+        self.frame1.pack(side=tkinter.TOP, fill=tkinter.X)
+
+        self.frame2 = Frame(self, borderwidth=1, relief=tkinter.RIDGE)
+        self.new_button = Button(self.frame2, text='New Entry')
+        self.new_button.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.edit_button = Button(self.frame2, text='Edit Entry')
+        self.edit_button.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.delete_button = Button(self.frame2, text='Delete Entry')
+        self.delete_button.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.move_up_button = Button(self.frame2, text='Move Entry Up')
+        self.move_up_button.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.move_down_button = Button(self.frame2, text='Move Entry Down')
+        self.move_down_button.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.frame2.pack(side=tkinter.TOP, fill=tkinter.X)
+
+        self.schema_viewer = SchemaViewer(self)
+        self.schema_viewer.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
+
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
         # set up the menu bar
         menu = tkinter.Menu()
         filemenu = tkinter.Menu(menu, tearoff=0)
-        filemenu.add_command(label="New Schema", command=self.new_schema)
-        filemenu.add_command(label="Open Schema", command=self.open_schema)
+        filemenu.add_command(label="Open Schema", command=self.callback_open)
+        filemenu.add_command(label="New Schema", command=self.callback_new_schema)
+        filemenu.add_separator()
         filemenu.add_command(label="Save", command=self.save)
+        filemenu.add_command(label="Save As", command=self.callback_save_as)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
         menu.add_cascade(label="File", menu=filemenu)
-        self.primary.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        root.config(menu=menu)
+        self.parent.config(menu=menu)
 
-    def set_file_name(self, file_name):
-        self._file_name = file_name
-        if os.path.exists(file_name):
-            self.label_schema = LabelSchema.from_file(file_name)
-        else:
-            self.label_schema = LabelSchema()
+        # setup entry configs and some validation callbacks
+        self.schema_viewer.treeview.bind('<<TreeviewSelect>>', self.item_selected_on_viewer)
 
-    # main schema element edit callbacks - piggyback on validation methods
+        self.version_entry.config(validate='focusout', validatecommand=self._version_entry_validate)
+        self.version_date_entry.config(state='disabled')
+        self.classification_entry.config(validate='focusout', validatecommand=self._classification_validate)
+        self.confidence_entry.config(validate='focusout', validatecommand=self._confidence_validate)
+        self.geometries_entry.config(state='disabled')
+        self.edit_button.config(command=self.callback_edit_entry)
+        self.new_button.config(command=self.callback_new_entry)
+        self.delete_button.config(command=self.callback_delete_entry)
+        self.move_up_button.config(command=self.callback_move_up)
+        self.move_down_button.config(command=self.callback_move_down)
+
+        # setup the entry panel
+        self.entry_popup = tkinter.Toplevel(self.parent)
+        self.entry = LabelEntryPanel(self.entry_popup, self.variables)
+        self.entry.hide_on_close()
+        self.entry_popup.withdraw()
+
+        self.entry.save_button.config(command=self.callback_save_entry)
+
+        self.set_label_schema(label_schema)
+
+    @property
+    def label_schema(self):
+        """
+        None|LabelSchema: The label schema
+        """
+
+        return self.variables.label_schema
+
+    # some entry validation methods
     def _version_entry_validate(self):
         the_value = self.version_entry.get().strip()
         if the_value != '' and self.label_schema.version != the_value:
-            self._unsaved_edits = True
+            self.variables.unsaved_edits = True
             self.label_schema._version = the_value
             self.label_schema.update_version_date(value=None)
             self.version_date_entry.set_text(self.label_schema.version_date)
@@ -603,13 +608,12 @@ class SchemaEditor(WidgetPanel):
     def _classification_validate(self):
         the_value = self.classification_entry.get().strip()
         if self.label_schema.classification != the_value:
-            self._unsaved_edits = True
+            self.variables.unsaved_edits = True
             self.label_schema._classification = the_value
         return True
 
     def _confidence_validate(self):
         the_value = self.confidence_entry.get().strip()
-        print('the confidence value', the_value)
         if the_value == '':
             the_values = None
         else:
@@ -622,155 +626,22 @@ class SchemaEditor(WidgetPanel):
                 the_values = temp_values
 
         if self.label_schema.confidence_values != the_values:
-            self._unsaved_edits = True
+            self.variables.unsaved_edits = True
             self.label_schema.confidence_values = the_values
         return True
 
-    def _populate_fields_schema(self):
-        """
-        Populate the GUI values from the schema.
+    # some helper methods
+    def _set_focus_on_entry_popup(self):
+        self.entry_popup.deiconify()
+        self.entry_popup.focus_set()
+        self.entry_popup.lift()
+        self.entry_popup.grab_set()
 
-        Returns
-        -------
-        None
-        """
-
-        self.version_entry.config(state='normal')
-        self.version_entry.set_text(self.label_schema.version)
-
-        self.version_date_entry.set_text(self.label_schema.version_date)
-
-        self.classification_entry.config(state='normal')
-        self.classification_entry.set_text(self.label_schema.classification)
-
-        self.confidence_entry.config(state='normal')
-        if self.label_schema.confidence_values is None:
-            self.confidence_entry.set_text('')
-        else:
-            self.confidence_entry.set_text(
-                ' '.join('{}'.format(entry) for entry in self.label_schema.confidence_values))
-
-        self.confidence_entry.config(state='normal')
-        if self.label_schema.permitted_geometries is None:
-            self.geometries_entry.set_text('')
-        else:
-            self.geometries_entry.set_text(
-                ' '.join(self.label_schema.permitted_geometries))
-
-    def edit_entry(self):
-        """
-        Edit the selected element.
-
-        Returns
-        -------
-        None
-        """
-
-        if self._file_name is None:
-            showinfo('No Schema Selected', message='Choose schema location from File menu')
-            return
-
-        selected = self.schema_viewer.treeview.focus()
-        if selected == '':
+    def _verify_selected(self):
+        if self.variables.current_id is None:
             showinfo('No Element Selected', message='Choose element from Viewer')
-            return
-
-        popup = LabelEntryWidget(self.label_schema, edit_id=selected)
-        if popup.id_changed is not None:
-            self.schema_viewer.rerender_entry(popup.id_changed)
-            self._unsaved_edits = True
-        popup.destroy()
-
-    def new_entry(self):
-        """
-        Create a new label schema entry.
-
-        Returns
-        -------
-        None
-        """
-
-        if self._file_name is None:
-            showinfo('No Schema Selected', message='Choose schema location from File menu')
-            return
-
-        popup = LabelEntryWidget(self.label_schema, edit_id=None)
-        if popup.id_changed is not None:
-            self.schema_viewer.rerender_entry(popup.id_changed)
-            self._unsaved_edits = True
-        popup.destroy()
-
-    def delete_entry(self):
-        """
-        Delete the selected entry.
-
-        Returns
-        -------
-        None
-        """
-        if self._file_name is None:
-            showinfo('No Schema Selected', message='Choose schema location from File menu')
-            return
-
-        selected = self.schema_viewer.treeview.focus()
-        if selected == '':
-            showinfo('No Element Selected', message='Choose element from Viewer')
-            return
-
-        # does the selected entry have any children?
-        children = self.label_schema.subtypes.get(selected, None)
-        if children is not None and len(children) > 0:
-            response = askyesnocancel('Delete Children?', message='Selected entry has children. Delete all children?')
-            if response is not True:
-                return
-        self.schema_viewer.delete_entry(selected)
-        self._unsaved_edits = True
-
-    def move_up(self):
-        """
-        Move the selected entry up one spot.
-
-        Returns
-        -------
-        None
-        """
-
-        if self._file_name is None:
-            showinfo('No Schema Selected', message='Choose schema location from File menu')
-            return
-
-        selected = self.schema_viewer.treeview.focus()
-        if selected == '':
-            showinfo('No Element Selected', message='Choose element from Viewer')
-            return
-
-        result = self.label_schema.reorder_child_element(selected, spaces=-1)
-        if result:
-            self.schema_viewer.rerender_entry(selected)
-            self._unsaved_edits = True
-
-    def move_down(self):
-        """
-        Move the selected entry down one spot.
-
-        Returns
-        -------
-        None
-        """
-
-        if self._file_name is None:
-            showinfo('No Schema Selected', message='Choose schema location from File menu')
-            return
-
-        selected = self.schema_viewer.treeview.focus()
-        if selected == '':
-            showinfo('No Element Selected', message='Choose element from Viewer')
-            return
-
-        result = self.label_schema.reorder_child_element(selected, spaces=1)
-        if result:
-            self.schema_viewer.rerender_entry(selected)
-            self._unsaved_edits = True
+            return False
+        return True
 
     def _check_save_state(self):
         """
@@ -782,7 +653,7 @@ class SchemaEditor(WidgetPanel):
             Continue (True) or abort (False)
         """
 
-        if self._file_name is None or (not self._unsaved_edits):
+        if not self.variables.unsaved_edits:
             return True
 
         result = askyesnocancel(
@@ -795,83 +666,108 @@ class SchemaEditor(WidgetPanel):
             self.save()
         return True
 
-    def new_schema(self):
-        """
-        Create a new schema.
+    def _update_schema_display(self):
+        if self.variables.label_schema is None:
+            self.version_entry.config(state='disabled', text='')
+            self.version_date_entry.set_text('')
+            self.classification_entry.config(state='disabled', text='')
+            self.confidence_entry.config(state='disabled', text='')
+            self.geometries_entry.config(state='disabled', text='')
+        else:
+            self.version_entry.config(state='normal')
+            self.version_entry.set_text(self.label_schema.version)
 
-        Returns
-        -------
-        None
-        """
+            self.version_date_entry.set_text(self.label_schema.version_date)
 
-        if not self._check_save_state():
-            return
+            self.classification_entry.config(state='normal')
+            self.classification_entry.set_text(self.label_schema.classification)
 
+            self.confidence_entry.config(state='normal')
+            if self.label_schema.confidence_values is None:
+                self.confidence_entry.set_text('')
+            else:
+                self.confidence_entry.set_text(
+                    ' '.join('{}'.format(entry) for entry in self.label_schema.confidence_values))
+
+            self.confidence_entry.config(state='normal')
+            if self.label_schema.permitted_geometries is None:
+                self.geometries_entry.set_text('')
+            else:
+                self.geometries_entry.set_text(
+                    ' '.join(self.label_schema.permitted_geometries))
+
+        self.schema_viewer.fill_from_label_schema(self.variables.label_schema)
+        self.entry.update_label_schema()
+
+    def prompt_for_filename(self):
         schema_file = asksaveasfilename(
-            initialdir=self.browse_directory,
+            initialdir=self.variables.browse_directory,
             filetypes=[file_filters.json_files, file_filters.all_files])
 
         if schema_file == '' or schema_file == ():
             # closed or cancelled
-            return
-        schema = LabelSchema()
-        schema.to_file(schema_file)
-        self.set_schema_file(schema_file)
+            return False
 
-    def open_schema(self):
+        self.variables.browse_directory = os.path.split(schema_file)[0]
+        self.variables.label_file_name = schema_file
+        # todo: what if this file name exists? It should prompt already?
+        return True
+
+    def set_label_schema(self, label_schema):
         """
-        Open and edit a schema file.
-
-        Returns
-        -------
-        None
-        """
-
-        if not self._check_save_state():
-            return
-
-        schema_file = askopenfilename(
-            initialdir=self.browse_directory,
-            filetypes=[file_filters.json_files, file_filters.all_files])
-        if schema_file == '' or schema_file == ():
-            # closed or cancelled
-            return
-
-        self.set_schema_file(schema_file)
-
-    def set_schema_file(self, schema_file):
-        """
-        Updates to the new file.
+        Sets the label schema value.
 
         Parameters
         ----------
-        schema_file : str
+        label_schema : None|str|LabelSchema
         """
 
-        self.label_schema = LabelSchema.from_file(schema_file)
-        self.browse_directory = os.path.split(schema_file)[0]
-        self._file_name = schema_file
+        if label_schema is None:
+            self.variables.label_file_name = None
+            self.variables.label_schema = LabelSchema()
+        elif isinstance(label_schema, str):
+            the_file = label_schema
+            label_schema = LabelSchema.from_file(the_file)
+            self.variables.label_file_name = the_file
+            self.variables.label_schema = label_schema
+            browse_dir = os.path.split(os.path.abspath(the_file))[0]
+            self.variables.browse_directory = browse_dir
+        elif isinstance(label_schema, LabelSchema):
+            self.variables.label_file_name = None
+            self.variables.label_schema = label_schema
+        else:
+            raise TypeError(
+                'input must be the path for a label schema file or a LabelSchema instance')
 
-        self._unsaved_edits = False
-        self.schema_viewer.fill_from_label_schema(self.label_schema)
-        self._populate_fields_schema()
+        self.variables.unsaved_edits = True
+        self.variables.current_id = None
+        self._update_schema_display()
 
+    def set_current_id(self, value):
+        if value == '':
+            value = None
+        if (value is None and self.variables.current_id is None) or \
+                (value == self.variables.current_id):
+            return
+
+        self.variables.current_id = value
+        self.entry.update_current_id()
+        if value is not None:
+            self.schema_viewer.treeview.focus(value)
+            self.schema_viewer.treeview.selection_set(value)
+
+    # callbacks and bound methods
     def save(self):
         """
         Save any current progress.
-
-        Returns
-        -------
-        None
         """
 
-        if self._file_name is None:
-            showinfo('No Schema Selected', message='Choose schema location from File menu')
-            return
+        if self.variables.label_file_name is None:
+            if not self.prompt_for_filename():
+                return  # they opted to not pick a file
 
-        if self._unsaved_edits:
-            self.label_schema.to_file(self._file_name)
-            self._unsaved_edits = False
+        self.label_schema.to_file(self.variables.label_file_name)
+        self.variables.unsaved_edits = False
 
     def exit(self):
         """
@@ -882,20 +778,103 @@ class SchemaEditor(WidgetPanel):
         None
         """
 
-        if self._file_name is not None and self._unsaved_edits:
+        if self.variables.unsaved_edits:
             save_state = askyesno('Save Progress', message='There are unsaved edits. Save?')
             if save_state is True:
                 self.save()
-        self.root.destroy()
+        self.parent.destroy()
+
+    def callback_open(self):
+        if not self._check_save_state():
+            return
+
+        schema_file = askopenfilename(
+            initialdir=self.variables.browse_directory,
+            filetypes=[file_filters.json_files, file_filters.all_files])
+        if schema_file == '' or schema_file == ():
+            # closed or cancelled
+            return
+
+        self.set_label_schema(schema_file)
+
+    def callback_new_schema(self):
+        if not self._check_save_state():
+            return
+
+        self.set_label_schema(LabelSchema())
+
+    def callback_save_as(self):
+        if self.prompt_for_filename():
+            # they chose the new filename
+            self.save()
+
+    def callback_edit_entry(self):
+        if not self._verify_selected():
+            return
+        self._set_focus_on_entry_popup()
+
+    def callback_new_entry(self):
+        self.variables.current_id = None
+        self.entry.update_current_id()
+        self._set_focus_on_entry_popup()
+
+    def callback_delete_entry(self):
+        if not self._verify_selected():
+            return
+
+        selected = self.variables.current_id
+        # does the selected entry have any children?
+        children = self.label_schema.subtypes.get(selected, None)
+        if children is not None and len(children) > 0:
+            response = askyesnocancel('Delete Children?', message='Selected entry has children. Delete all children?')
+            if response is not True:
+                return
+        self.schema_viewer.delete_entry(selected)
+        self.variables.unsaved_edits = True
+        self.set_current_id(None)
+
+    def callback_move_up(self):
+        if not self._verify_selected():
+            return
+        selected = self.variables.current_id
+
+        result = self.label_schema.reorder_child_element(selected, spaces=-1)
+        if result:
+            self.schema_viewer.rerender_entry(selected)
+            self.variables.unsaved_edits = True
+
+    def callback_move_down(self):
+        if not self._verify_selected():
+            return
+        selected = self.variables.current_id
+
+        result = self.label_schema.reorder_child_element(selected, spaces=1)
+        if result:
+            self.schema_viewer.rerender_entry(selected)
+            self.variables.unsaved_edits = True
+
+    def callback_save_entry(self):
+        if self.entry.save_function():
+            self.schema_viewer.rerender_entry(self.entry.id_changed)
+            self.set_current_id(self.entry.id_changed)
+            self.entry.close_window()
+            self.entry_popup.grab_release()
+
+    # noinspection PyUnusedLocal
+    def item_selected_on_viewer(self, event):
+        item_id = self.schema_viewer.treeview.focus()
+        if item_id == '':
+            return
+        self.set_current_id(item_id)
 
 
-def main(schema_file=None):
+def main(label_schema=None):
     """
     Main method for initializing the tool
 
     Parameters
     ----------
-    schema_file : None|str
+    label_schema : None|str|LabelSchema
     """
 
     root = tkinter.Tk()
@@ -904,9 +883,7 @@ def main(schema_file=None):
     the_style.theme_use('classic')
 
     # noinspection PyUnusedLocal
-    app = SchemaEditor(root)
-    if schema_file is not None:
-        app.set_schema_file(schema_file)
+    app = SchemaEditor(root, label_schema=label_schema)
 
     root.mainloop()
 
@@ -924,4 +901,4 @@ if __name__ == '__main__':
             help='The path to the existing schema file for opening.')
         args = parser.parse_args()
 
-        main(schema_file=args.input)
+        main(label_schema=args.input)
