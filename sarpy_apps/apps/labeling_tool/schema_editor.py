@@ -15,7 +15,6 @@ from tkinter import ttk
 from tkinter.messagebox import showinfo, askyesno, askyesnocancel
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
-from sarpy.compliance import string_types
 from sarpy.annotation.label import LabelSchema
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor, BooleanDescriptor
@@ -26,40 +25,15 @@ from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
 from sarpy_apps.supporting_classes import file_filters
 
 
-####
-# Utility functions
-
-def _validate_schema(schema):
-    """
-    Utility function for verifying that an input argument is or points to a LabelSchema.
-
-    Parameters
-    ----------
-    schema : str|LabelSchema
-
-    Returns
-    -------
-    LabelSchema
-    """
-
-    if isinstance(schema, string_types):
-        schema = LabelSchema.from_file(schema)
-    if not isinstance(schema, LabelSchema):
-        raise TypeError(
-            'label_schema must be either a path to am appropriate .json file or a '
-            'LabelSchema object. Got type {}'.format(type(schema)))
-    return schema
-
-
 ###########
 # Treeview for a label schema, and associated selection widget
 
-class SchemaViewer(Frame):
+class SchemaViewer(TreeviewWithScrolling):
     """
     For the purpose of viewing the schema definition.
     """
 
-    def __init__(self, parent, label_schema=None, geometry_size=None, **kwargs):
+    def __init__(self, parent, label_schema=None, **kwargs):
         """
 
         Parameters
@@ -68,29 +42,18 @@ class SchemaViewer(Frame):
             The GUI element which is the parent of this node.
         label_schema : None|LabelSchema
             The label schema.
-        geometry_size : None|str
-            The optional geometry size for the parent.
         kwargs
             The keyword argument collection
         """
 
         self._label_schema = None
-        self.root = parent
-        super(SchemaViewer, self).__init__(parent, **kwargs)
-        if geometry_size is not None:
-            self.root.geometry(geometry_size)
-        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        try:
-            self.root.protocol("WM_DELETE_WINDOW", self.close_window)
-        except AttributeError:
-            pass
+        self.parent = parent
 
-        # instantiate the treeview
-        self.treeview = TreeviewWithScrolling(self, columns=('Name', ))  # type: TreeviewWithScrolling
-        self.treeview.frame.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        # define the column headings
-        self.treeview.heading('#0', text='Name')
-        self.treeview.heading('#1', text='ID')
+        kwargs['column'] = ('Name', )
+        TreeviewWithScrolling.__init__(self, parent, **kwargs)
+        self.heading('#0', text='Name')
+        self.heading('#1', text='ID')
+
         self.fill_from_label_schema(label_schema)
 
     def _empty_entries(self):
@@ -102,10 +65,7 @@ class SchemaViewer(Frame):
         None
         """
 
-        self.treeview.delete(*self.treeview.get_children())
-
-    def close_window(self):
-        self.root.withdraw()
+        self.delete(*self.get_children())
 
     def delete_entry(self, the_id):
         """
@@ -118,7 +78,7 @@ class SchemaViewer(Frame):
 
         # noinspection PyBroadException
         try:
-            self.treeview.delete(the_id)  # try to delete, and just skip if it fails
+            self.delete(the_id)  # try to delete, and just skip if it fails
         except Exception:
             pass
 
@@ -144,7 +104,7 @@ class SchemaViewer(Frame):
 
             # noinspection PyBroadException
             try:
-                self.treeview.delete(the_id)
+                self.delete(the_id)
             except Exception:
                 pass
 
@@ -153,7 +113,7 @@ class SchemaViewer(Frame):
             parent_id = self._label_schema.get_parent(the_id)
             the_index = self._label_schema.subtypes[parent_id].index(the_id)
             the_label = self._label_schema.labels[the_id]
-            self.treeview.insert(parent_id, the_index, the_id, text=the_label, values=(the_id,))
+            self.insert(parent_id, the_index, the_id, text=the_label, values=(the_id,))
             children = self._label_schema.subtypes.get(the_id, None)
             if children is not None:
                 for child_id in children:
@@ -181,29 +141,42 @@ class _SchemaSelectionWidget(object):
     Class for interactive label schema selection widget.
     """
 
-    def __init__(self, label_schema):
+    def __init__(self, label_schema, start_item=None):
         """
 
         Parameters
         ----------
         label_schema : str|LabelSchema
+        start_item : None|str
+            The initial item selected
         """
 
         # validate label schema input
-        label_schema = _validate_schema(label_schema)
+        if isinstance(label_schema, str):
+            label_schema = LabelSchema.from_file(label_schema)
+        if not isinstance(label_schema, LabelSchema):
+            raise TypeError(
+                'label_schema must be either a path to am appropriate .json file or a '
+                'LabelSchema object. Got type {}'.format(type(label_schema)))
+
         # initialize the selected value option
         self._selected_value = ''
 
         self.root = tkinter.Toplevel()
+        self.root.geometry('250x400')
         self.root.wm_title('Select Label Schema Entry')
-        self.viewer = SchemaViewer(self.root, label_schema=label_schema, geometry_size='250x400')
+
+        self.viewer = SchemaViewer(self.root, label_schema=label_schema)
+        self.viewer.frame.pack(side=tkinter.TOP, expand=tkinter.TRUE, fill=tkinter.BOTH)
+        self.set_selected_value(start_item)
         self.submit_button = Button(self.root, text='Submit', command=self.set_value)
-        self.submit_button.pack()
-        self.root.mainloop()
+        self.submit_button.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE)
+        self.root.grab_set()
+        self.root.wait_window()
 
     def set_value(self):
-        self._selected_value = self.viewer.treeview.focus()
-        self.root.quit()
+        self._selected_value = self.viewer.focus()
+        self.root.destroy()
 
     @property
     def selected_value(self):
@@ -219,7 +192,7 @@ class _SchemaSelectionWidget(object):
 
         Parameters
         ----------
-        selected_value : str
+        selected_value : None|str
 
         Returns
         -------
@@ -231,22 +204,8 @@ class _SchemaSelectionWidget(object):
 
         # noinspection PyBroadException
         try:
-            self.viewer.treeview.selection_set(selected_value)
-        except Exception:
-            pass
-
-    def destroy(self):
-        """
-        Destroy the widget elements.
-
-        Returns
-        -------
-        None
-        """
-
-        # noinspection PyBroadException
-        try:
-            self.root.destroy()
+            self.viewer.selection_set(selected_value)
+            self.viewer.item(selected_value, open=True)
         except Exception:
             pass
 
@@ -267,10 +226,8 @@ def select_schema_entry(label_schema, start_id=None):
     str
     """
 
-    selection_widget = _SchemaSelectionWidget(label_schema)
-    selection_widget.set_selected_value(start_id)
+    selection_widget = _SchemaSelectionWidget(label_schema, start_item=start_id)
     value = selection_widget.selected_value
-    selection_widget.destroy()
     return value
 
 
@@ -307,7 +264,7 @@ class LabelEntryPanel(Frame):
         self._current_id = None
         self._parent_id = None
         self._new_entry = False
-        self.id_changed = None
+        self.id_changed = None  # state variable for external usage
 
         self.parent = parent
         Frame.__init__(self, parent, **kwargs)
@@ -462,8 +419,8 @@ class LabelEntryPanel(Frame):
         else:
 
             try:
-                result = self.label_schema.change_entry(the_id, the_name, the_parent)
-                self.id_changed = the_id
+                if self.label_schema.change_entry(the_id, the_name, the_parent):
+                    self.id_changed = the_id
             except Exception as e:
                 showinfo("Edit Error", message="Editing error - {}".format(e))
                 return False
@@ -546,7 +503,8 @@ class SchemaEditor(Frame):
         self.frame2.pack(side=tkinter.TOP, fill=tkinter.X)
 
         self.schema_viewer = SchemaViewer(self)
-        self.schema_viewer.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
+        self.schema_viewer.frame.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
+        # NB: it's already packed inside a frame
 
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
@@ -564,13 +522,18 @@ class SchemaEditor(Frame):
         self.parent.config(menu=menu)
 
         # setup entry configs and some validation callbacks
-        self.schema_viewer.treeview.bind('<<TreeviewSelect>>', self.item_selected_on_viewer)
+        self.schema_viewer.bind('<<TreeviewSelect>>', self.item_selected_on_viewer)
 
-        self.version_entry.config(validate='focusout', validatecommand=self._version_entry_validate)
+        self.version_entry.config(
+            validate='focusout', validatecommand=self.register(self._version_entry_validate))
         self.version_date_entry.config(state='disabled')
-        self.classification_entry.config(validate='focusout', validatecommand=self._classification_validate)
-        self.confidence_entry.config(validate='focusout', validatecommand=self._confidence_validate)
-        self.geometries_entry.config(state='disabled')
+        self.classification_entry.config(
+            validate='focusout', validatecommand=self.register(self._classification_validate))
+        self.confidence_entry.config(
+            validate='focusout', validatecommand=self.register(self._confidence_validate))
+        self.geometries_entry.config(
+            validate='focusout', validatecommand=(self.register(self._geometry_validate), ),
+            invalidcommand=(self.register(self._geometry_invalid), ))
         self.edit_button.config(command=self.callback_edit_entry)
         self.new_button.config(command=self.callback_new_entry)
         self.delete_button.config(command=self.callback_delete_entry)
@@ -617,7 +580,10 @@ class SchemaEditor(Frame):
         if the_value == '':
             the_values = None
         else:
-            temp_values = the_value.split()
+            if ',' in the_value:
+                temp_values = [entry.strip() for entry in the_value.split(',')]
+            else:
+                temp_values = the_value.split()
 
             # noinspection PyBroadException
             try:
@@ -625,10 +591,53 @@ class SchemaEditor(Frame):
             except Exception:
                 the_values = temp_values
 
+            # reformat the contents
+            self.confidence_entry.delete(0, len(the_value))
+            self.confidence_entry.insert(0, ', '.join('{}'.format(entry) for entry in the_values))
+
         if self.label_schema.confidence_values != the_values:
             self.variables.unsaved_edits = True
             self.label_schema.confidence_values = the_values
         return True
+
+    def _geometry_validate(self):
+        the_value = self.geometries_entry.get().strip()
+
+        if the_value == '':
+            the_values = None
+        else:
+            if ',' in the_value:
+                the_values = [entry.strip().lower() for entry in the_value.split(',')]
+            else:
+                the_values = [entry.lower() for entry in the_value.split()]
+
+        if (self.label_schema.permitted_geometries == the_values) or \
+                (self.label_schema.permitted_geometries is None and the_values is None):
+            return True
+        try:
+            self.label_schema.permitted_geometries = the_values
+            self.variables.unsaved_edits = True
+
+            # reformat the contents
+            self.geometries_entry.delete(0, len(the_value))
+            self.geometries_entry.insert(0, ', '.join(self.label_schema.permitted_geometries))
+
+            return True
+        except ValueError:
+            return False
+
+    def _geometry_invalid(self):
+        showinfo(
+            'geometry type guidance',
+            message='The contents for geometry should be a space delimited\n'
+                    'combination of {"point", "line", "polygon"}')
+        self.geometries_entry.focus_set()
+        temp = self.geometries_entry.get()
+        self.geometries_entry.delete(0, len(temp))
+        if self.label_schema is None or self.label_schema.permitted_geometries is None:
+            self.geometries_entry.insert(0, '')
+        else:
+            self.geometries_entry.insert(0, ' '.join(self.label_schema.permitted_geometries))
 
     # some helper methods
     def _set_focus_on_entry_popup(self):
@@ -668,33 +677,41 @@ class SchemaEditor(Frame):
 
     def _update_schema_display(self):
         if self.variables.label_schema is None:
-            self.version_entry.config(state='disabled', text='')
+            self.version_entry.config(state='disabled')
+            self.version_entry.set_text('')
             self.version_date_entry.set_text('')
-            self.classification_entry.config(state='disabled', text='')
-            self.confidence_entry.config(state='disabled', text='')
-            self.geometries_entry.config(state='disabled', text='')
+            self.classification_entry.config(state='disabled')
+            self.classification_entry.set_text('')
+            self.confidence_entry.config(state='disabled')
+            self.confidence_entry.set_text('')
+            self.geometries_entry.config(state='disabled')
+            self.geometries_entry.set_text('')
         else:
-            self.version_entry.config(state='normal')
+            self.version_entry.config(validate='none')
             self.version_entry.set_text(self.label_schema.version)
+            self.version_entry.config(validate='focusout', state='normal')
 
             self.version_date_entry.set_text(self.label_schema.version_date)
 
-            self.classification_entry.config(state='normal')
+            self.classification_entry.config(validate='none')
             self.classification_entry.set_text(self.label_schema.classification)
+            self.classification_entry.config(validate='focusout', state='normal')
 
-            self.confidence_entry.config(state='normal')
+            self.confidence_entry.config(validate='none')
             if self.label_schema.confidence_values is None:
                 self.confidence_entry.set_text('')
             else:
                 self.confidence_entry.set_text(
                     ' '.join('{}'.format(entry) for entry in self.label_schema.confidence_values))
+            self.confidence_entry.config(validate='focusout', state='normal')
 
-            self.confidence_entry.config(state='normal')
+            self.geometries_entry.config(validate='none')
             if self.label_schema.permitted_geometries is None:
                 self.geometries_entry.set_text('')
             else:
                 self.geometries_entry.set_text(
                     ' '.join(self.label_schema.permitted_geometries))
+            self.geometries_entry.config(validate='focusout', state='normal')
 
         self.schema_viewer.fill_from_label_schema(self.variables.label_schema)
         self.entry.update_label_schema()
@@ -739,7 +756,7 @@ class SchemaEditor(Frame):
             raise TypeError(
                 'input must be the path for a label schema file or a LabelSchema instance')
 
-        self.variables.unsaved_edits = True
+        self.variables.unsaved_edits = False
         self.variables.current_id = None
         self._update_schema_display()
 
@@ -753,8 +770,8 @@ class SchemaEditor(Frame):
         self.variables.current_id = value
         self.entry.update_current_id()
         if value is not None:
-            self.schema_viewer.treeview.focus(value)
-            self.schema_viewer.treeview.selection_set(value)
+            self.schema_viewer.focus(value)
+            self.schema_viewer.selection_set(value)
 
     # callbacks and bound methods
     def save(self):
@@ -862,7 +879,7 @@ class SchemaEditor(Frame):
 
     # noinspection PyUnusedLocal
     def item_selected_on_viewer(self, event):
-        item_id = self.schema_viewer.treeview.focus()
+        item_id = self.schema_viewer.focus()
         if item_id == '':
             return
         self.set_current_id(item_id)
