@@ -25,7 +25,7 @@ from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, \
 from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.panel_builder import WidgetPanel, RadioButtonPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.utils.image_utils import frame_sequence_utils
+from tk_builder.utils.frame_sequence_utils import save_numpy_frame_sequence_to_animated_gif
 
 from tk_builder.widgets.widget_descriptors import RadioButtonDescriptor, \
     PanelDescriptor, ImagePanelDescriptor, CheckButtonDescriptor, LabelDescriptor, \
@@ -472,7 +472,7 @@ class ApertureTool(WidgetPanel):
             self.step_animation(direction_forward_or_back)
             self.phase_history_panel.update()
         fps = float(self.animation_panel.animation_settings.frame_rate.get())
-        frame_sequence_utils.save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
+        save_numpy_frame_sequence_to_animated_gif(frame_sequence, filename, fps)
         self.animation_panel.animation_settings.enable_all_widgets()
 
     def callback_step_forward(self):

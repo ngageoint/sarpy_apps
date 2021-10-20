@@ -6,22 +6,16 @@ __author__ = "Jason Casey"
 import os
 
 import tkinter
-from tkinter.filedialog import askopenfilename, asksaveasfilename
-
-import numpy
+from tkinter.filedialog import askopenfilename
 
 from tk_builder.base_elements import StringDescriptor, IntegerDescriptor, TypedDescriptor
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.utils.geometry_utils.kml_util import KmlUtil
 from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader
 
-import sarpy.geometry.point_projection as point_projection
-import sarpy.geometry.geocoords as geocoords
 from sarpy.visualization.remap import get_remap_list
 
 
@@ -105,42 +99,6 @@ class CanvasDemo(WidgetPanel):
 
         self.canvas_demo_image_panel.canvas.on_left_mouse_click(self.callback_handle_canvas_left_mouse_click)
         self.canvas_demo_image_panel.canvas.on_left_mouse_release(self.callback_handle_canvas_left_mouse_release)
-
-    def callback_save_kml(self):
-        kml_save_fname = asksaveasfilename(initialdir=os.path.expanduser("~/Downloads"))
-
-        kml_util = KmlUtil()
-
-        for shape_id in self.canvas_demo_image_panel.canvas.variables.shape_ids:
-            image_coords = self.canvas_demo_image_panel.canvas.get_shape_image_coords(shape_id)
-            shape_type = self.canvas_demo_image_panel.canvas.get_shape_type(shape_id)
-            if image_coords:
-                sicd_meta = self.canvas_demo_image_panel.canvas.variables.canvas_image_object.reader_object.sicdmeta
-                image_points = numpy.zeros((int(len(image_coords)/2), 2))
-                image_points[:, 0] = image_coords[0::2]
-                image_points[:, 1] = image_coords[1::2]
-
-                ground_points_ecf = point_projection.image_to_ground(image_points, sicd_meta)
-                ground_points_latlon = geocoords.ecf_to_geodetic(ground_points_ecf)
-
-                world_y_coordinates = ground_points_latlon[:, 0]
-                world_x_coordinates = ground_points_latlon[:, 1]
-
-                xy_point_list = [(x, y) for x, y in zip(world_x_coordinates, world_y_coordinates)]
-
-                if shape_id == self.canvas_demo_image_panel.canvas.variables.zoom_rect.uid:
-                    pass
-                elif shape_type == self.canvas_demo_image_panel.canvas.variables.select_rect.uid:
-                    pass
-                elif shape_type == ShapeTypeConstants.POINT:
-                    kml_util.add_point(str(shape_id), xy_point_list[0])
-                elif shape_type == ShapeTypeConstants.LINE:
-                    kml_util.add_linestring(str(shape_id), xy_point_list)
-                elif shape_type == ShapeTypeConstants.POLYGON:
-                    kml_util.add_polygon(str(shape_id), xy_point_list)
-                elif shape_type == ShapeTypeConstants.RECT:
-                    kml_util.add_polygon(str(shape_id), xy_point_list)
-        kml_util.write_to_file(kml_save_fname)
 
     def callback_handle_canvas_left_mouse_click(self, event):
         self.canvas_demo_image_panel.canvas.callback_handle_left_mouse_click(event)

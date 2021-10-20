@@ -22,7 +22,7 @@ from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.received.base import CRSDTypeReader
 
 from tk_builder.panels.image_panel import ImagePanel
-import tk_builder.utils.color_utils.color_converter as color_converter
+from tk_builder.utils.color_utils import rgb_to_hex
 from tk_builder.image_reader import NumpyCanvasImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 
 
 class Colors(object):
-    layover = color_converter.rgb_to_hex((1, 0.65, 0))
-    shadow = color_converter.rgb_to_hex((0, 0.65, 1))
-    multipath = color_converter.rgb_to_hex((1, 0, 0))
-    north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
-    flight_direction = color_converter.rgb_to_hex((1, 1, 0))
+    layover = rgb_to_hex((1, 0.65, 0))
+    shadow = rgb_to_hex((0, 0.65, 1))
+    multipath = rgb_to_hex((1, 0, 0))
+    north = rgb_to_hex((0.58, 0.82, 0.31))
+    flight_direction = rgb_to_hex((1, 1, 0))
 
 
 class ArrowWidths(object):
