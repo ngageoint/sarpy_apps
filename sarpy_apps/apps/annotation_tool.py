@@ -16,7 +16,6 @@ from tkinter.messagebox import showinfo, askyesnocancel
 from tkinter.colorchooser import askcolor
 from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
 
-
 from tk_builder.base_elements import StringDescriptor, BooleanDescriptor
 from tk_builder.widgets.image_canvas_tool import ShapeTypeConstants
 from tk_builder.image_reader import CanvasImageReader
@@ -1120,14 +1119,10 @@ class AnnotateTabControl(Frame):
     A tab control panel which holds the feature details panels
     """
 
-    tab_control = TypedDescriptor(
-        'tab_control', Notebook)  # type: Notebook
-
     def __init__(self, master, app_variables, **kwargs):
 
         Frame.__init__(self, master, **kwargs)
-
-        self.tab_control = Notebook(self)
+        self.tab_control = Notebook(self)  # type: Notebook
         self.details_tab = AnnotateDetailsPanel(self, app_variables)
         self.geometry_tab = GeometryDetailsPanel(self, app_variables)
 
@@ -1156,10 +1151,6 @@ class AnnotateTabControl(Frame):
 
 
 class AnnotationPanel(Frame):
-    name_panel = TypedDescriptor('name_panel', NamePanel)  # type: NamePanel
-    tab_panel = TypedDescriptor('tab_panel', AnnotateTabControl)  # type: AnnotateTabControl
-    button_panel = TypedDescriptor('button_panel', AnnotateButtons)  # type: AnnotateButtons
-
     def __init__(self, master, app_variables, **kwargs):
         """
 
@@ -1175,13 +1166,13 @@ class AnnotationPanel(Frame):
         Frame.__init__(self, master, **kwargs)
         self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
 
-        self.name_panel = NamePanel(self, app_variables)
+        self.name_panel = NamePanel(self, app_variables)  # type: NamePanel
         self.name_panel.grid(row=0, column=0, sticky='NSEW')
 
-        self.tab_panel = AnnotateTabControl(self, app_variables)
+        self.tab_panel = AnnotateTabControl(self, app_variables)  # type: AnnotateTabControl
         self.tab_panel.grid(row=1, column=0, sticky='NSEW')
 
-        self.button_panel = AnnotateButtons(self)
+        self.button_panel = AnnotateButtons(self)  # type: AnnotateButtons
         self.button_panel.grid(row=2, column=0, sticky='NSEW')
 
         self.grid_rowconfigure(1, weight=1)
@@ -1628,8 +1619,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
     """
     The main annotation tool
     """
-    _new_annotation_type = AnnotationFeature
-    _new_file_annotation_type = FileAnnotationCollection
+    _NEW_ANNOTATION_TYPE = AnnotationFeature
+    _NEW_FILE_ANNOTATION_TYPE = FileAnnotationCollection
 
     def __init__(self, master, reader=None, annotation_collection=None, **kwargs):
         """
@@ -1643,7 +1634,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         kwargs
         """
 
-        self.variables = AppVariables()
+        if not hasattr(self, 'variables'):
+            self.variables = AppVariables()  # type: AppVariables
+
         if 'sashrelief' not in kwargs:
             kwargs['sashrelief'] = tkinter.RIDGE
         if 'orient' not in kwargs:
@@ -1673,17 +1666,17 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.exit)
         # edit popup menu
-        edit_menu = tkinter.Menu(menu_bar, tearoff=0)
-        edit_menu.add_command(label='Replicate Selected', command=self.callback_replicate_feature)
-        file_menu.add_separator()
-        edit_menu.add_command(label='Delete Selected', command=self.callback_delete_feature)
+        self.edit_menu = tkinter.Menu(menu_bar, tearoff=0)
+        self.edit_menu.add_command(label='Replicate Selected', command=self.callback_replicate_feature)
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(label='Delete Selected', command=self.callback_delete_feature)
         # metadata popup menu
         metadata_menu = tkinter.Menu(menu_bar, tearoff=0)
         metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         # configure menubar
         menu_bar.add_cascade(label="File", menu=file_menu)
-        menu_bar.add_cascade(label="Edit", menu=edit_menu)
+        menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
         menu_bar.add_cascade(label="Metadata", menu=metadata_menu)
         self.master.config(menu=menu_bar)
 
@@ -1860,6 +1853,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             return False
         return True
 
+    def _get_default_collection(self):
+        return self._NEW_FILE_ANNOTATION_TYPE(image_file_name=self.image_file_name)
+
     def set_annotations(self, annotation_collection):
         if self.variables.image_reader is None:
             return  # nothing to be done
@@ -1874,7 +1870,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             else:
                 try:
                     annotation_filename = annotation_collection
-                    annotation_collection = self._new_file_annotation_type.from_file(annotation_filename)
+                    annotation_collection = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_filename)
                 except Exception as e:
                     showinfo('File Annotation Error',
                              message='Opening annotation file {} failed with error {}.'.format(
@@ -1883,10 +1879,10 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
                     annotation_collection = None
 
         if annotation_collection is None:
-            annotation_collection = self._new_file_annotation_type(image_file_name=self.image_file_name)
+            annotation_collection = self._get_default_collection()
 
-        if not isinstance(annotation_collection, self._new_file_annotation_type):
-            raise TypeError('annotation collection must be of type {}'.format(self._new_file_annotation_type))
+        if not isinstance(annotation_collection, self._NEW_FILE_ANNOTATION_TYPE):
+            raise TypeError('annotation collection must be of type {}'.format(self._NEW_FILE_ANNOTATION_TYPE))
 
         # validate the the image selected matches the annotation image name
         _, image_fname = os.path.split(self.image_file_name)
@@ -2481,7 +2477,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
     def callback_new_annotation(self):
         if self.variables.file_annotation_collection is not None:
             # create a new feature and add it to tracking
-            annotation = self._new_annotation_type()
+            annotation = self._NEW_ANNOTATION_TYPE()
             self.variables.file_annotation_collection.add_annotation(annotation)
             self.variables.initialize_feature_tracking(annotation.uid)
 
@@ -2536,6 +2532,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         event
         """
 
+        # todo: what to do here?
         self.my_populate_metaicon()
 
     def shape_create_on_canvas(self, event):

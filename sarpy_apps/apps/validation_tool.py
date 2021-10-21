@@ -193,7 +193,6 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         """
 
-        self.root = primary
         self.variables = AppVariables()
 
         if 'sashrelief' not in kwargs:
@@ -240,7 +239,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
-        self.root.config(menu=menubar)
+        self.master.config(menu=menubar)
 
         # set the callbacks for the button panel
         self.button_panel.local_fs_button.config(command=self.callback_local_fs)
@@ -261,7 +260,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
     def _get_and_log_feedback(self, title_text):
         # type: (str) -> None
-        feedback = FeedbackPopup(self.root, title_text)
+        feedback = FeedbackPopup(self.master, title_text)
         feedback.root.grab_set()
         feedback.root.wait_window()
         if not feedback.use_feedback:
@@ -288,7 +287,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        self.root.destroy()
+        self.master.destroy()
 
     def save_log(self):
         if self.variables.image_reader is None or self.log_handler is None:
@@ -414,9 +413,8 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         # create a complex image reader - don't pass the same one around, so no hidden state
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
-        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = LocalFrequencySupportTool(root)
-        tool.update_reader(reader)
+        root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = LocalFrequencySupportTool(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -433,9 +431,8 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         # create a complex image reader - don't pass the same one around, so no hidden state
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
-        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = FullFrequencySupportTool(root)
-        tool.update_reader(reader)
+        root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = FullFrequencySupportTool(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -452,9 +449,8 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         # create a complex image reader - don't pass the same one around, so no hidden state
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the aperture tool based on this reader
-        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = RegionSelection(root)
-        tool.update_reader(reader)
+        root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = RegionSelection(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -472,8 +468,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the rcs tool based on this reader
         root = tkinter.Toplevel()  # create a new toplevel with its own mainloop, so it's blocking
-        tool = RCSTool(root)
-        tool.update_reader(reader)
+        tool = RCSTool(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
