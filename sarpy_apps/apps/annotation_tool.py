@@ -24,8 +24,7 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button, \
     Combobox, Notebook
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling
-from tk_builder.widgets.widget_descriptors import LabelDescriptor, ButtonDescriptor, \
-    EntryDescriptor, ComboboxDescriptor, TypedDescriptor
+from tk_builder.widgets.widget_descriptors import LabelDescriptor, EntryDescriptor, TypedDescriptor
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection, all_files, json_files
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
@@ -451,16 +450,6 @@ class NamePanel(Frame):
     A simple panel for name display
     """
 
-    id_label = LabelDescriptor(
-        'id_label', default_text='ID:')  # type: Label
-    id_value = LabelDescriptor(
-        'id_value', default_text='')  # type: Label
-
-    name_label = LabelDescriptor(
-        'name_label', default_text='Name:')  # type: Label
-    name_value = EntryDescriptor(
-        'name_value', default_text='<no name>')  # type: Entry
-
     def __init__(self, master, app_variables, **kwargs):
         """
 
@@ -477,14 +466,14 @@ class NamePanel(Frame):
         Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
-        self.id_label = Label(self, text='ID:', width=12)
+        self.id_label = Label(self, text='ID:', width=12)  # type: Label
         self.id_label.grid(row=0, column=0, sticky='NW')
-        self.id_value = Label(self, text='', width=12)
+        self.id_value = Label(self, text='', width=12)  # type: Label
         self.id_value.grid(row=0, column=1, sticky='NEW')
 
-        self.name_label = Label(self, text='Name:', width=12)
+        self.name_label = Label(self, text='Name:', width=12)  # type: Label
         self.name_label.grid(row=1, column=0, sticky='NW')
-        self.name_value = Entry(self, text=self.default_name, width=12)
+        self.name_value = Entry(self, text=self.default_name, width=12)  # type: Entry
         self.name_value.grid(row=1, column=1, sticky='NEW')
 
         self.grid_columnconfigure(1, weight=1)
@@ -563,16 +552,6 @@ class AnnotateDetailsPanel(Frame):
     A panel for displaying the basic details of the annotation
     """
 
-    directory_label = LabelDescriptor(
-        'directory_label', default_text='Directory:')  # type: Label
-    directory_value = ComboboxDescriptor(
-        'directory_value', default_text='')  # type: Combobox
-
-    description_label = LabelDescriptor(
-        'description_label', default_text='Description:')  # type: Label
-    description_value = TypedDescriptor(
-        'description_value', TextWithScrolling)  # type: TextWithScrolling
-
     def __init__(self, master, app_variables, **kwargs):
         """
 
@@ -590,14 +569,14 @@ class AnnotateDetailsPanel(Frame):
         Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
-        self.directory_label = Label(self, text='Directory:', width=12)
+        self.directory_label = Label(self, text='Directory:', width=12)  # type: Label
         self.directory_label.grid(row=0, column=0, sticky='NW', padx=5, pady=5)
-        self.directory_value = Combobox(self, text='')
+        self.directory_value = Combobox(self, text='')  # type: Combobox
         self.directory_value.grid(row=0, column=1, sticky='NEW', padx=5, pady=5)
 
-        self.description_label = Label(self, text='Description:', width=12)
+        self.description_label = Label(self, text='Description:', width=12)  # type: Label
         self.description_label.grid(row=1, column=0, sticky='NW', padx=5, pady=5)
-        self.description_value = TextWithScrolling(self)
+        self.description_value = TextWithScrolling(self)  # type: TextWithScrolling
         self.description_value.frame.grid(row=1, column=1, sticky='NSEW', padx=5, pady=5)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -687,18 +666,6 @@ class AnnotateDetailsPanel(Frame):
 
 class GeometryButtons(Frame):
     _shapes = ('point', 'line', 'rectangle', 'ellipse', 'polygon')
-    label = LabelDescriptor(
-        'label', default_text='Add Geometry:')  # type: Label
-    point = ButtonDescriptor(
-        'point', default_text='Point')  # type: Button
-    line = ButtonDescriptor(
-        'line', default_text='Line')  # type: Button
-    rectangle = ButtonDescriptor(
-        'rectangle', default_text='Rectangle')  # type: Button
-    ellipse = ButtonDescriptor(
-        'ellipse', default_text='Ellipse')  # type: Button
-    polygon = ButtonDescriptor(
-        'polygon', default_text='Polygon')  # type: Button
 
     def __init__(self, master, active_shapes=None, **kwargs):
         """
@@ -715,17 +682,17 @@ class GeometryButtons(Frame):
         Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2, relief=tkinter.RIDGE)
 
-        self.label = Label(self, text='Add Geometry:')
+        self.label = Label(self, text='Add Geometry:')  # type: Label
         self.label.pack(side=tkinter.LEFT, padx=5, pady=5)
-        self.point = Button(self, text='Point')
+        self.point = Button(self, text='Point')  # type: Button
         self.point.pack(side=tkinter.LEFT, padx=5, pady=5)
-        self.line = Button(self, text='Line')
+        self.line = Button(self, text='Line')  # type: Button
         self.line.pack(side=tkinter.LEFT, padx=5, pady=5)
-        self.rectangle = Button(self, text='Rectangle')
+        self.rectangle = Button(self, text='Rectangle')  # type: Button
         self.rectangle.pack(side=tkinter.LEFT, padx=5, pady=5)
-        self.ellipse = Button(self, text='Ellipse')
+        self.ellipse = Button(self, text='Ellipse')  # type: Button
         self.ellipse.pack(side=tkinter.LEFT, padx=5, pady=5)
-        self.polygon = Button(self, text='Polygon')
+        self.polygon = Button(self, text='Polygon')  # type: Button
         self.polygon.pack(side=tkinter.LEFT, padx=5, pady=5)
 
         self.set_active_shapes(active_shapes)
@@ -957,14 +924,6 @@ class GeometryDetailsPanel(Frame):
     A panel for displaying the basic geometry details
     """
 
-    geometry_buttons = TypedDescriptor(
-        'geometry_buttons', GeometryButtons, docstring='the button panel')  # type: GeometryButtons
-    geometry_view = TypedDescriptor(
-        'geometry_view', TreeviewWithScrolling, docstring='the geometry viewer')  # type: TreeviewWithScrolling
-    geometry_properties_panel = TypedDescriptor(
-        'geometry_properties_panel', GeometryPropertiesPanel,
-        docstring='the geometry properties')  # type: GeometryPropertiesPanel
-
     def __init__(self, master, app_variables, **kwargs):
         """
 
@@ -979,15 +938,18 @@ class GeometryDetailsPanel(Frame):
         self.annotation_feature = None  # type: Union[None, AnnotationFeature]
 
         Frame.__init__(self, master, **kwargs)
-        self.geometry_buttons = GeometryButtons(self, active_shapes=None)
+        self.geometry_buttons = GeometryButtons(
+            self, active_shapes=None)  # type: GeometryButtons
         self.geometry_buttons.grid(row=0, column=0, columnspan=2, sticky='NEW', padx=3, pady=3)
 
-        self.geometry_view = TreeviewWithScrolling(self, selectmode=tkinter.BROWSE)
+        self.geometry_view = TreeviewWithScrolling(
+            self, selectmode=tkinter.BROWSE)  # type: TreeviewWithScrolling
         self.geometry_view.heading('#0', text='Name')
         self.geometry_view.frame.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)
         # NB: reference the frame for packing, since it's already packed into a frame
 
-        self.geometry_properties_panel = GeometryPropertiesPanel(self, app_variables)
+        self.geometry_properties_panel = GeometryPropertiesPanel(
+            self, app_variables)  # type: GeometryPropertiesPanel
         self.geometry_properties_panel.grid(row=1, column=1, sticky='NSEW', padx=3, pady=3)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -1031,10 +993,6 @@ class GeometryDetailsPanel(Frame):
     def _empty_entries(self):
         """
         Empty all entries - for the purpose of reinitializing.
-
-        Returns
-        -------
-        None
         """
 
         self.geometry_view.delete(*self.geometry_view.get_children())
@@ -1120,7 +1078,7 @@ class AnnotateTabControl(Frame):
     """
 
     def __init__(self, master, app_variables, **kwargs):
-
+        self.app_variables = app_variables
         Frame.__init__(self, master, **kwargs)
         self.tab_control = Notebook(self)  # type: Notebook
         self.details_tab = AnnotateDetailsPanel(self, app_variables)
@@ -1634,8 +1592,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         kwargs
         """
 
-        if not hasattr(self, 'variables'):
-            self.variables = AppVariables()  # type: AppVariables
+        self.variables = AppVariables()  # type: AppVariables
 
         if 'sashrelief' not in kwargs:
             kwargs['sashrelief'] = tkinter.RIDGE
@@ -1651,34 +1608,35 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             self.image_panel, width=400, height=700, padx=3, pady=3, sticky='NSEW', stretch=tkinter.FIRST)
 
         self.collection_panel = AnnotationCollectionPanel(self, self.variables)
+
         self.add(self.collection_panel, width=200, height=700, padx=3, pady=3, sticky='NSEW')
 
         # file menu
-        menu_bar = tkinter.Menu()
-        file_menu = tkinter.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Open Image", command=self.select_image_file)
-        file_menu.add_command(label="Open Directory", command=self.select_image_directory)
-        file_menu.add_separator()
-        file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
-        file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
-        file_menu.add_separator()
-        file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.exit)
+        self.menu_bar = tkinter.Menu()
+        self.file_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.file_menu.add_command(label="Open Image", command=self.select_image_file)
+        self.file_menu.add_command(label="Open Directory", command=self.select_image_directory)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
+        self.file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.exit)
         # edit popup menu
-        self.edit_menu = tkinter.Menu(menu_bar, tearoff=0)
+        self.edit_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.edit_menu.add_command(label='Replicate Selected', command=self.callback_replicate_feature)
         self.edit_menu.add_separator()
         self.edit_menu.add_command(label='Delete Selected', command=self.callback_delete_feature)
         # metadata popup menu
-        metadata_menu = tkinter.Menu(menu_bar, tearoff=0)
-        metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         # configure menubar
-        menu_bar.add_cascade(label="File", menu=file_menu)
-        menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
-        menu_bar.add_cascade(label="Metadata", menu=metadata_menu)
-        self.master.config(menu=menu_bar)
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
+        self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
+        self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
+        self.master.config(menu=self.menu_bar)
 
         # hide unwanted elements on the panel toolbars
         self.image_panel.hide_tools('new_shape')
@@ -1713,7 +1671,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.annotate.button_panel.cancel_button.config(command=self.callback_popup_cancel)
         self.annotate.button_panel.apply_button.config(command=self.callback_popup_apply)
 
-        # bind the new geoemtry buttons explicitly
+        # bind the new geometry buttons explicitly
         self.annotate.tab_panel.geometry_tab.geometry_buttons.point.config(command=self.callback_new_point)
         self.annotate.tab_panel.geometry_tab.geometry_buttons.line.config(command=self.callback_new_line)
         self.annotate.tab_panel.geometry_tab.geometry_buttons.rectangle.config(command=self.callback_new_rect)
