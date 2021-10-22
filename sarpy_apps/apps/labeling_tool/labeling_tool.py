@@ -11,10 +11,13 @@ from typing import Union
 from datetime import datetime
 
 import tkinter
+from tkinter import ttk, PanedWindow
+
 from tkinter.messagebox import showinfo
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 from tk_builder.base_elements import TypedDescriptor
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox, Entry
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling
 
@@ -26,6 +29,7 @@ from sarpy_apps.apps.labeling_tool.schema_editor import SchemaEditor, select_sch
 from sarpy.annotation.label import FileLabelCollection, LabelCollection, \
     LabelFeature, LabelProperties, LabelMetadataList, LabelMetadata, LabelSchema
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 
 def get_default_schema():
@@ -47,7 +51,7 @@ class AppVariables(AppVariables_Annotate):
             self.file_annotation_collection.label_schema
 
     def get_label(self, label_id):
-        if self.file_annotation_collection is None:
+        if self.file_annotation_collection is None or label_id is None:
             return None
         return self.file_annotation_collection.label_schema.labels[label_id]
 
@@ -106,12 +110,12 @@ class LabelSpecificsPanel(Frame):
 
         self.user_id_label = Label(self, text='User ID:', relief=tkinter.RIDGE, width=15, padding=3)
         self.user_id_label.grid(row=3, column=0, sticky='NEW', padx=3, pady=3)
-        self.user_id_value = Entry(self, text='', relief=tkinter.RIDGE, width=15, padding=3, state='disabled')
+        self.user_id_value = Entry(self, text='', relief=tkinter.RIDGE, width=15, state='disabled')
         self.user_id_value.grid(row=3, column=1, sticky='NEW', padx=3, pady=3)
 
         self.timestamp_label = Label(self, text='Timestamp:', relief=tkinter.RIDGE, width=15, padding=3)
         self.timestamp_label.grid(row=4, column=0, sticky='NEW', padx=3, pady=3)
-        self.timestamp_value = Entry(self, text='', relief=tkinter.RIDGE, width=15, padding=3, state='disabled')
+        self.timestamp_value = Entry(self, text='', relief=tkinter.RIDGE, width=15, state='disabled')
         self.timestamp_value.grid(row=4, column=1, sticky='NEW', padx=3, pady=3)
 
         self.frame1 = Frame(self, borderwidth=1, relief=tkinter.RIDGE)
@@ -119,7 +123,7 @@ class LabelSpecificsPanel(Frame):
         self.cancel_button.pack(side=tkinter.RIGHT)
         self.submit_button = Button(self.frame1, text='Submit')
         self.submit_button.pack(side=tkinter.RIGHT)
-        self.frame1.grid(row=5, column=0, columspan=2, sticky='NSEW')
+        self.frame1.grid(row=5, column=0, columnspan=2, sticky='NSEW')
         self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
@@ -248,15 +252,15 @@ class LabelSpecificsPanel(Frame):
         self.update_annotation()
 
     def callback_submit(self):
-        # NB: this should be called by the controlling parent for holistic state change elsewhere
+        # NB: this should be called by the controlling parent for holistic state change everywhere
         status, msg = self._populate_values_into_inprogress()
         if not status:
             showinfo('Incomplete data population', message=msg)
-            return
+            return status
 
         self.current_metadata_list.insert_new_element(self.in_progess_metadata)
         self.in_progess_metadata = None
-        self.update_annotation()
+        return status
 
 
 class LabelDetailsPanel(Frame):
@@ -271,30 +275,81 @@ class LabelDetailsPanel(Frame):
         """
 
         self.app_variables = app_variables
+        self.current_annotation = None  # type: Union[None, LabelFeature]
         Frame.__init__(self, master, **kwargs)
-        # todo: what are the right pieces?
-        #   - sort of like geometry panel
-        #   - a button for new or add or something
-        #   - a simpler viewer (label & timestamp?)
-        #   - LabelSpecificsPanel (change name - LabelEditPanel?)
 
-        pass
+        self.update_label_button = Button(
+            self, text='Update Label', command=self.callback_update_label)  # type: Button
+        self.update_label_button.grid(row=0, column=0, columnspan=2, sticky='NE', padx=3, pady=3)
+
+        self.viewer = TreeviewWithScrolling(
+            self, columns=('confidence', ), selectmode=tkinter.BROWSE)  # type: TreeviewWithScrolling
+        self.viewer.heading('#0', text='Label')
+        self.viewer.heading('#1', text='Confidence')
+        self.viewer.frame.grid(row=1, column=0, sticky='NSEW', padx=3, pady=3)
+        # NB: reference the frame for packing, since it's already packed into a frame
+
+        self.label_specifics = LabelSpecificsPanel(self, app_variables, border=1, relief=tkinter.RIDGE)
+        self.label_specifics.grid(row=1, column=1, sticky='NSEW', padx=3, pady=3)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.update_annotation()
+
+        self.viewer.bind('<<TreeviewSelect>>', self.callback_label_selected_on_viewer)
+
+    def _set_focus(self, uid):
+        self.viewer.set_selection_with_expansion(uid)
+
+    def _empty_entries(self):
+        """
+        Empty all entries - for the purpose of reinitializing.
+        """
+
+        self.viewer.delete(*self.viewer.get_children())
+
+    def _fill_treeview(self):
+        """
+        Fills the treeview based on the current annotation.
+        """
+
+        if self.current_annotation is None or \
+                self.current_annotation.properties.parameters is None or \
+                len(self.current_annotation.properties.parameters):
+            self._empty_entries()
+            self.label_specifics.set_entry(None)
+            return
+
+        label_list = self.current_annotation.properties.parameters
+        for i, entry in enumerate(label_list):
+            label = self.app_variables.get_label(entry.label_id)
+            conf = '' if entry.confidence is None else entry.confidence
+            self.viewer.insert('', 'end', iid=str(i), text=label, values=(conf, ))
+        if len(label_list) > 0:
+            self._set_focus('0')
+
+    def callback_label_selected_on_viewer(self):
+        label_index = self.viewer.focus()
+        if label_index == '':
+            return
+        self.label_specifics.set_entry(int(label_index))
+
+    def callback_update_label(self):
+        self.label_specifics.set_entry(None)
+
+    def set_annotation_feature(self, annotation_feature):
+        self.current_annotation = annotation_feature
+        self._fill_treeview()
 
     def update_annotation(self):
-        # todo:
-        pass
-
-    def update_annotation_collection(self):
-        # todo:
-        pass
+        annotation_feature = self.app_variables.get_current_annotation_object()
+        self.set_annotation_feature(annotation_feature)
 
     def cancel(self):
-        # todo: nothing necessary here?
-        pass
+        self._fill_treeview()  # probably unnecessary
 
     def save(self):
-        # todo: nothing necessary here?
-        pass
+        self._fill_treeview()  # probably unnecessary
 
 
 #############
@@ -311,10 +366,27 @@ class LabelTabControl(AnnotateTabControl):
         self.geometry_tab.update_annotation()
         self.label_tab.update_annotation()
 
+    def _set_active_shapes(self):
+        label_schema = self.app_variables.label_schema  # type: LabelSchema
+        if label_schema is None or \
+                label_schema.permitted_geometries is None or \
+                len(label_schema.permitted_geometries) == 0:
+            shapes = None
+        else:
+            shapes = []
+            if 'point' in label_schema.permitted_geometries:
+                shapes.append('point')
+            if 'line' in label_schema.permitted_geometries:
+                shapes.append('line')
+            if 'polygon' in label_schema.permitted_geometries:
+                shapes.extend(['rectangle', 'ellipse', 'polygon'])
+        self.geometry_tab.geometry_buttons.set_active_shapes(shapes)
+
     def update_annotation_collection(self):
         self.details_tab.update_annotation_collection()
         self.geometry_tab.update_annotation()
         self.label_tab.update_annotation()
+        self._set_active_shapes()
 
     def cancel(self):
         self.details_tab.cancel()
@@ -465,9 +537,100 @@ class LabelingTool(AnnotationTool):
         """
 
         self.variables = AppVariables()  # type: AppVariables
-        AnnotationTool.__init__(master, reader=reader, annotation_collection=annotation_collection, **kwargs)
-        self.edit_menu.add_separator()
+
+        if 'sashrelief' not in kwargs:
+            kwargs['sashrelief'] = tkinter.RIDGE
+        if 'orient' not in kwargs:
+            kwargs['orient'] = tkinter.HORIZONTAL
+        PanedWindow.__init__(self, master, **kwargs)
+        WidgetWithMetadata.__init__(self, master)
+        self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
+
+        self.image_panel = ImagePanel(self)
+        self.image_panel.canvas.set_canvas_size(400, 500)
+        self.add(
+            self.image_panel, width=400, height=700, padx=3, pady=3, sticky='NSEW', stretch=tkinter.FIRST)
+
+        self.collection_panel = LabelCollectionPanel(self, self.variables)  # type: LabelCollectionPanel
+
+        self.add(self.collection_panel, width=200, height=700, padx=3, pady=3, sticky='NSEW')
+
+        # file menu
+        self.menu_bar = tkinter.Menu()
+        self.file_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.file_menu.add_command(label="Open Image", command=self.select_image_file)
+        self.file_menu.add_command(label="Open Directory", command=self.select_image_directory)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Open Existing Annotation File", command=self.select_annotation_file)
+        self.file_menu.add_command(label="Create New Annotation File", command=self.create_new_annotation_file)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Save Annotation File", command=self.save_annotation_file)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.exit)
+        # edit popup menu
+        self.edit_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.edit_menu.add_command(label='Edit Label Schema', command=self.callback_edit_schema)
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(label='Replicate Selected', command=self.callback_replicate_feature)
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(label='Delete Selected', command=self.callback_delete_feature)
+
+        # metadata popup menu
+        self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        # configure menubar
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
+        self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
+        self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
+        self.master.config(menu=self.menu_bar)
+
+        # hide unwanted elements on the panel toolbars
+        self.image_panel.hide_tools('new_shape')
+        self.image_panel.hide_shapes()
+        self.image_panel.hide_select_index()
+        # disable tools until an image is selected
+        self.image_panel.disable_tools()
+
+        self.collection_panel.new_button.config(command=self.callback_new_annotation)
+        self.collection_panel.edit_button.config(command=self.callback_popup_annotation)
+        self.collection_panel.zoom_button.config(command=self.callback_zoom_to_feature)
+        self.collection_panel.move_button.config(command=self.callback_move_feature)
+
+        # set up context panel canvas event listeners
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.sync_image_index_changed)
+        self.image_panel.canvas.bind('<<ShapeCreate>>', self.shape_create_on_canvas)
+        self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.shape_finalized_on_canvas)
+        self.image_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_canvas)
+        self.image_panel.canvas.bind('<<ShapeSelect>>', self.shape_selected_on_canvas)
+
+        # set up the label_panel viewer event listeners
+        self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
+
+        self.annotate_popup = tkinter.Toplevel(master)
+        self.annotate = LabelPanel(self.annotate_popup, self.variables)  # type: LabelPanel
+        self.annotate.hide_on_close()
+        self.annotate_popup.withdraw()
+
+        # bind actions/listeners from annotate popup
+        self.annotate.tab_panel.geometry_tab.bind('<<GeometryPropertyChanged>>', self.geometry_selected_on_viewer)
+        self.annotate.button_panel.delete_button.config(command=self.callback_delete_geometry)
+        self.annotate.button_panel.cancel_button.config(command=self.callback_popup_cancel)
+        self.annotate.button_panel.apply_button.config(command=self.callback_popup_apply)
+
+        # bind the new geometry buttons explicitly
+        self.annotate.tab_panel.geometry_tab.geometry_buttons.point.config(command=self.callback_new_point)
+        self.annotate.tab_panel.geometry_tab.geometry_buttons.line.config(command=self.callback_new_line)
+        self.annotate.tab_panel.geometry_tab.geometry_buttons.rectangle.config(command=self.callback_new_rect)
+        self.annotate.tab_panel.geometry_tab.geometry_buttons.ellipse.config(command=self.callback_new_ellipse)
+        self.annotate.tab_panel.geometry_tab.geometry_buttons.polygon.config(command=self.callback_new_polygon)
+
+        # bind the label specifics submit button specifically
+        self.annotate.tab_panel.label_tab.label_specifics.submit_button.config(command=self.callback_submit_label)
+
+        self.set_reader(reader)
+        self.set_annotations(annotation_collection)
+        self.annotate.update_annotation_collection()
 
     def set_title(self):
         """
@@ -564,8 +727,9 @@ class LabelingTool(AnnotationTool):
             showinfo(
                 'label schema editing',
                 message='You are opting to edit the label schema with existing labeled features.\n'
-                        'Deleting any labels which are currently applied with result in a non-viable label collection.\n'
-                        'Do not delete any labels from the schema unless you are sure.')
+                        'Deleting any labels which are currently applied somewhere will result\n'
+                        'in a non-viable label collection, and no error checking will be performed here.\n'
+                        '\nDo not delete any labels from the schema unless you are sure.')
 
         root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
         tool = SchemaEditor(root, label_schema=self.variables.file_annotation_collection.label_schema)
@@ -573,3 +737,53 @@ class LabelingTool(AnnotationTool):
         root.wait_window()
         # update for any important state changes
         self.set_annotations(self.variables.file_annotation_collection)
+
+    def callback_submit_label(self):
+        """
+        Submit the new label for the selected feature
+        """
+
+        if self.annotate.tab_panel.label_tab.label_specifics.callback_submit():
+            self.annotate.update_annotation()
+            self.collection_panel.update_annotation()
+
+
+def main(reader=None, annotation=None):
+    """
+    Main method for initializing the labeling tool
+
+    Parameters
+    ----------
+    reader : None|str|BaseReader|GeneralCanvasImageReader
+    annotation : None|str|FileLabelCollection
+    """
+
+    root = tkinter.Tk()
+    root.geometry("1000x800")
+
+    the_style = ttk.Style()
+    the_style.theme_use('classic')
+
+    # noinspection PyUnusedLocal
+    app = LabelingTool(root, reader=reader, annotation_collection=annotation)
+    root.mainloop()
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Open the labeling tool with optional input file.",
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument(
+        '-i', '--input', metavar='input', default=None,
+        help='The path to the optional image file for opening.')
+    parser.add_argument(
+        '-a', '--annotation', metavar='annotation', default=None,
+        help='The path to the optional annotation file. '
+             'If the image input is not specified, then this has no effect. '
+             'If both are specified, then a check will be performed that the '
+             'annotation actually applies to the provided image.')
+    this_args = parser.parse_args()
+
+    main(reader=this_args.input, annotation=this_args.annotation)
