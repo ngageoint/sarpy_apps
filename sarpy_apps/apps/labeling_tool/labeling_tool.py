@@ -317,6 +317,7 @@ class LabelDetailsPanel(Frame):
                 self.current_annotation.properties.parameters is None or \
                 len(self.current_annotation.properties.parameters):
             self._empty_entries()
+            self.label_specifics.update_annotation()
             self.label_specifics.set_entry(None)
             return
 
@@ -598,7 +599,8 @@ class LabelingTool(AnnotationTool):
         self.collection_panel.move_button.config(command=self.callback_move_feature)
 
         # set up context panel canvas event listeners
-        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.sync_image_index_changed)
+        self.image_panel.canvas.bind('<<ImageIndexPreChange>>', self.handle_image_index_prechange)
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
         self.image_panel.canvas.bind('<<ShapeCreate>>', self.shape_create_on_canvas)
         self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.shape_finalized_on_canvas)
         self.image_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_canvas)

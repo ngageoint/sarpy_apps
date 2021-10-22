@@ -12,7 +12,6 @@ import tkinter
 
 import numpy
 
-from sarpy.compliance import string_types
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.general.base import AbstractReader
 
@@ -49,9 +48,9 @@ class MetaIcon(ImagePanel):
     The metaicon widget.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, **kwargs):
         self.parent = parent
-        super(MetaIcon, self).__init__(parent)
+        ImagePanel.__init__(self, parent, **kwargs)
         self._metadata_container = MetaIconDataContainer()
 
         self._margin_percent = 5
@@ -155,32 +154,32 @@ class MetaIcon(ImagePanel):
         line_positions = self.line_positions
 
         self.canvas.create_new_text(
-            line_positions[0], increment_color=False, text=self.data_container.iid_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[0], self.data_container.iid_line, color='white',
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[1], increment_color=False, text=self.data_container.geo_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[1], self.data_container.geo_line, color="white",
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[2], increment_color=False, text=self.data_container.res_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[2], data_container.res_line, color="white",
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[3], increment_color=False, text=self.data_container.cdp_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[3], self.data_container.cdp_line, color="white",
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[4], increment_color=False, text=self.data_container.get_angle_line('azimuth'),
-            fill="white", anchor="nw", font=self.font)
+            line_positions[4], self.data_container.get_angle_line('azimuth'), color="white",
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[5], increment_color=False, text=self.data_container.get_angle_line('graze'),
-            fill="white", anchor="nw", font=self.font)
+            line_positions[5], self.data_container.get_angle_line('graze'), color="white",
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[6], increment_color=False, text=self.data_container.get_angle_line('layover'),
-            fill=Colors.layover, anchor="nw", font=self.font)
+            line_positions[6], self.data_container.get_angle_line('layover'), color=Colors.layover,
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[7], increment_color=False, text=self.data_container.get_angle_line('shadow'),
-            fill=Colors.shadow, anchor="nw", font=self.font)
+            line_positions[7], self.data_container.get_angle_line('shadow'), color=Colors.shadow,
+            regular_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[8], increment_color=False, text=self.data_container.get_angle_line('multipath'),
-            fill=Colors.multipath, anchor="nw", font=self.font)
+            line_positions[8], self.data_container.get_angle_line('multipath'), color=Colors.multipath,
+            regular_options={'anchor': 'nw', 'font': self.font})
 
         self.draw_layover_arrow()
         self.draw_shadow_arrow()
@@ -204,7 +203,7 @@ class MetaIcon(ImagePanel):
         None
         """
 
-        if isinstance(reader, string_types):
+        if isinstance(reader, str):
             reader = open_complex(reader)
 
         if not isinstance(reader, AbstractReader):
@@ -415,8 +414,7 @@ class MetaIcon(ImagePanel):
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
         self.canvas.create_new_text(
-            (text_pos[0], text_pos[1]),
-            increment_color=False, text="N", fill=Colors.north, font=self.font)
+            (text_pos[0], text_pos[1]), 'N', color=Colors.north, regular_options={'font': self.font})
 
     def draw_direction_arrow(self):
         """
@@ -443,7 +441,7 @@ class MetaIcon(ImagePanel):
         self.canvas.create_new_text(
             (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
              flight_direction_arrow_start[1]),
-            increment_color=False, text=text, fill=Colors.flight_direction, font=self.font)
+            text, color=Colors.flight_direction, regular_options={'font': self.font})
 
     def _adjust_arrow_aspect_ratio(self, origin, arrow_length, arrow_angle):
         """
