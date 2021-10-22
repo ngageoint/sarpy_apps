@@ -1683,7 +1683,6 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         # hide unwanted elements on the panel toolbars
         self.image_panel.hide_tools('new_shape')
         self.image_panel.hide_shapes()
-        self.image_panel.hide_select_index()
         # disable tools until an image is selected
         self.image_panel.disable_tools()
 
@@ -1693,7 +1692,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.collection_panel.move_button.config(command=self.callback_move_feature)
 
         # set up context panel canvas event listeners
-        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.sync_image_index_changed)
+        self.image_panel.canvas.bind('<<ImageIndexPreChange>>', self.handle_image_index_prechange)
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
         self.image_panel.canvas.bind('<<ShapeCreate>>', self.shape_create_on_canvas)
         self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.shape_finalized_on_canvas)
         self.image_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_canvas)
@@ -2237,6 +2237,14 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             self.collection_panel.update_annotation()
             self.annotate.update_annotation()
 
+    def _empty_all_shapes(self):
+        self._modifying_shapes_on_canvas = True
+        self.image_panel.canvas.reinitialize_shapes()
+
+        # reinitialize dictionary relating canvas shapes and annotation shapes
+        self.variables.reinitialize_features()
+        self._modifying_shapes_on_canvas = False
+
     def _initialize_geometry(self, annotation_file_name, annotation_collection):
         """
         Initialize the geometry elements from the annotation.
@@ -2256,12 +2264,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.variables.file_annotation_collection = annotation_collection
         self.set_current_feature_id(None)
 
-        # dump all the old shapes
         self._modifying_shapes_on_canvas = True
-        self.image_panel.canvas.reinitialize_shapes()
-
-        # reinitialize dictionary relating canvas shapes and annotation shapes
-        self.variables.reinitialize_features()
+        # dump all the old shapes
+        self._empty_all_shapes()
 
         # populate all the shapes
         if annotation_collection.annotations is not None:
@@ -2523,7 +2528,20 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
     # event listeners
     # noinspection PyUnusedLocal
-    def sync_image_index_changed(self, event):
+    def handle_image_index_prechange(self, event):
+        """
+        Handle that the image index is about to change.
+
+        Parameters
+        ----------
+        event
+        """
+
+        # dump all the shapes prior to index change
+        self._empty_all_shapes()
+
+    # noinspection PyUnusedLocal
+    def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.
 
@@ -2532,7 +2550,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         event
         """
 
-        # todo: what to do here?
+        self._initialize_annotation_file(
+            self.variables.annotation_file_name, self.variables.file_annotation_collection)
         self.my_populate_metaicon()
 
     def shape_create_on_canvas(self, event):
