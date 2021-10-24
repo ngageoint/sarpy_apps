@@ -315,85 +315,141 @@ class AppVariables(object):
         docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
 
 
-class SettingsPanel(basic_widgets.Frame):
+from enum import Enum
+
+class Operation(Enum):
+    REV = -2
+    PREV = -1
+    STOP = 0
+    NEXT = 1
+    FWD = 2
+
+
+class SliderWidget(basic_widgets.Frame):
+    """
+    Widget panel with slider for forward/reverse and manual scan.
+    """
+
     def __init__(self, parent):
         """
 
         Parameters
         ----------
-        parent : basic_widgets.Frame
+        parent: basic_widgets.Frame
         """
 
-        basic_widgets.Frame.__init__(self, parent)
+        super().__init__(parent)
 
-        self.var_period = ttk.StringVar()
-        self.entry_period = basic_widgets.Entry(self, textvariable=self.var_period)
+        self.label_1 = basic_widgets.Label(self, text='1')
+        self.label_2 = basic_widgets.Label(self, text='Pulse')
 
-        self.var_stride = ttk.StringVar()
-        self.entry_stride = basic_widgets.Entry(self, textvariable=self.var_stride)
+        self.entry = basic_widgets.Entry(self)
+        self.var_entry = tkinter.IntVar(value=1)
+        self.entry.configure(font=('TkFixedFont', 12), justify='right',
+                             textvariable=self.var_entry, width=6)
 
-        self.label_cur_pos = basic_widgets.Label(self)
-        self.label_max_pos = basic_widgets.Label(self)
+        self.fullscale = basic_widgets.Label(self, text='100')
+
+        self.label_1.grid(row=0, column=0, sticky='w', padx=5)
+        self.label_2.grid(row=0, column=1, sticky='e', padx=5)
+        self.entry.grid(row=0, column=2, sticky='w', padx=5)
+        self.fullscale.grid(row=0, column=3, sticky='e', padx=5)
+        self.columnconfigure(0, weight=0)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.columnconfigure(3, weight=0)
+
+        self.scale = basic_widgets.Scale(self)
+        self.var_scale = tkinter.IntVar(value=1)
+        self.scale.configure(from_=1, to=100, length=600, orient='horizontal',
+                             variable=self.var_scale)
+        self.scale.grid(row=1, column=0, columnspan=4, padx=5, pady=5, sticky='esw')
 
 
-class ButtonsPanel(basic_widgets.Frame):
+class DirectionWidget(basic_widgets.Frame):
+    """
+    Button pair to select forward/reverse/stopped direction.
+    """
+
     def __init__(self, parent):
         """
 
         Parameters
         ----------
-        parent : basic_widgets.Frame
+        parent: basic_widgets.Frame
         """
 
-        ttk.Frame.__init__(self, parent)
+        super().__init__(parent)
+        self.parent = parent
 
-        buttons_list = [
-            {"text": "\u23EE", "label": "Rewind", "command": self.cmd_rwnd},
-            {"text": "\u23EA", "label": "Prev", "command": self.cmd_prev},
-            {"text": "\u25C0", "label": "ScanRev", "command": self.cmd_scanrev},
-            {"text": "\u23F9", "label": "Stop", "command": self.cmd_stop},
-            {"text": "\u25B6", "label": "ScanFwd", "command": self.cmd_scanfwd},
-            {"text": "\u23E9", "label": "Next", "command": self.cmd_next},
-            {"text": "\u23ED", "label": "FastFwd", "command": self.cmd_ffwd}]
-
-        self.labels = []
-        self.buttons = []
-        self.label_style = ttk.Style()
-        self.label_style.configure('Scanner.TLabel', font=('Arial', 10))
         self.button_style = ttk.Style()
-        self.button_style.configure('Scanner.TButton', font=('Courier', 18),
-                                    foreground="black", background="light blue")
-        for column, b in enumerate(buttons_list):
-            new_label = basic_widgets.Label(self, text=b["label"],
-                                            style='Scanner.TLabel')
-            new_label.grid(column=column, row=0)
-            self.labels.append(new_label)
-            new_button = basic_widgets.Button(self, text=b["text"],
-                                              style='Scanner.TButton',
-                                              command=b["command"])
-            new_button.grid(column=column, row=1)
-            self.buttons.append(new_button)
+        self.button_style.configure('ToggleOff.TButton', font=('Arial', 24),
+                                    foreground="gray50", background="PaleTurquoise3",
+                                    sticky='CENTER')
+        self.button_style.configure('ToggleOn.TButton', font=('Arial', 24),
+                                    foreground="black", background="PaleTurquoise1",
+                                    sticky='CENTER')
 
-    def cmd_rwnd(self):
-        print("Rewind")
+        self.button_rev = \
+            basic_widgets.Button(self.parent, text="\u23EA",
+                                 style='ToggleOff.TButton',
+                                 command=lambda: self.action(Operation.REV))
+        self.button_prev = \
+            basic_widgets.Button(self.parent, text="\u25C0",
+                                 style='ToggleOff.TButton',
+                                 command=lambda: self.action(Operation.PREV))
+        self.button_next = \
+            basic_widgets.Button(self.parent, text="\u25B6",
+                                 style='ToggleOff.TButton',
+                                 command=lambda: self.action(Operation.NEXT))
+        self.button_fwd = \
+            basic_widgets.Button(self.parent, text="\u23E9",
+                                 style='ToggleOff.TButton',
+                                 command=lambda: self.action(Operation.FWD))
 
-    def cmd_prev(self):
-        print("Previous")
+        self.mode = Operation.STOP
 
-    def cmd_scanrev(self):
-        print("ScanRev")
+    @staticmethod
+    def set_button(button, mode):
+        """
 
-    def cmd_stop(self):
-        print("Stop")
+        Parameters
+        ----------
+        button: ttk.Button
+            Button to be reconfigured
+        mode: bool|int
+            New button state, True = on/pressed or False = off/released
+        """
+        if mode:
+            button.state(['pressed'])
+            button.configure(style='ToggleOn.TButton')
+        else:
+            button.state(['!pressed'])
+            button.configure(style='ToggleOff.TButton')
 
-    def cmd_scanfwd(self):
-        print("ScanFwd")
+    def action(self, new_mode):
+        """
+        Set direction based on buttons' states and new button press.
 
-    def cmd_next(self):
-        print("Next")
-
-    def cmd_ffwd(self):
-        print("FastFwd")
+        Parameters
+        ----------
+        new_mode: Enum.Operation
+            Button that was pressed, Operation.Rev = left arrow, Operation.Fwd = right arrow
+        """
+        self.mode = Operation.STOP if self.mode == new_mode else new_mode
+        if self.mode == Operation.REV:
+            self.set_button(self.button_rev,True)
+            self.set_button(self.button_fwd,False)
+        elif self.mode == Operation.PREV:
+            pass
+        elif self.mode == Operation.FWD:
+            self.set_button(self.button_rev,False)
+            self.set_button(self.button_fwd,True)
+        elif self.mode == Operation.NEXT:
+            pass
+        else:
+            self.set_button(self.button_rev,False)
+            self.set_button(self.button_fwd,False)
 
 
 class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
@@ -405,31 +461,48 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         primary : tkinter.Toplevel|tkinter.Tk
         """
 
+        super().__init__(primary)
+
         self.root = primary
-        self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
+        self.primary = basic_widgets.Frame(primary)  # type: basic_widgets.Frame
 
         basic_widgets.Frame.__init__(self, primary)
         WidgetWithMetadata.__init__(self, primary)
+
         self.variables = AppVariables()
 
-        self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
-        self.image_panel.config(borderwidth=0)
-        self.primary.add(self.image_panel, width=550, height=700, padx=5, pady=5, sticky='NEW')
-
+        self.style_pyplot_panel = ttk.Style()
+        self.style_pyplot_panel.configure('TLabelframe', labelmargins=10)
         self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
-        self.primary.add(self.pyplot_panel, width=550, height=700, padx=5, pady=5, sticky='NEW')
+
         self.pyplot_panel.cmap_name = 'viridis'
-        self.pyplot_panel.set_ylabel('GHz')
-        self.pyplot_panel.set_xlabel('microseconds')
+        self.pyplot_panel.set_ylabel('Freq (GHz)')
+        self.pyplot_panel.set_xlabel('Time (\u03BCsec)')
 
         self.scanner_panel = basic_widgets.Frame(primary)  # type: basic_widgets.Frame
-        self.buttons_panel = ButtonsPanel(self.scanner_panel)
-        self.buttons_panel.pack()
+        self.scanner_panel.columnconfigure(0, weight=0)
+        self.scanner_panel.columnconfigure(1, weight=0)
+        self.scanner_panel.columnconfigure(2, weight=1)
+        self.scanner_panel.columnconfigure(3, weight=0)
+        self.scanner_panel.columnconfigure(4, weight=0)
 
-        self.primary.grid(column=0, row=0, sticky="NSEW")
-        self.scanner_panel.grid(column=0, row=1, columnspan=2, sticky="NSEW")
+        self.dir_buttons = DirectionWidget(self.scanner_panel)
+        self.slider = SliderWidget(self.scanner_panel)
 
-        self.set_title()
+        self.dir_buttons.button_rev.grid(row=0, column=0, sticky='w')
+        self.dir_buttons.button_prev.grid(row=0, column=1, sticky='w')
+        self.slider.grid(row=0, column=2, sticky='ew')
+        self.dir_buttons.button_next.grid(row=0, column=3, sticky='e')
+        self.dir_buttons.button_fwd.grid(row=0, column=4, sticky='e')
+
+        self.pyplot_panel.pack(side="top", expand=True, fill='both')
+        self.scanner_panel.pack(side="bottom", expand=False, fill='x')
+
+        self.primary.rowconfigure(0, weight=1)
+        self.primary.rowconfigure(1, weight=0)
+        # self.primary.grid(row=0, column=0, sticky="NSEW", expand=True, fill='both')
+        self.primary.pack(expand=True, fill='both')
+        self.set_frame_title()
 
         # define menus
         menubar = tkinter.Menu()
@@ -448,16 +521,28 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         primary.config(menu=menubar)
 
-        # hide extraneous tool elements
-        self.image_panel.hide_tools('shape_drawing')
-        self.image_panel.hide_shapes()
+        # # hide extraneous tool elements
+        # self.image_panel.hide_tools('shape_drawing')
+        # self.image_panel.hide_shapes()
 
-        # bind canvas events for proper functionality
-        # this makes for bad performance on a larger image - do not activate
-        # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
-        self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
-        self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+        # # bind canvas events for proper functionality
+        # # this makes for bad performance on a larger image - do not activate
+        # # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
+        # self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
+        # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
+        # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+    def set_frame_title(self):
+        """
+        Sets the LabelFrame title.
+        """
+
+        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        if file_name is None:
+            the_title = " . . . "
+        else:
+            the_title = " {} ".format(os.path.split(file_name)[1])
+        self.pyplot_panel.config(style='Pyplot.TLabelframe', text=the_title)
 
     def set_title(self):
         """
@@ -475,23 +560,23 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.primary.destroy()
         self.root.destroy()
 
-    # noinspection PyUnusedLocal
-    def handle_selection_change(self, event):
-        """
-        Handle a change in the selection area.
-
-        Parameters
-        ----------
-        event
-        """
-
-        if self.variables.image_reader is None:
-            return
-
-        full_image_width = self.image_panel.canvas.variables.state.canvas_width
-        fill_image_height = self.image_panel.canvas.variables.state.canvas_height
-        self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
-        self.display_canvas_rect_selection_in_pyplot_frame()
+    # # noinspection PyUnusedLocal
+    # def handle_selection_change(self, event):
+    #     """
+    #     Handle a change in the selection area.
+    #
+    #     Parameters
+    #     ----------
+    #     event
+    #     """
+    #
+    #     if self.variables.image_reader is None:
+    #         return
+    #
+    #     # full_image_width = self.image_panel.canvas.variables.state.canvas_width
+    #     # fill_image_height = self.image_panel.canvas.variables.state.canvas_height
+    #     # self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
+    #     self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal
     def handle_remap_change(self, event):
@@ -542,19 +627,20 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
             raise TypeError('Got unexpected input for the reader')
 
         # change the tool to view
-        self.image_panel.canvas.current_tool = 'VIEW'
-        self.image_panel.canvas.current_tool = 'VIEW'
+        # self.image_panel.canvas.current_tool = 'VIEW'
+        # self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
-        self.set_title()
+        self.set_frame_title()
         # refresh appropriate GUI elements
         self.pyplot_panel.make_blank()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
 
     def callback_select_files(self):
-        fname = askopenfilename(initialdir=self.variables.browse_directory, filetypes=[crsd_files, all_files])
+        fname = askopenfilename(initialdir=self.variables.browse_directory,
+                                filetypes=[crsd_files, all_files])
         if fname is None or fname in ['', ()]:
             return
 
@@ -569,19 +655,19 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
             col_max = int(numpy.ceil(max(coords[1::2])))
             return row_min, row_max, col_min, col_max
 
-        threshold = self.image_panel.canvas.variables.config.select_size_threshold
+        # threshold = self.image_panel.canvas.variables.config.select_size_threshold
+        #
+        # select_id = self.image_panel.canvas.variables.select_rect.uid
+        # rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
+        # extent = get_extent(rect_coords)
 
-        select_id = self.image_panel.canvas.variables.select_rect.uid
-        rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
-        extent = get_extent(rect_coords)
-
-        if abs(extent[1] - extent[0]) < threshold or abs(extent[3] - extent[2]) < threshold:
-            self.pyplot_panel.make_blank()
-        else:
-            times = 1e6*self.variables.image_reader.times[extent[2]:extent[3]]
-            frequencies = 1e-9*self.variables.image_reader.frequencies[extent[0]:extent[1]]
-            image_data = self.variables.image_reader.pulse_data[extent[0]: extent[1], extent[2]:extent[3]]
-            self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
+        # if abs(extent[1] - extent[0]) < threshold or abs(extent[3] - extent[2]) < threshold:
+        #     self.pyplot_panel.make_blank()
+        # else:
+        #     times = 1e6*self.variables.image_reader.times[extent[2]:extent[3]]
+        #     frequencies = 1e-9*self.variables.image_reader.frequencies[extent[0]:extent[1]]
+        #     image_data = self.variables.image_reader.pulse_data[extent[0]: extent[1], extent[2]:extent[3]]
+        #     self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
 
     def my_populate_metaicon(self):
         """
@@ -609,8 +695,6 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.populate_metaviewer(image_reader)
 
 
-
-
 def main(reader=None):
     """
     Main method for initializing the pulse explorer
@@ -627,7 +711,6 @@ def main(reader=None):
 
     app = PulseExplorer(root)
 
-    # root.geometry("1200x900")
     if reader is not None:
         app.update_reader(reader)
 
