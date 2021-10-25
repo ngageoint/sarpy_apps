@@ -681,13 +681,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            image_reader = None
-            the_index = 0
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-            the_index = self.image_panel.canvas.get_image_index()
+        image_reader = self.variables.image_reader
+        the_index = None if image_reader is None else image_reader.index
         self.populate_metaicon(image_reader, the_index)
 
     def my_populate_metaviewer(self):
@@ -695,11 +690,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None:
-            image_reader = None
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-        self.populate_metaviewer(image_reader)
+        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main(reader=None):
