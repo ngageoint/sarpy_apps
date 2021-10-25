@@ -509,6 +509,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         # file menu
         filemenu = tkinter.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Open Image", command=self.callback_select_files)
+        filemenu.add_command(label="Settings...", command=self.callback_settings_popup)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
         # menus for informational popups
@@ -626,15 +627,12 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         if not isinstance(the_reader, STFTCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
 
-        # change the tool to view
-        # self.image_panel.canvas.current_tool = 'VIEW'
-        # self.image_panel.canvas.current_tool = 'VIEW'
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
         self.set_frame_title()
         # refresh appropriate GUI elements
-        self.pyplot_panel.make_blank()
+        # self.pyplot_panel.make_blank()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
 
@@ -647,14 +645,14 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         the_reader = STFTCanvasImageReader(fname)
         self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
 
-    def display_canvas_rect_selection_in_pyplot_frame(self):
-        def get_extent(coords):
-            row_min = int(numpy.floor(min(coords[0::2])))
-            row_max = int(numpy.ceil(max(coords[0::2])))
-            col_min = int(numpy.floor(min(coords[1::2])))
-            col_max = int(numpy.ceil(max(coords[1::2])))
-            return row_min, row_max, col_min, col_max
-
+    # def display_canvas_rect_selection_in_pyplot_frame(self):
+    #     def get_extent(coords):
+    #         row_min = int(numpy.floor(min(coords[0::2])))
+    #         row_max = int(numpy.ceil(max(coords[0::2])))
+    #         col_min = int(numpy.floor(min(coords[1::2])))
+    #         col_max = int(numpy.ceil(max(coords[1::2])))
+    #         return row_min, row_max, col_min, col_max
+    #
         # threshold = self.image_panel.canvas.variables.config.select_size_threshold
         #
         # select_id = self.image_panel.canvas.variables.select_rect.uid
@@ -668,6 +666,15 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         #     frequencies = 1e-9*self.variables.image_reader.frequencies[extent[0]:extent[1]]
         #     image_data = self.variables.image_reader.pulse_data[extent[0]: extent[1], extent[2]:extent[3]]
         #     self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
+
+    def callback_settings_popup(self):
+        pass
+    
+    def display_in_pyplot_frame(self):
+        times = 1.0e6 * self.variables.image_reader.times
+        frequencies = 1.0e-9 * self.variables.image_reader.frequencies
+        pulse_data = self.variables.image_reader.pulse_data
+        self.pyplot_panel.update_pcolormesh(times, frequencies, pulse_data, shading='gouraud', snap=True)
 
     def my_populate_metaicon(self):
         """
