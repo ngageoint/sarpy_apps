@@ -2001,25 +2001,14 @@ class RCSTool(basic_widgets.Frame, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.context_panel.canvas.variables.canvas_image_object is None or \
-                self.context_panel.canvas.variables.canvas_image_object.image_reader is None:
-            image_reader = None
-            the_index = 0
-        else:
-            image_reader = self.context_panel.canvas.variables.canvas_image_object.image_reader
-            the_index = self.context_panel.canvas.get_image_index()
-        self.populate_metaicon(image_reader, the_index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.context_panel.canvas.variables.canvas_image_object is None:
-            image_reader = None
-        else:
-            image_reader = self.context_panel.canvas.variables.canvas_image_object.image_reader
-        self.populate_metaviewer(image_reader)
+        self.populate_metaviewer(self.variables.image_reader)
 
     # noinspection PyUnusedLocal
     def feature_selected_on_viewer(self, event):

@@ -537,7 +537,7 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        self.populate_metaicon(self.variables.image_reader, self.variables.image_reader.index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """

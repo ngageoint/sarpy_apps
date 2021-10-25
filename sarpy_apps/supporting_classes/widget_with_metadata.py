@@ -54,23 +54,22 @@ class WidgetWithMetadata(object):
         self.metaviewer_popup_panel.deiconify()
         self._set_focus_on_metaviewer_popup()
 
-    def populate_metaicon(self, image_reader, the_index):
+    def populate_metaicon(self, image_reader):
         """
         Populate the metaicon.
 
         Parameters
         ----------
         image_reader : CanvasImageReader
-        the_index : int
         """
 
         if image_reader is None:
             self.metaicon.make_empty()
 
         if isinstance(image_reader, ComplexCanvasImageReader):
-            self.metaicon.create_from_reader(image_reader.base_reader, index=the_index)
+            self.metaicon.create_from_reader(image_reader.base_reader, index=image_reader.index)
         elif isinstance(image_reader, DerivedCanvasImageReader):
-            self.metaicon.create_from_reader(image_reader.base_reader, index=the_index)
+            self.metaicon.create_from_reader(image_reader.base_reader, index=image_reader.index)
         else:
             self.metaicon.make_empty()
 

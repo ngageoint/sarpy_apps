@@ -257,13 +257,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.variables.image_reader is None:
-            image_reader = None
-            the_index = 0
-        else:
-            image_reader = self.variables.image_reader
-            the_index = self.image_panel.canvas.get_image_index()
-        self.populate_metaicon(image_reader, the_index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """

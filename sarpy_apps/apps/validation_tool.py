@@ -511,7 +511,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        self.populate_metaicon(self.variables.image_reader, 0)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
