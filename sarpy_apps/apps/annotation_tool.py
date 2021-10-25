@@ -855,7 +855,6 @@ class GeometryPropertiesPanel(Frame):
             return
         self._set_color(result[1])
 
-
     def _set_uid_value(self, value):
         if value is None:
             value = ''
@@ -1781,7 +1780,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             the_index = 0
         else:
             image_reader = self.variables.image_reader
-            the_index = self.image_panel.canvas.get_image_index()
+            the_index = image_reader.index
         self.populate_metaicon(image_reader, the_index)
 
     def my_populate_metaviewer(self):
