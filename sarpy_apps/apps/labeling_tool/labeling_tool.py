@@ -26,8 +26,8 @@ from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotat
     AnnotationCollectionViewer, AnnotationCollectionPanel, AnnotationTool
 from sarpy_apps.apps.labeling_tool.schema_editor import SchemaEditor, select_schema_entry
 
-from sarpy.annotation.label import FileLabelCollection, LabelCollection, \
-    LabelFeature, LabelProperties, LabelMetadataList, LabelMetadata, LabelSchema
+from sarpy.annotation.label import FileLabelCollection, LabelFeature, \
+    LabelMetadataList, LabelMetadata, LabelSchema
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
@@ -160,7 +160,8 @@ class LabelSpecificsPanel(Frame):
             self.user_id_value.set_text('')
             self.timestamp_value.set_text('')
         else:
-            self.object_type_button.set_text('<Choose>' if entry.label_id is None else self.app_variables.get_label(entry.label_id))
+            self.object_type_button.set_text(
+                '<Choose>' if entry.label_id is None else self.app_variables.get_label(entry.label_id))
             self.comment_text.set_value('' if entry.comment is None else entry.comment)
             self.confidence_combo.set_text('' if entry.confidence is None else str(entry.confidence))
             self.user_id_value.set_text(entry.user_id)
@@ -341,6 +342,7 @@ class LabelDetailsPanel(Frame):
     def set_annotation_feature(self, annotation_feature):
         self.current_annotation = annotation_feature
         self._fill_treeview()
+        self.label_specifics.update_annotation()
 
     def update_annotation(self):
         annotation_feature = self.app_variables.get_current_annotation_object()
@@ -483,6 +485,8 @@ class LabelCollectionViewer(AnnotationCollectionViewer):
         label = self._app_variables.get_label(label_id)
         if label is None:
             label = ''
+        if name == annotation.uid and label_id != '':
+            name = label
         self.insert(parent, at_index, the_id, text=name, values=(label, ))
 
 
@@ -610,6 +614,7 @@ class LabelingTool(AnnotationTool):
         self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
         self.annotate_popup = tkinter.Toplevel(master)
+        self.annotate_popup.geometry('600x400')
         self.annotate = LabelPanel(self.annotate_popup, self.variables)  # type: LabelPanel
         self.annotate.hide_on_close()
         self.annotate_popup.withdraw()
@@ -734,6 +739,7 @@ class LabelingTool(AnnotationTool):
                         '\nDo not delete any labels from the schema unless you are sure.')
 
         root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        # noinspection PyUnusedLocal
         tool = SchemaEditor(root, label_schema=self.variables.file_annotation_collection.label_schema)
         root.grab_set()
         root.wait_window()
