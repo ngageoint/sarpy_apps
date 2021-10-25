@@ -461,13 +461,11 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         primary : tkinter.Toplevel|tkinter.Tk
         """
 
-        super().__init__(primary)
+        basic_widgets.Frame.__init__(self, primary)
+        WidgetWithMetadata.__init__(self, primary)
 
         self.root = primary
         self.primary = basic_widgets.Frame(primary)  # type: basic_widgets.Frame
-
-        basic_widgets.Frame.__init__(self, primary)
-        WidgetWithMetadata.__init__(self, primary)
 
         self.variables = AppVariables()
 
@@ -531,7 +529,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         # # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
         # self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+        # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed) << USE THIS fir index and pulse
 
     def set_frame_title(self):
         """
@@ -629,7 +627,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         # update the reader
         self.variables.image_reader = the_reader
-        self.image_panel.set_image_reader(the_reader)
+        self.image_panel.set_image_reader(the_reader)  # display_in_pyplot_frame
         self.set_frame_title()
         # refresh appropriate GUI elements
         # self.pyplot_panel.make_blank()
@@ -669,7 +667,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
     def callback_settings_popup(self):
         pass
-    
+
     def display_in_pyplot_frame(self):
         times = 1.0e6 * self.variables.image_reader.times
         frequencies = 1.0e-9 * self.variables.image_reader.frequencies
