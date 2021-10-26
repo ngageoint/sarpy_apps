@@ -351,6 +351,7 @@ class RCSTool(AnnotationTool):
         """
 
         self.variables = AppVariables()  # type: AppVariables
+        self.variables.allow_multi_geometry = False
 
         if 'sashrelief' not in kwargs:
             kwargs['sashrelief'] = tkinter.RIDGE
@@ -644,7 +645,7 @@ def main(reader=None, annotation=None):
     """
 
     root = tkinter.Tk()
-    root.geometry("1000x800")
+    root.geometry("1200x800")
 
     the_style = ttk.Style()
     the_style.theme_use('classic')

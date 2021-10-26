@@ -66,6 +66,8 @@ class AppVariables(object):
     annotation_file_name = StringDescriptor(
         'annotation_file_name',
         docstring='The path for the annotation results file.')  # type: str
+    allow_multi_geometry = BooleanDescriptor(
+        'allow_multi_geometry', default_value=True)  # type: bool
 
     def __init__(self):
         self._feature_to_canvas = {}  # a dictionary mapping feature.uid to shape ids on the canvas
@@ -1054,6 +1056,11 @@ class GeometryDetailsPanel(Frame):
 
         self.annotation_feature = annotation_feature
         self._fill_treeview()
+        if self.annotation_feature is not None:
+            if self.annotation_feature.geometry_count == 0 or self._app_variables.allow_multi_geometry:
+                self.geometry_buttons.enable_shapes()
+            else:
+                self.geometry_buttons.disable_shapes()
 
     def cancel(self):
         self.geometry_properties_panel.cancel()
