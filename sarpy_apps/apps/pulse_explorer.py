@@ -7,6 +7,7 @@ __author__ = ("Thomas Rackers", "Thomas McCullough")
 
 import logging
 import os
+from enum import Enum
 
 import numpy
 from scipy.signal import spectrogram, resample
@@ -17,10 +18,9 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
-from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-from tk_builder.widgets import widget_descriptors, basic_widgets
+from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import crsd_files, all_files
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
@@ -315,8 +315,6 @@ class AppVariables(object):
         docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
 
 
-from enum import Enum
-
 class Operation(Enum):
     REV = -2
     PREV = -1
@@ -453,31 +451,33 @@ class DirectionWidget(basic_widgets.Frame):
 
 
 class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
-    def __init__(self, primary):
+    def __init__(self, primary, reader=None, **kwargs):
         """
 
         Parameters
         ----------
         primary : tkinter.Toplevel|tkinter.Tk
+        reader : None|str|CRSDTypeReader|CRSDTypeCanvasImageReader
+        kwargs
+            Keyword arguments passed through to the Frame
         """
 
-        basic_widgets.Frame.__init__(self, primary)
+        basic_widgets.Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
 
         self.root = primary
-        self.primary = basic_widgets.Frame(primary)  # type: basic_widgets.Frame
 
         self.variables = AppVariables()
 
         self.style_pyplot_panel = ttk.Style()
         self.style_pyplot_panel.configure('TLabelframe', labelmargins=10)
-        self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
+        self.pyplot_panel = PyplotImagePanel(self)  # type: PyplotImagePanel
 
         self.pyplot_panel.cmap_name = 'viridis'
         self.pyplot_panel.set_ylabel('Freq (GHz)')
         self.pyplot_panel.set_xlabel('Time (\u03BCsec)')
 
-        self.scanner_panel = basic_widgets.Frame(primary)  # type: basic_widgets.Frame
+        self.scanner_panel = basic_widgets.Frame(self)  # type: basic_widgets.Frame
         self.scanner_panel.columnconfigure(0, weight=0)
         self.scanner_panel.columnconfigure(1, weight=0)
         self.scanner_panel.columnconfigure(2, weight=1)
@@ -496,10 +496,10 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.pyplot_panel.pack(side="top", expand=True, fill='both')
         self.scanner_panel.pack(side="bottom", expand=False, fill='x')
 
-        self.primary.rowconfigure(0, weight=1)
-        self.primary.rowconfigure(1, weight=0)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=0)
         # self.primary.grid(row=0, column=0, sticky="NSEW", expand=True, fill='both')
-        self.primary.pack(expand=True, fill='both')
+        self.pack(expand=True, fill='both')
         self.set_frame_title()
 
         # define menus
@@ -519,6 +519,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         primary.config(menu=menubar)
+
+        self.update_reader(reader)
 
         # # hide extraneous tool elements
         # self.image_panel.hide_tools('shape_drawing')
@@ -556,7 +558,6 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        self.primary.destroy()
         self.root.destroy()
 
     # # noinspection PyUnusedLocal
@@ -607,9 +608,12 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|CRSDTypeReader|STFTCanvasImageReader
+        the_reader : None|str|CRSDTypeReader|STFTCanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -671,7 +675,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
     def display_in_pyplot_frame(self):
         times = 1.0e6 * self.variables.image_reader.times
         frequencies = 1.0e-9 * self.variables.image_reader.frequencies
-        image_data = self.variables.image_reader.pulse_data
+        image_data = self.variables.image_reader.pulse_data[:, :]
         self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
 
     def my_populate_metaicon(self):
@@ -705,7 +709,7 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = PulseExplorer(root)
+    app = PulseExplorer(root, reader)
 
     if reader is not None:
         app.update_reader(reader)
