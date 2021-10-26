@@ -102,7 +102,7 @@ class LabelSpecificsPanel(Frame):
 
         self.comment_label = Label(self, text='Comment:', relief=tkinter.RIDGE, width=15, padding=3)
         self.comment_label.grid(row=1, column=0, sticky='NEW', padx=3, pady=3)
-        self.comment_text = TextWithScrolling(self)
+        self.comment_text = TextWithScrolling(self, height=5)
         self.comment_text.frame.grid(row=1, column=1, sticky='NSEW', padx=3, pady=3)
 
         self.confidence_label = Label(self, text='Confidence:', relief=tkinter.RIDGE, width=15, padding=3)
@@ -324,6 +324,7 @@ class LabelDetailsPanel(Frame):
             self.label_specifics.set_entry(None)
             return
 
+        self._empty_entries()
         label_list = self.current_annotation.properties.parameters
         for i, entry in enumerate(label_list):
             label = self.app_variables.get_label(entry.label_id)
@@ -332,7 +333,8 @@ class LabelDetailsPanel(Frame):
         if len(label_list) > 0:
             self._set_focus('0')
 
-    def callback_label_selected_on_viewer(self):
+    # noinspection PyUnusedLocal
+    def callback_label_selected_on_viewer(self, event):
         label_index = self.viewer.focus()
         if label_index == '':
             return
@@ -616,7 +618,7 @@ class LabelingTool(AnnotationTool):
         self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
         self.annotate_popup = tkinter.Toplevel(master)
-        self.annotate_popup.geometry('600x400')
+        self.annotate_popup.geometry('700x500')
         self.annotate = LabelPanel(self.annotate_popup, self.variables)  # type: LabelPanel
         self.annotate.hide_on_close()
         self.annotate_popup.withdraw()
