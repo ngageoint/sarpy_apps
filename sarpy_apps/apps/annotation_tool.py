@@ -1645,7 +1645,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.master.config(menu=self.menu_bar)
 
         # hide unwanted elements on the panel toolbars
-        self.image_panel.hide_tools('new_shape')
+        self.image_panel.hide_tools(['new_shape', 'select'])
         self.image_panel.hide_shapes()
         # disable tools until an image is selected
         self.image_panel.disable_tools()
