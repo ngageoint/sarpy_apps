@@ -18,7 +18,7 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox, Entry
+from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
 
 from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotate, \
