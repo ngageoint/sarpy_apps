@@ -1840,7 +1840,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             annotation_collection = self._get_default_collection()
 
         if not isinstance(annotation_collection, self._NEW_FILE_ANNOTATION_TYPE):
-            raise TypeError('annotation collection must be of type {}'.format(self._NEW_FILE_ANNOTATION_TYPE))
+            raise TypeError(
+                'annotation collection must be of type {}, got type {}'.format(
+                    self._NEW_FILE_ANNOTATION_TYPE, type(annotation_collection)))
 
         # validate the the image selected matches the annotation image name
         _, image_fname = os.path.split(self.image_file_name)
