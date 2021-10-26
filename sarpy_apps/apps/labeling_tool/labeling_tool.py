@@ -25,11 +25,13 @@ from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotat
     NamePanel, AnnotateButtons, AnnotateTabControl, AnnotationPanel, \
     AnnotationCollectionViewer, AnnotationCollectionPanel, AnnotationTool
 from sarpy_apps.apps.labeling_tool.schema_editor import SchemaEditor, select_schema_entry
+from sarpy_apps.supporting_classes.file_filters import all_files, json_files
+from sarpy_apps.supporting_classes.image_reader import GeneralCanvasImageReader
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.annotation.label import FileLabelCollection, LabelFeature, \
     LabelMetadataList, LabelMetadata, LabelSchema
-from sarpy_apps.supporting_classes.file_filters import all_files, json_files
-from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+from sarpy.io.general.base import BaseReader
 
 
 def get_default_schema():
@@ -316,7 +318,7 @@ class LabelDetailsPanel(Frame):
 
         if self.current_annotation is None or \
                 self.current_annotation.properties.parameters is None or \
-                len(self.current_annotation.properties.parameters):
+                len(self.current_annotation.properties.parameters) == 0:
             self._empty_entries()
             self.label_specifics.update_annotation()
             self.label_specifics.set_entry(None)
