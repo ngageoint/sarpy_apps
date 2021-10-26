@@ -342,21 +342,21 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
 
             # draw the row deltak1/deltak2 lines
             row_deltak1_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 row_deltak1_id, (row_deltak1, 0, row_deltak1, col_count))
             deltak2_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 deltak2_id, (row_deltak2, 0, row_deltak2, col_count))
 
             # draw the column deltak1/deltak2 lines
             col_deltak1_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 col_deltak1_id, (0, col_deltak1, row_count, col_deltak1))
             deltak2_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 deltak2_id, (0, col_deltak2, row_count, col_deltak2))
 

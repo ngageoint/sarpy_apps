@@ -2076,8 +2076,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             # type: () -> (int, str)
             image_coords = the_geometry.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
-            canvas_id = self.image_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, color=geometry_properties.color)
+            self.line = self.image_panel.canvas.create_new_line((0, 0, 0, 0), make_current=False,
+                                                                color=geometry_properties.color)
+            canvas_id = self.line
             self.image_panel.canvas.modify_existing_shape_using_image_coords(
                 canvas_id, image_coords)
             return canvas_id, 'LINE'

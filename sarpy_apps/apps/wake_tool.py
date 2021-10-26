@@ -395,10 +395,8 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         last_shape_id = self.image_panel.canvas.current_shape_id
         if self.variables.horizontal_line_id is None:
             self.variables.horizontal_line_id = self.image_panel.canvas.create_new_line(
-                horizontal_line_coords,
-                increment_color=False,
-                fill=self.variables.horizontal_line_color,
-                width=self.variables.horizontal_line_width)
+                horizontal_line_coords, increment_color=False, color=self.variables.horizontal_line_color,
+                regular_options={'width': self.variables.horizontal_line_width})
         else:
             self.image_panel.canvas.modify_existing_shape_using_canvas_coords(
                 self.variables.horizontal_line_id, horizontal_line_coords)

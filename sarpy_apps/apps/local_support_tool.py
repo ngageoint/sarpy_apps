@@ -275,22 +275,22 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
         if self.variables.row_line_low is None or \
                 self.frequency_panel.canvas.get_vector_object(self.variables.row_line_low) is None:
             self.variables.row_deltak1 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             self.variables.row_deltak2 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             self.variables.col_deltak1 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             self.variables.col_deltak2 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
 
             self.variables.row_line_low = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', dash=(3, ))
             self.variables.row_line_high = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', dash=(3, ))
             self.variables.col_line_low = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', dash=(3, ))
             self.variables.col_line_high = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', dash=(3, ))
 
         else:
             self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
