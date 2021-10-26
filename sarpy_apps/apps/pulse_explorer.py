@@ -671,7 +671,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
     def display_in_pyplot_frame(self):
         times = 1.0e6 * self.variables.image_reader.times
         frequencies = 1.0e-9 * self.variables.image_reader.frequencies
-        image_data = self.variables.image_reader.pulse_data
+        image_data = self.variables.image_reader.pulse_data[:, :]
         self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
 
     def my_populate_metaicon(self):
