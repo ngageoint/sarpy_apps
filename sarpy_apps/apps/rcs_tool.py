@@ -19,7 +19,7 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox, Entry
-from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling
+from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
 
 from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotate, \
     NamePanel, AnnotateButtons, AnnotateTabControl, AnnotationPanel, \
@@ -84,12 +84,18 @@ class RCSSpecificsPanel(TreeviewWithScrolling):
         kwargs['columns'] = ('mean_db', 'mean', 'std', 'max', 'min')
 
         TreeviewWithScrolling.__init__(self, master, **kwargs)
-        self.heading('#0', 'Name')
-        self.heading('#1', 'Mean[dB]')
-        self.heading('#2', 'Mean[power]')
-        self.heading('#3', 'Std[power]')
-        self.heading('#4', 'Max[power]')
-        self.heading('#5', 'Min[power]')
+        self.heading('#0', text='Name')
+        self.column('#0', width=10)
+        self.heading('#1', text='Mean[dB]')
+        self.column('#1', width=10)
+        self.heading('#2', text='Mean[power]')
+        self.column('#2', width=10)
+        self.heading('#3', text='Std[power]')
+        self.column('#3', width=10)
+        self.heading('#4', text='Max[power]')
+        self.column('#4', width=10)
+        self.heading('#5', text='Min[power]')
+        self.column('#5', width=10)
 
     def _empty_entries(self):
         """
@@ -226,7 +232,7 @@ class RCSCollectionViewer(AnnotationCollectionViewer):
     @property
     def annotation_collection(self):
         """
-        FileLabelCollection : The file annotation collection
+        FileRCSCollection : The file annotation collection
         """
 
         return self._app_variables.file_annotation_collection
@@ -288,9 +294,11 @@ class RCSCollectionPanel(AnnotationCollectionPanel):
         self.zoom_button.grid(row=2, column=0, sticky='NW')
         self.move_button = Button(self.button_panel, text='Move Selected Annotation', width=28)  # type: Button
         self.move_button.grid(row=3, column=0, sticky='NW')
-        self.frame1 = Frame(self)
+        self.frame1 = Frame(self.button_panel)
         self.units_label = Label(self.frame1, text='Units:', relief=tkinter.RIDGE)
+        self.units_label.pack(side=tkinter.LEFT)
         self.units_value = Combobox(self.frame1, text='')
+        self.units_value.pack(side=tkinter.LEFT)
         self.frame1.grid(row=4, column=0, sticky='NW')
         self.button_panel.grid(row=0, column=0, sticky='NSEW')
 
