@@ -28,8 +28,7 @@ from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.file_filters import all_files, json_files
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
-from sarpy.annotation.rcs import FileRCSCollection, RCSFeature, RCSProperties, \
-    RCSValueCollection, RCSValue, RCSStatistics
+from sarpy.annotation.rcs import FileRCSCollection, RCSFeature, RCSValueCollection
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.converter import open_complex
 
@@ -351,7 +350,6 @@ class RCSTool(AnnotationTool):
         """
 
         self.variables = AppVariables()  # type: AppVariables
-        self.variables.allow_multi_geometry = False
 
         if 'sashrelief' not in kwargs:
             kwargs['sashrelief'] = tkinter.RIDGE
@@ -572,14 +570,14 @@ class RCSTool(AnnotationTool):
         if self.variables.current_geometry_id == geometry_id:
             self.set_current_geometry_id(None)
 
-        # todo: update this and its constituents to calculate the rcs mumbo-jumbo
-
         canvas_id = self.variables.get_canvas_for_geometry(geometry_id)
         if canvas_id is not None:
             # get the feature and get rid of the geometry
             feature_id = self.variables.get_feature_for_canvas(canvas_id)
             feature = self.variables.file_annotation_collection.annotations[feature_id]
             feature.remove_geometry_element(geometry_id)
+            feature.set_rcs_parameters_from_reader(self.variables.image_reader.base_reader)
+
         # remove geometry from tracking
         canvas_id = self.variables.delete_geometry_from_tracking(geometry_id)
         # remove canvas id from tracking, and delete the shape
@@ -602,9 +600,8 @@ class RCSTool(AnnotationTool):
 
         geometry = self._get_geometry_for_feature(feature_id)
 
-        # todo: update this and its constituents to calculate the rcs mumbo-jumbo
-
         annotation = self.variables.file_annotation_collection.annotations[feature_id]
+        annotation.set_rcs_parameters_from_reader(self.variables.image_reader.base_reader)
         self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
         self.collection_panel.viewer.rerender_annotation(annotation.uid, set_focus=set_focus)
         self.annotate.update_annotation()
@@ -630,8 +627,6 @@ class RCSTool(AnnotationTool):
         self.image_panel.canvas.current_shape_id = event.x
         self._add_shape_to_feature(
             self.variables.current_feature_id, event.x, set_focus=True, set_current=True)
-
-        # todo: update this and its constituents to calculate the rcs mumbo-jumbo
 
 
 def main(reader=None, annotation=None):
