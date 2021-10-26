@@ -41,6 +41,7 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
+
 ##################
 # Animation panel
 
@@ -719,8 +720,8 @@ class ApertureTool(WidgetPanel):
             frame_num = self.app_variables.animation.current_position
             new_rect = (x_uls[frame_num], y_uls[frame_num], x_lrs[frame_num], y_lrs[frame_num])
 
-        self.phase_history_panel.canvas.modify_existing_shape_using_canvas_coords(
-            self.phase_history_panel.canvas.variables.select_rect.uid, new_rect)
+        select_uid = self.phase_history_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
+        self.phase_history_panel.canvas.modify_existing_shape_using_canvas_coords(select_uid, new_rect)
         self.update_filtered_image()
         self.update_phase_history_selection()
 
@@ -759,13 +760,11 @@ class ApertureTool(WidgetPanel):
         self.phase_history_panel.set_image_reader(fft_reader)
 
         # set up the selection rectangle properties
-        select_rect_id = self.phase_history_panel.canvas.variables.select_rect.uid
-        rect_bounds = self.get_fft_image_bounds()
-        vector_object = self.phase_history_panel.canvas.get_vector_object(select_rect_id)
-        vector_object.image_drag_limits = rect_bounds
-        self.phase_history_panel.canvas.modify_existing_shape_using_image_coords(select_rect_id, rect_bounds)
-        self.phase_history_panel.canvas.show_shape(select_rect_id)
         self.phase_history_panel.canvas.current_tool = "SELECT"
+        vector_object = self.phase_history_panel.canvas.variables.get_tool_shape_by_name('SELECT')
+        rect_bounds = self.get_fft_image_bounds()
+        vector_object.image_drag_limits = rect_bounds
+        self.phase_history_panel.canvas.modify_existing_shape_using_image_coords(vector_object.uid, rect_bounds)
         self._skip_update = False  # short circuiting a stupid canvas update
 
         # update the information about the phase history area selection
@@ -834,8 +833,8 @@ class ApertureTool(WidgetPanel):
             remap_function = NRL()
 
         # fetch the data
-        select_rect_id = self.phase_history_panel.canvas.variables.select_rect.uid
-        full_image_rect = self.phase_history_panel.canvas.get_shape_image_coords(select_rect_id)
+        select_uid = self.phase_history_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
+        full_image_rect = self.phase_history_panel.canvas.get_shape_image_coords(select_uid)
         if full_image_rect is None:
             return None
 
@@ -860,8 +859,8 @@ class ApertureTool(WidgetPanel):
         the_sicd = self.app_variables.image_reader.get_sicd()
 
         image_bounds = self.get_fft_image_bounds()
-        current_bounds = self.phase_history_panel.canvas.shape_image_coords_to_canvas_coords(
-            self.phase_history_panel.canvas.variables.select_rect.uid)
+        select_uid = self.phase_history_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
+        current_bounds = self.phase_history_panel.canvas.shape_image_coords_to_canvas_coords(select_uid)
         x_min = min(current_bounds[1::2])
         x_max = max(current_bounds[1::2])
         y_min = min(current_bounds[0::2])
@@ -1136,8 +1135,8 @@ class RegionSelection(Frame, WidgetWithMetadata):
 
         self.aperture_tool_popup()
         # update the aperture filter
-        selection_image_coords = self.image_panel.canvas.get_shape_image_coords(
-            self.image_panel.canvas.variables.select_rect.uid)
+        select_uid = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
+        selection_image_coords = self.image_panel.canvas.get_shape_image_coords(select_uid)
 
         if selection_image_coords is None:
             self.variables.aperture_filter.set_sub_image_bounds(None, None)

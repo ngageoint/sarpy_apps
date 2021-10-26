@@ -171,8 +171,8 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
         self.image_panel.canvas.zoom_to_full_image_selection((0, 0, full_rows, full_cols))
         # set selection rectangle
         self.image_panel.canvas.current_tool = 'SELECT'
-        self.image_panel.canvas.modify_existing_shape_using_image_coords(
-            self.image_panel.canvas.variables.select_rect.uid, middle)
+        select = self.image_panel.canvas.variables.get_tool_shape_by_name('SELECT')
+        self.image_panel.canvas.modify_existing_shape_using_image_coords(select.uid, middle)
         self.handle_selection_change(None)
 
     # noinspection PyUnusedLocal
@@ -374,7 +374,7 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
                 self.variables.col_line_high, (0, col_bw_high, row_count, col_bw_high))
 
         threshold = self.image_panel.canvas.variables.config.select_size_threshold
-        select_id = self.image_panel.canvas.variables.select_rect.uid
+        select_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
         rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
         extent = get_extent(rect_coords)  # left, right, bottom, top
         row_count = extent[1] - extent[0]
