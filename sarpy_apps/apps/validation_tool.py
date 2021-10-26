@@ -19,8 +19,8 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.file_filters import create_filter_entry, all_files
 from tk_builder.logger import TextHandler
 from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
-from tk_builder.widgets.basic_widgets import Label, RadioButton, Text, Button
-from tk_builder.widgets.widget_descriptors import LabelDescriptor, RadioButtonDescriptor, \
+from tk_builder.widgets.basic_widgets import Label, CheckButton, Text, Button
+from tk_builder.widgets.widget_descriptors import LabelDescriptor, CheckButtonDescriptor, \
     TextDescriptor, ButtonDescriptor
 
 from sarpy_apps.apps.aperture_tool import RegionSelection
@@ -51,8 +51,8 @@ class _Feedback(WidgetPanel):
         docstring='The overall title')  # type: Label
     acceptable_label = LabelDescriptor(
         'acceptable_label', default_text='acceptable?', docstring='')  # type: Label
-    acceptable_button = RadioButtonDescriptor(
-        'acceptable_button', docstring='')  # type: RadioButton
+    acceptable_button = CheckButtonDescriptor(
+        'acceptable_button', docstring='')  # type: CheckButton
     feedback_label = LabelDescriptor(
         'feedback_label', default_text='feedback', docstring='')  # type: Label
     feedback_text = TextDescriptor(
