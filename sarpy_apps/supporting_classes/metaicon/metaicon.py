@@ -12,7 +12,6 @@ import tkinter
 
 import numpy
 
-from sarpy.compliance import string_types
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.general.base import AbstractReader
 
@@ -22,7 +21,7 @@ from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.received.base import CRSDTypeReader
 
 from tk_builder.panels.image_panel import ImagePanel
-import tk_builder.utils.color_utils.color_converter as color_converter
+from tk_builder.utils.color_utils import rgb_to_hex
 from tk_builder.image_reader import NumpyCanvasImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
@@ -30,11 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 class Colors(object):
-    layover = color_converter.rgb_to_hex((1, 0.65, 0))
-    shadow = color_converter.rgb_to_hex((0, 0.65, 1))
-    multipath = color_converter.rgb_to_hex((1, 0, 0))
-    north = color_converter.rgb_to_hex((0.58, 0.82, 0.31))
-    flight_direction = color_converter.rgb_to_hex((1, 1, 0))
+    layover = rgb_to_hex((1, 0.65, 0))
+    shadow = rgb_to_hex((0, 0.65, 1))
+    multipath = rgb_to_hex((1, 0, 0))
+    north = rgb_to_hex((0.58, 0.82, 0.31))
+    flight_direction = rgb_to_hex((1, 1, 0))
 
 
 class ArrowWidths(object):
@@ -49,11 +48,12 @@ class MetaIcon(ImagePanel):
     The metaicon widget.
     """
 
-    def __init__(self, parent):
-        super(MetaIcon, self).__init__(parent)
+    def __init__(self, parent, **kwargs):
+        self.parent = parent
+        ImagePanel.__init__(self, parent, **kwargs)
         self._metadata_container = MetaIconDataContainer()
 
-        self._margin_percent = 5  # TODO: is it more clear to use fraction versus percent?
+        self._margin_percent = 5
         self._font_family = 'Times New Roman'
         self.canvas.set_canvas_size(10, 10)
 
@@ -154,32 +154,32 @@ class MetaIcon(ImagePanel):
         line_positions = self.line_positions
 
         self.canvas.create_new_text(
-            line_positions[0], increment_color=False, text=self.data_container.iid_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[0], self.data_container.iid_line, color='white',
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[1], increment_color=False, text=self.data_container.geo_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[1], self.data_container.geo_line, color="white",
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[2], increment_color=False, text=self.data_container.res_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[2], data_container.res_line, color="white",
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[3], increment_color=False, text=self.data_container.cdp_line,
-            fill="white", anchor="nw", font=self.font)
+            line_positions[3], self.data_container.cdp_line, color="white",
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[4], increment_color=False, text=self.data_container.get_angle_line('azimuth'),
-            fill="white", anchor="nw", font=self.font)
+            line_positions[4], self.data_container.get_angle_line('azimuth'), color="white",
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[5], increment_color=False, text=self.data_container.get_angle_line('graze'),
-            fill="white", anchor="nw", font=self.font)
+            line_positions[5], self.data_container.get_angle_line('graze'), color="white",
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[6], increment_color=False, text=self.data_container.get_angle_line('layover'),
-            fill=Colors.layover, anchor="nw", font=self.font)
+            line_positions[6], self.data_container.get_angle_line('layover'), color=Colors.layover,
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[7], increment_color=False, text=self.data_container.get_angle_line('shadow'),
-            fill=Colors.shadow, anchor="nw", font=self.font)
+            line_positions[7], self.data_container.get_angle_line('shadow'), color=Colors.shadow,
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[8], increment_color=False, text=self.data_container.get_angle_line('multipath'),
-            fill=Colors.multipath, anchor="nw", font=self.font)
+            line_positions[8], self.data_container.get_angle_line('multipath'), color=Colors.multipath,
+            regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
 
         self.draw_layover_arrow()
         self.draw_shadow_arrow()
@@ -193,7 +193,7 @@ class MetaIcon(ImagePanel):
 
         Parameters
         ----------
-        reader : AbstractReader|str
+        reader : str|AbstractReader
             A file name or reader object.
         index : int
             The meta object index in the reader.
@@ -203,21 +203,25 @@ class MetaIcon(ImagePanel):
         None
         """
 
-        if isinstance(reader, string_types):
+        if isinstance(reader, str):
             reader = open_complex(reader)
 
         if not isinstance(reader, AbstractReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
         if isinstance(reader, SICDTypeReader):
+            # noinspection PyUnresolvedReferences
             sicd = reader.get_sicds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sicd(sicd)
         elif isinstance(reader, SIDDTypeReader):
+            # noinspection PyUnresolvedReferences
             sidd = reader.get_sidds_as_tuple()[index]
             data_container = MetaIconDataContainer.from_sidd(sidd)
         elif isinstance(reader, CPHDTypeReader):
+            # noinspection PyUnresolvedReferences
             data_container = MetaIconDataContainer.from_cphd(reader.cphd_meta, index)
         elif isinstance(reader, CRSDTypeReader):
+            # noinspection PyUnresolvedReferences
             data_container = MetaIconDataContainer.from_crsd(reader.crsd_meta)
         else:
             data_container = MetaIconDataContainer()
@@ -303,6 +307,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The layover arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.layover_arrow_angle)
 
     @property
@@ -312,6 +317,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.shadow_arrow_angle)
 
     @property
@@ -321,6 +327,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The multipath arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.multipath_arrow_angle)
 
     @property
@@ -330,6 +337,7 @@ class MetaIcon(ImagePanel):
         Tuple[float, float, float, float]: The north arrow coordinates.
         """
 
+        # noinspection PyTypeChecker
         return self._get_arrow_coords(self.north_arrow_angle)
 
     def _get_arrow_coords(self, arrow_angle):
@@ -349,6 +357,7 @@ class MetaIcon(ImagePanel):
         if arrow_angle is None:
             return 0., 0., 0., 0.
 
+        # noinspection PyTypeChecker
         return self._adjust_arrow_aspect_ratio(self.arrows_origin, self.arrow_lengths, arrow_angle)
 
     def draw_layover_arrow(self):
@@ -361,8 +370,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.layover_arrow_coords,
-            increment_color=False, fill=Colors.layover, width=ArrowWidths.layover_width)
+            self.layover_arrow_coords, make_current=False, increment_color=False, color=Colors.layover,
+            regular_options={'width': ArrowWidths.layover_width}, highlight_options={'width': ArrowWidths.layover_width})
 
     def draw_shadow_arrow(self):
         """
@@ -374,8 +383,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.shadow_arrow_coords,
-            increment_color=False, fill=Colors.shadow, width=ArrowWidths.shadow_width)
+            self.shadow_arrow_coords, increment_color=False, make_current=False, color=Colors.shadow,
+            regular_options={'width': ArrowWidths.shadow_width}, highlight_options={'width': ArrowWidths.shadow_width})
 
     def draw_multipath_arrow(self):
         """
@@ -387,8 +396,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.multipath_arrow_coords,
-            increment_color=False, fill=Colors.multipath, width=ArrowWidths.multipath_width)
+            self.multipath_arrow_coords, make_current=False, increment_color=False, color=Colors.multipath,
+            regular_options={'width': ArrowWidths.multipath_width}, highlight_options={'width': ArrowWidths.multipath_width})
 
     def draw_north_arrow(self):
         """
@@ -400,8 +409,8 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.north_arrow_coords,
-            increment_color=False, fill=Colors.north, width=ArrowWidths.north_width)
+            self.north_arrow_coords, make_current=False, increment_color=False, color=Colors.north,
+            regular_options={'width': ArrowWidths.north_width}, highlight_options={'width': ArrowWidths.north_width})
         # label the north arrow
         x_start = self.north_arrow_coords[0]
         x_end = self.north_arrow_coords[2]
@@ -409,8 +418,8 @@ class MetaIcon(ImagePanel):
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
         self.canvas.create_new_text(
-            (text_pos[0], text_pos[1]),
-            increment_color=False, text="N", fill=Colors.north, font=self.font)
+            (text_pos[0], text_pos[1]), 'N', color=Colors.north,
+            regular_options={'font': self.font}, highlight_options={'font': self.font})
 
     def draw_direction_arrow(self):
         """
@@ -427,17 +436,20 @@ class MetaIcon(ImagePanel):
         if self.data_container.side_of_track == 'R':
             self.canvas.create_new_arrow(
                 flight_direction_arrow_start + flight_direction_arrow_end,
-                increment_color=False, fill=Colors.flight_direction, width=3)
+                make_current=False, increment_color=False, color=Colors.flight_direction,
+                regular_options={'width': 3}, highlight_options={'width': 3})
             text = 'R'
         else:
             text = 'L'
             self.canvas.create_new_arrow(
                 flight_direction_arrow_end + flight_direction_arrow_start,
-                increment_color=False, fill=Colors.flight_direction, width=3)
+                make_current=False, increment_color=False, color=Colors.flight_direction,
+                regular_options={'width': 3}, highlight_options={'width': 3})
         self.canvas.create_new_text(
             (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
              flight_direction_arrow_start[1]),
-            increment_color=False, text=text, fill=Colors.flight_direction, font=self.font)
+            text, make_current=False, color=Colors.flight_direction,
+            regular_options={'font': self.font}, highlight_options={'font': self.font})
 
     def _adjust_arrow_aspect_ratio(self, origin, arrow_length, arrow_angle):
         """

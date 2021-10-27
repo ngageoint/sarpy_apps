@@ -644,9 +644,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        image_reader = self.variables.image_reader
-        the_index = None if image_reader is None else image_reader.index
-        self.populate_metaicon(image_reader, the_index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """

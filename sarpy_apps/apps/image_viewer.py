@@ -16,7 +16,7 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets import basic_widgets
+from tk_builder.widgets.basic_widgets import Frame
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
@@ -40,28 +40,33 @@ class AppVariables(object):
         'image_reader', CanvasImageReader, docstring='')  # type: CanvasImageReader
 
 
-class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
-    def __init__(self, primary):
+class ImageViewer(Frame, WidgetWithMetadata):
+    def __init__(self, primary, reader=None, **kwargs):
         """
 
         Parameters
         ----------
         primary : tkinter.Toplevel|tkinter.Tk
+        reader
+        kwargs
         """
 
         self.root = primary
-        self.primary = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
-
-        basic_widgets.Frame.__init__(self, primary)
+        Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.primary = tkinter.PanedWindow(self, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
+
         self.variables = AppVariables()
 
-        self.image_panel = ImagePanel(self.primary)  # type: ImagePanel
-        self.image_panel.config(borderwidth=0)
-        self.primary.add(self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.image_panel = ImagePanel(self.primary, borderwidth=0)  # type: ImagePanel
+        self.primary.add(
+            self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
+            stretch=tkinter.FIRST)
 
         self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
-        self.primary.add(self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.primary.add(
+            self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
@@ -95,6 +100,8 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+        self.update_reader(reader, update_browse=None)
 
     def set_title(self):
         """
@@ -162,9 +169,12 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|BaseReader|CanvasImageReader
+        the_reader : None|str|BaseReader|CanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -229,7 +239,7 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
 
         threshold = self.image_panel.canvas.variables.config.select_size_threshold
 
-        select_id = self.image_panel.canvas.variables.select_rect.uid
+        select_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
         rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
         extent = get_extent(rect_coords)
 
@@ -247,25 +257,14 @@ class ImageViewer(basic_widgets.Frame, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            image_reader = None
-            the_index = 0
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-            the_index = self.image_panel.canvas.get_image_index()
-        self.populate_metaicon(image_reader, the_index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None:
-            image_reader = None
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-        self.populate_metaviewer(image_reader)
+        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main(reader=None):
@@ -282,10 +281,8 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = ImageViewer(root)
+    app = ImageViewer(root, reader=reader)
     root.geometry("1000x800")
-    if reader is not None:
-        app.update_reader(reader)
 
     root.mainloop()
 
