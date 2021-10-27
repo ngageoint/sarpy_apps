@@ -1,7 +1,8 @@
 # This details the important differences introduced in sarpy_apps 1.1
 # NB: bump the version number in __about__.py to reflect the below.
 
-* .4 - Adding pulse explorer tool for CRSD file exploration
+* .4 - Adding plain annotation tool and associated refactoring labeling and rcs tools
+       General stability improvements for all apps
 * .3 - Incorporating reader structure clarification from sarpy 1.2.25
 * .2 - Incorporate changes to remap functions and reader types from sarpy 1.2.24
        Adding canvas image readers specific to CPHD and CRSD usage
