@@ -7,7 +7,7 @@ __author__ = ("Thomas Rackers", "Thomas McCullough")
 
 import logging
 import os
-from enum import Enum
+from enum import Enum, auto
 
 import numpy
 from scipy.signal import spectrogram, resample
@@ -18,7 +18,6 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
-from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.widgets import basic_widgets
 
@@ -316,11 +315,11 @@ class AppVariables(object):
 
 
 class Operation(Enum):
-    REV = -2
-    PREV = -1
-    STOP = 0
-    NEXT = 1
-    FWD = 2
+    REV = auto()
+    PREV = auto()
+    STOP = auto()
+    NEXT = auto()
+    FWD = auto()
 
 
 class SliderWidget(basic_widgets.Frame):
@@ -339,29 +338,40 @@ class SliderWidget(basic_widgets.Frame):
         super().__init__(parent)
 
         self.label_1 = basic_widgets.Label(self, text='1')
-        self.label_2 = basic_widgets.Label(self, text='Pulse')
 
-        self.entry = basic_widgets.Entry(self)
+        self.label_channel = basic_widgets.Label(self, text='Channel')
+        self.cbx_channel = basic_widgets.Combobox(self, state='readonly')
+        self.var_cbx_channel = tkinter.IntVar(value=0)
+        self.cbx_channel.configure(justify='left',
+                                   textvariable=self.var_cbx_channel,
+                                   values=[], width=15)
+
+        self.label_pulse = basic_widgets.Label(self, text='Pulse')
+        self.entry_pulse = basic_widgets.Entry(self)
         self.var_entry = tkinter.IntVar(value=1)
-        self.entry.configure(font=('TkFixedFont', 12), justify='right',
+        self.entry_pulse.configure(font=('TkFixedFont', 12), justify='right',
                              textvariable=self.var_entry, width=6)
 
         self.fullscale = basic_widgets.Label(self, text='100')
 
-        self.label_1.grid(row=0, column=0, sticky='w', padx=5)
-        self.label_2.grid(row=0, column=1, sticky='e', padx=5)
-        self.entry.grid(row=0, column=2, sticky='w', padx=5)
-        self.fullscale.grid(row=0, column=3, sticky='e', padx=5)
+        self.label_1.grid(row=0, column=0, padx=5, sticky='w')
+        self.label_channel.grid(row=0, column=1, padx=5, sticky='e')
+        self.cbx_channel.grid(row=0, column=2, padx=5)
+        self.label_pulse.grid(row=0, column=3, padx=5)
+        self.entry_pulse.grid(row=0, column=4, padx=5, sticky='w')
+        self.fullscale.grid(row=0, column=5, padx=5, sticky='e')
         self.columnconfigure(0, weight=0)
         self.columnconfigure(1, weight=1)
-        self.columnconfigure(2, weight=1)
+        self.columnconfigure(2, weight=0)
         self.columnconfigure(3, weight=0)
+        self.columnconfigure(4, weight=1)
+        self.columnconfigure(5, weight=0)
 
         self.scale = basic_widgets.Scale(self)
         self.var_scale = tkinter.IntVar(value=1)
         self.scale.configure(from_=1, to=100, length=600, orient='horizontal',
                              variable=self.var_scale)
-        self.scale.grid(row=1, column=0, columnspan=4, padx=5, pady=5, sticky='esw')
+        self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5, sticky='esw')
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -498,7 +508,6 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=0)
-        # self.primary.grid(row=0, column=0, sticky="NSEW", expand=True, fill='both')
         self.pack(expand=True, fill='both')
         self.set_frame_title()
 
@@ -522,14 +531,6 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         self.update_reader(reader)
 
-        # # hide extraneous tool elements
-        # self.image_panel.hide_tools('shape_drawing')
-        # self.image_panel.hide_shapes()
-
-        # # bind canvas events for proper functionality
-        # # this makes for bad performance on a larger image - do not activate
-        # # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
-        # self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed) << USE THIS fir index and pulse
 
@@ -559,24 +560,6 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
     def exit(self):
         self.root.destroy()
-
-    # # noinspection PyUnusedLocal
-    # def handle_selection_change(self, event):
-    #     """
-    #     Handle a change in the selection area.
-    #
-    #     Parameters
-    #     ----------
-    #     event
-    #     """
-    #
-    #     if self.variables.image_reader is None:
-    #         return
-    #
-    #     # full_image_width = self.image_panel.canvas.variables.state.canvas_width
-    #     # fill_image_height = self.image_panel.canvas.variables.state.canvas_height
-    #     # self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
-    #     self.display_canvas_rect_selection_in_pyplot_frame()
 
     # noinspection PyUnusedLocal
     def handle_remap_change(self, event):
@@ -646,28 +629,6 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         the_reader = STFTCanvasImageReader(fname)
         self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
-
-    # def display_canvas_rect_selection_in_pyplot_frame(self):
-    #     def get_extent(coords):
-    #         row_min = int(numpy.floor(min(coords[0::2])))
-    #         row_max = int(numpy.ceil(max(coords[0::2])))
-    #         col_min = int(numpy.floor(min(coords[1::2])))
-    #         col_max = int(numpy.ceil(max(coords[1::2])))
-    #         return row_min, row_max, col_min, col_max
-    #
-        # threshold = self.image_panel.canvas.variables.config.select_size_threshold
-        #
-        # select_id = self.image_panel.canvas.variables.select_rect.uid
-        # rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
-        # extent = get_extent(rect_coords)
-
-        # if abs(extent[1] - extent[0]) < threshold or abs(extent[3] - extent[2]) < threshold:
-        #     self.pyplot_panel.make_blank()
-        # else:
-        #     times = 1e6*self.variables.image_reader.times[extent[2]:extent[3]]
-        #     frequencies = 1e-9*self.variables.image_reader.frequencies[extent[0]:extent[1]]
-        #     image_data = self.variables.image_reader.pulse_data[extent[0]: extent[1], extent[2]:extent[3]]
-        #     self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
 
     def callback_settings_popup(self):
         pass
