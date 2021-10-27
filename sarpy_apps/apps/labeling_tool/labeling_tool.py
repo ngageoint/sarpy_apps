@@ -678,7 +678,11 @@ class LabelingTool(AnnotationTool):
         if annotation_fname in ['', ()]:
             return
 
-        annotations = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_fname)
+        try:
+            annotations = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_fname)
+        except Exception as e:
+            showinfo('Parsing failed', message='Parsing this label annotations file failed with message:\n{}'.format(e))
+            return
         self.set_annotations(annotations)
 
     def create_new_annotation_file(self):

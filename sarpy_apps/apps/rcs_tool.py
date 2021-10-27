@@ -91,9 +91,9 @@ class RCSSpecificsPanel(TreeviewWithScrolling):
         self.column('#2', width=10)
         self.heading('#3', text='Std[power]')
         self.column('#3', width=10)
-        self.heading('#4', text='Max[power]')
+        self.heading('#4', text='Min[power]')
         self.column('#4', width=10)
-        self.heading('#5', text='Min[power]')
+        self.heading('#5', text='Max[power]')
         self.column('#5', width=10)
 
     def _empty_entries(self):
@@ -150,7 +150,6 @@ class RCSTabControl(AnnotateTabControl):
         # NB: pack the frame, since the treeview is already packed into a frame
 
         self.geometry_tab.geometry_buttons.set_active_shapes(['rectangle', 'ellipse', 'polygon'])
-        # todo: "forget" point and line?
 
     def update_annotation(self):
         self.details_tab.update_annotation()
@@ -251,19 +250,17 @@ class RCSCollectionViewer(AnnotationCollectionViewer):
     def _render_annotation(self, the_id, at_index='end'):
         annotation = self.annotation_collection.annotations[the_id]
         parent = self._element_association[the_id]
-
         if annotation.properties.parameters is None:
             value = ''
         else:
-            value = ''
+            value = 'NaN'
             the_index = self._app_variables.image_reader.index
-            the_units = self._app_variables.get_rcs_units()
+            the_units = self._app_variables.rcs_viewer_units
             for entry in annotation.properties.parameters:
                 if entry.units == the_units and entry.index == the_index:
-                    if entry.value is not None and entry.value.mean is not None:
+                    if entry.value is not None and entry.value.mean is not None and entry.value.mean > 0:
                         value = '{0:0.5G}'.format(10*numpy.log10(entry.value.mean))
                     break
-
         name = annotation.get_name()
         self.insert(parent, at_index, the_id, text=name, values=(value, ))
 
@@ -306,7 +303,10 @@ class RCSCollectionPanel(AnnotationCollectionPanel):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-    def callback_units_select(self):
+        self.units_value.on_selection(self.callback_units_select)
+
+    # noinspection PyUnusedLocal
+    def callback_units_select(self, event):
         self.app_variables.rcs_viewer_units = self.units_value.get()
         self.update_annotation_collection()
 
@@ -412,10 +412,10 @@ class RCSTool(AnnotationTool):
         self.image_panel.canvas.bind('<<ImageIndexPreChange>>', self.handle_image_index_prechange)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
         self.image_panel.canvas.bind('<<ShapeCreate>>', self.shape_create_on_canvas)
+        self.image_panel.canvas.bind('<<ShapeCoordsEdit>>', self.shape_finalized_on_canvas)  # is this too much?
         self.image_panel.canvas.bind('<<ShapeCoordsFinalized>>', self.shape_finalized_on_canvas)
         self.image_panel.canvas.bind('<<ShapeDelete>>', self.shape_delete_on_canvas)
         self.image_panel.canvas.bind('<<ShapeSelect>>', self.shape_selected_on_canvas)
-        # todo: edit shape_finalized_on_canvas
 
         # set up the label_panel viewer event listeners
         self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
@@ -528,7 +528,11 @@ class RCSTool(AnnotationTool):
         if annotation_fname in ['', ()]:
             return
 
-        annotations = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_fname)
+        try:
+            annotations = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_fname)
+        except Exception as e:
+            showinfo('Parsing failed', message='Parsing this rcs annotations file failed with message:\n{}'.format(e))
+            return
         self.set_annotations(annotations)
 
     def create_new_annotation_file(self):
@@ -601,10 +605,11 @@ class RCSTool(AnnotationTool):
 
         geometry = self._get_geometry_for_feature(feature_id)
 
-        annotation = self.variables.file_annotation_collection.annotations[feature_id]
-        annotation.set_rcs_parameters_from_reader(self.variables.image_reader.base_reader)
-        self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
-        self.collection_panel.viewer.rerender_annotation(annotation.uid, set_focus=set_focus)
+        if feature_id is not None:
+            annotation = self.variables.file_annotation_collection.annotations[feature_id]
+            annotation.set_rcs_parameters_from_reader(self.variables.image_reader.base_reader)
+            self.variables.file_annotation_collection.annotations[feature_id].geometry = geometry
+            self.collection_panel.viewer.rerender_annotation(annotation.uid, set_focus=set_focus)
         self.annotate.update_annotation()
         self.variables.unsaved_changes = True
 
