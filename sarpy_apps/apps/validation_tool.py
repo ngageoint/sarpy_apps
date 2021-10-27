@@ -17,10 +17,11 @@ from tkinter.scrolledtext import ScrolledText
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.file_filters import create_filter_entry, all_files
-from tk_builder.image_reader import CanvasImageReader
 from tk_builder.logger import TextHandler
 from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
-from tk_builder.widgets import basic_widgets, widget_descriptors
+from tk_builder.widgets.basic_widgets import Label, CheckButton, Text, Button
+from tk_builder.widgets.widget_descriptors import LabelDescriptor, CheckButtonDescriptor, \
+    TextDescriptor, ButtonDescriptor
 
 from sarpy_apps.apps.aperture_tool import RegionSelection
 from sarpy_apps.apps.local_support_tool import LocalFrequencySupportTool
@@ -45,21 +46,21 @@ class _Feedback(WidgetPanel):
         ('feedback_label', 'feedback_text'),
         ('cancel_button', 'submit_button'))
 
-    title_label = widget_descriptors.LabelDescriptor(
+    title_label = LabelDescriptor(
         'title_label', default_text='',
-        docstring='The overall title')  # type: basic_widgets.Label
-    acceptable_label = widget_descriptors.LabelDescriptor(
-        'acceptable_label', default_text='acceptable?', docstring='')  # type: basic_widgets.Label
-    acceptable_button = widget_descriptors.RadioButtonDescriptor(
-        'acceptable_button', docstring='')  # type: basic_widgets.RadioButton
-    feedback_label = widget_descriptors.LabelDescriptor(
-        'feedback_label', default_text='feedback', docstring='')  # type: basic_widgets.Label
-    feedback_text = widget_descriptors.TextDescriptor(
-        'feedback_text', docstring='The widget to provide log information')  # type: basic_widgets.Text
-    cancel_button = widget_descriptors.ButtonDescriptor(
-        'cancel_button', default_text='Cancel', docstring='')  # type: basic_widgets.Button
-    submit_button = widget_descriptors.ButtonDescriptor(
-        'submit_button', default_text='Submit', docstring='')  # type: basic_widgets.Button
+        docstring='The overall title')  # type: Label
+    acceptable_label = LabelDescriptor(
+        'acceptable_label', default_text='acceptable?', docstring='')  # type: Label
+    acceptable_button = CheckButtonDescriptor(
+        'acceptable_button', docstring='')  # type: CheckButton
+    feedback_label = LabelDescriptor(
+        'feedback_label', default_text='feedback', docstring='')  # type: Label
+    feedback_text = TextDescriptor(
+        'feedback_text', docstring='The widget to provide log information')  # type: Text
+    cancel_button = ButtonDescriptor(
+        'cancel_button', default_text='Cancel', docstring='')  # type: Button
+    submit_button = ButtonDescriptor(
+        'submit_button', default_text='Submit', docstring='')  # type: Button
 
     def __init__(self, root, title_text):
         """
@@ -121,40 +122,40 @@ class _Buttons(WidgetPanelNoLabel):
         ('noise_label', 'noise_button'),
         ('geolocation_label', 'geolocation_button'))
 
-    local_fs_label = widget_descriptors.LabelDescriptor(
+    local_fs_label = LabelDescriptor(
         'local_fs_label', default_text='Perform local frequency support analysis',
-        docstring='')  # type: basic_widgets.Label
-    local_fs_button = widget_descriptors.ButtonDescriptor(
+        docstring='')  # type: Label
+    local_fs_button = ButtonDescriptor(
         'local_fs_button', default_text='Frequency Support Tool',
-        docstring='')  # type: basic_widgets.Button
+        docstring='')  # type: Button
 
-    full_fs_label = widget_descriptors.LabelDescriptor(
+    full_fs_label = LabelDescriptor(
         'full_fs_label', default_text='Perform full image frequency analysis',
-        docstring='')  # type: basic_widgets.Label
-    full_fs_button = widget_descriptors.ButtonDescriptor(
+        docstring='')  # type: Label
+    full_fs_button = ButtonDescriptor(
         'full_fs_button', default_text='Frequency Analysis Tool',
-        docstring='')  # type: basic_widgets.Button
+        docstring='')  # type: Button
 
-    sign_label = widget_descriptors.LabelDescriptor(
+    sign_label = LabelDescriptor(
         'sign_label', default_text='Perform Fourier analysis',
-        docstring='')  # type: basic_widgets.Label
-    sign_button = widget_descriptors.ButtonDescriptor(
+        docstring='')  # type: Label
+    sign_button = ButtonDescriptor(
         'sign_button', default_text='Aperture Tool',
-        docstring='')  # type: basic_widgets.Button
+        docstring='')  # type: Button
 
-    noise_label = widget_descriptors.LabelDescriptor(
+    noise_label = LabelDescriptor(
         'noise_label', default_text='Perform noise analysis',
-        docstring='')  # type: basic_widgets.Label
-    noise_button = widget_descriptors.ButtonDescriptor(
+        docstring='')  # type: Label
+    noise_button = ButtonDescriptor(
         'noise_button', default_text='RCS Tool',
-        docstring='')  # type: basic_widgets.Button
+        docstring='')  # type: Button
 
-    geolocation_label = widget_descriptors.LabelDescriptor(
+    geolocation_label = LabelDescriptor(
         'geolocation_label', default_text='Perform basic geolocation analysis',
-        docstring='')  # type: basic_widgets.Label
-    geolocation_button = widget_descriptors.ButtonDescriptor(
+        docstring='')  # type: Label
+    geolocation_button = ButtonDescriptor(
         'geolocation_button', default_text='Create kmz',
-        docstring='')  # type: basic_widgets.Button
+        docstring='')  # type: Button
 
     def __init__(self, parent):
         """
@@ -176,34 +177,40 @@ class AppVariables(object):
         'image_reader', SICDTypeCanvasImageReader, docstring='')  # type: SICDTypeCanvasImageReader
 
 
-class ValidationTool(WidgetPanel, WidgetWithMetadata):
+class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
     _widget_list = ("button_panel", "text_log_widget")
-    button_panel = widget_descriptors.TypedDescriptor(
+    button_panel = TypedDescriptor(
         'button_panel', _Buttons, docstring='the button panel')  # type: _Buttons
-    text_log_widget = widget_descriptors.TypedDescriptor(
+    text_log_widget = TypedDescriptor(
         'text_log_widget', ScrolledText, docstring='the log display')  # type: ScrolledText
 
-    def __init__(self, primary):
+    def __init__(self, primary, reader=None, **kwargs):
         """
 
         Parameters
         ----------
         primary : tkinter.Toplevel|tkinter.Tk
+        reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         """
 
-        self.root = primary
-        self.primary_frame = tkinter.PanedWindow(primary, sashrelief=tkinter.RIDGE, orient=tkinter.VERTICAL)
-        WidgetPanel.__init__(self, primary)
-        WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
 
+        if 'sashrelief' not in kwargs:
+            kwargs['sashrelief'] = tkinter.RIDGE
+        if 'orient' not in kwargs:
+            kwargs['orient'] = tkinter.VERTICAL
+
+        tkinter.PanedWindow.__init__(self, primary, **kwargs)
+        WidgetWithMetadata.__init__(self, primary)
+        self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
+
         # handle packing manually
-        self.button_panel = _Buttons(self.primary_frame)
-        self.primary_frame.add(self.button_panel, width=700, height=300, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.button_panel = _Buttons(self)
+        self.add(self.button_panel, width=700, height=300, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # create the scrolled text widget for logging output
-        self.text_log_widget = ScrolledText(self.primary_frame)  # TODO: other configuration?
-        self.primary_frame.add(self.text_log_widget, width=700, height=400, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.text_log_widget = ScrolledText(self)  # TODO: other configuration?
+        self.add(self.text_log_widget, width=700, height=400, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # set the logging handler for the validation logger to log to our widget
         self.log_handler = TextHandler(self.text_log_widget)  # type: TextHandler
@@ -232,9 +239,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
-        # handle packing
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.root.config(menu=menubar)
+        self.master.config(menu=menubar)
 
         # set the callbacks for the button panel
         self.button_panel.local_fs_button.config(command=self.callback_local_fs)
@@ -242,6 +247,8 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.button_panel.sign_button.config(command=self.callback_sign)
         self.button_panel.noise_button.config(command=self.callback_noise)
         self.button_panel.geolocation_button.config(command=self.callback_geolocation)
+
+        self.update_reader(reader)
 
     def _verify_reader(self):
         # type: () -> bool
@@ -253,7 +260,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
     def _get_and_log_feedback(self, title_text):
         # type: (str) -> None
-        feedback = FeedbackPopup(self.root, title_text)
+        feedback = FeedbackPopup(self.master, title_text)
         feedback.root.grab_set()
         feedback.root.wait_window()
         if not feedback.use_feedback:
@@ -280,7 +287,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
-        self.root.destroy()
+        self.master.destroy()
 
     def save_log(self):
         if self.variables.image_reader is None or self.log_handler is None:
@@ -327,9 +334,12 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
+        the_reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -403,9 +413,8 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         # create a complex image reader - don't pass the same one around, so no hidden state
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
-        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = LocalFrequencySupportTool(root)
-        tool.update_reader(reader)
+        root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = LocalFrequencySupportTool(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -422,9 +431,8 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         # create a complex image reader - don't pass the same one around, so no hidden state
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the frequency support tool based on this reader
-        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = FullFrequencySupportTool(root)
-        tool.update_reader(reader)
+        root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = FullFrequencySupportTool(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -441,9 +449,8 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         # create a complex image reader - don't pass the same one around, so no hidden state
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the aperture tool based on this reader
-        root = tkinter.Toplevel(self.root)  # create a new toplevel with its own mainloop, so it's blocking
-        tool = RegionSelection(root)
-        tool.update_reader(reader)
+        root = tkinter.Toplevel(self.master)  # create a new toplevel with its own mainloop, so it's blocking
+        tool = RegionSelection(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -461,8 +468,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         reader = SICDTypeCanvasImageReader(self.variables.image_reader.base_reader)
         # open the rcs tool based on this reader
         root = tkinter.Toplevel()  # create a new toplevel with its own mainloop, so it's blocking
-        tool = RCSTool(root)
-        tool.update_reader(reader)
+        tool = RCSTool(root, reader=reader)
         root.grab_set()
         root.wait_window()
 
@@ -505,7 +511,7 @@ class ValidationTool(WidgetPanel, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        self.populate_metaicon(self.variables.image_reader, 0)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
@@ -537,10 +543,7 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = ValidationTool(root)
-    if reader is not None:
-        app.update_reader(reader)
-
+    app = ValidationTool(root, reader=reader)
     root.mainloop()
 
 

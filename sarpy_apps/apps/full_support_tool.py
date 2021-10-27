@@ -24,9 +24,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
 
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.image_reader import NumpyCanvasImageReader
-from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets import widget_descriptors, basic_widgets
+from tk_builder.widgets.basic_widgets import Frame
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, SICDTypeCanvasImageReader
@@ -161,21 +160,33 @@ class AppVariables(object):
             self.column_fourier_file = None
 
 
-class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
-    _widget_list = ("row_centered_image_panel", "column_centered_image_panel")
-    row_centered_image_panel = widget_descriptors.ImagePanelDescriptor(
-        "row_centered_image_panel")   # type: ImagePanel
-    column_centered_image_panel = widget_descriptors.ImagePanelDescriptor(
-        "column_centered_image_panel")   # type: ImagePanel
+class FullFrequencySupportTool(Frame, WidgetWithMetadata):
+    def __init__(self, primary, reader=None, **kwargs):
+        """
 
-    def __init__(self, primary):
+        Parameters
+        ----------
+        primary
+            tkinter.Tk|tkinter.TopLevel
+        reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
+        kwargs
+        """
+
         self.root = primary
-        self.primary_frame = basic_widgets.Frame(primary)
         self.variables = AppVariables()
-        WidgetPanel.__init__(self, self.primary_frame)
+
+        Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
 
-        self.init_w_horizontal_layout()
+        self.row_centered_image_panel = ImagePanel(self, borderwidth=2, relief=tkinter.RIDGE)  # type: ImagePanel
+        self.row_centered_image_panel.grid(row=0, column=0, sticky='NSEW')
+
+        self.column_centered_image_panel = ImagePanel(self, borderwidth=2, relief=tkinter.RIDGE)  # type: ImagePanel
+        self.column_centered_image_panel.grid(row=0, column=1, sticky='NSEW')
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+
         self.set_title()
 
         # define menus
@@ -196,7 +207,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         # handle packing
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
@@ -208,6 +219,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.column_centered_image_panel.hide_shapes()
         self.column_centered_image_panel.hide_select_index()
 
+        self.update_reader(reader)
         # TODO: allow changing the image index somewhere?
         #   bind the handle_image_index_changed method
 
@@ -330,21 +342,21 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
             # draw the row deltak1/deltak2 lines
             row_deltak1_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 row_deltak1_id, (row_deltak1, 0, row_deltak1, col_count))
             deltak2_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 deltak2_id, (row_deltak2, 0, row_deltak2, col_count))
 
             # draw the column deltak1/deltak2 lines
             col_deltak1_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 col_deltak1_id, (0, col_deltak1, row_count, col_deltak1))
             deltak2_id = canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             canvas.modify_existing_shape_using_image_coords(
                 deltak2_id, (0, col_deltak2, row_count, col_deltak2))
 
@@ -462,9 +474,12 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
+        the_reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -522,7 +537,7 @@ class FullFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        self.populate_metaicon(self.variables.image_reader, self.variables.image_reader.index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
@@ -549,11 +564,8 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = FullFrequencySupportTool(root)
+    app = FullFrequencySupportTool(root, reader=reader)
     root.geometry("1000x1000")
-    if reader is not None:
-        app.update_reader(reader)
-
     root.mainloop()
 
 

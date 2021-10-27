@@ -19,9 +19,7 @@ from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import TypedDescriptor, IntegerDescriptor, StringDescriptor
 from tk_builder.image_reader import NumpyCanvasImageReader
-from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.widgets import widget_descriptors, basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
@@ -68,20 +66,39 @@ class AppVariables(object):
         docstring='The id of the frequency_panel of the column deltak2.')  # type: Union[None, int]
 
 
-class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
-    _widget_list = ("image_panel", "frequency_panel")
-    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")   # type: ImagePanel
-    frequency_panel = widget_descriptors.ImagePanelDescriptor("frequency_panel")   # type: ImagePanel
+class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
+    def __init__(self, primary, reader=None, **kwargs):
+        """
 
-    def __init__(self, primary):
+        Parameters
+        ----------
+        primary
+            tkinter.Tk|tkinter.TopLevel
+        reader : None|str|SICDTypeReader|SICDTypeImageCanvasReader
+        kwargs
+        """
+
         self.root = primary
-        self.primary_frame = basic_widgets.Frame(primary)
-        WidgetPanel.__init__(self, self.primary_frame)
-        WidgetWithMetadata.__init__(self, primary)
         self.variables = AppVariables()
         self.phase_remap = NRL()
 
-        self.init_w_horizontal_layout()
+        if 'sashrelief' not in kwargs:
+            kwargs['sashrelief'] = tkinter.RIDGE
+        if 'orient' not in kwargs:
+            kwargs['orient'] = tkinter.HORIZONTAL
+
+        tkinter.PanedWindow.__init__(self, primary, **kwargs)
+        WidgetWithMetadata.__init__(self, primary)
+
+        self.image_panel = ImagePanel(self, borderwidth=0)  # type: ImagePanel
+        self.add(
+            self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
+            stretch=tkinter.FIRST)
+        self.frequency_panel = ImagePanel(self, borderwidth=0)  # type: ImagePanel
+        self.add(
+            self.frequency_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
         self.set_title()
 
         # define menus
@@ -101,7 +118,6 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         menubar.add_cascade(label="Metadata", menu=popups_menu)
 
         # handle packing
-        self.primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
@@ -115,6 +131,8 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
         self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+
+        self.update_reader(reader)
 
     def set_title(self):
         """
@@ -153,8 +171,8 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         self.image_panel.canvas.zoom_to_full_image_selection((0, 0, full_rows, full_cols))
         # set selection rectangle
         self.image_panel.canvas.current_tool = 'SELECT'
-        self.image_panel.canvas.modify_existing_shape_using_image_coords(
-            self.image_panel.canvas.variables.select_rect.uid, middle)
+        select = self.image_panel.canvas.variables.get_tool_shape_by_name('SELECT')
+        self.image_panel.canvas.modify_existing_shape_using_image_coords(select.uid, middle)
         self.handle_selection_change(None)
 
     # noinspection PyUnusedLocal
@@ -194,9 +212,12 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
 
         Parameters
         ----------
-        the_reader : str|SICDTypeReader|SICDTypeCanvasImageReader
+        the_reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         update_browse : None|str
         """
+
+        if the_reader is None:
+            return
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
@@ -254,22 +275,22 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         if self.variables.row_line_low is None or \
                 self.frequency_panel.canvas.get_vector_object(self.variables.row_line_low) is None:
             self.variables.row_deltak1 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             self.variables.row_deltak2 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             self.variables.col_deltak1 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
             self.variables.col_deltak2 = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='red')
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='red')
 
             self.variables.row_line_low = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', regular_options={'dash': (3, )})
             self.variables.row_line_high = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', regular_options={'dash': (3, )})
             self.variables.col_line_low = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', regular_options={'dash': (3, )})
             self.variables.col_line_high = self.frequency_panel.canvas.create_new_line(
-                (0, 0, 0, 0), make_current=False, increment_color=False, fill='blue', dash=(3, ))
+                (0, 0, 0, 0), make_current=False, increment_color=False, color='blue', regular_options={'dash': (3, )})
 
         else:
             self.frequency_panel.canvas.modify_existing_shape_using_image_coords(
@@ -353,7 +374,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
                 self.variables.col_line_high, (0, col_bw_high, row_count, col_bw_high))
 
         threshold = self.image_panel.canvas.variables.config.select_size_threshold
-        select_id = self.image_panel.canvas.variables.select_rect.uid
+        select_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
         rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
         extent = get_extent(rect_coords)  # left, right, bottom, top
         row_count = extent[1] - extent[0]
@@ -387,14 +408,7 @@ class LocalFrequencySupportTool(WidgetPanel, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.variables.image_reader is None:
-            image_reader = None
-            the_index = 0
-        else:
-
-            image_reader = self.variables.image_reader
-            the_index = self.variables.image_reader.index
-        self.populate_metaicon(image_reader, the_index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
@@ -418,12 +432,8 @@ def main(reader=None):
     the_style = ttk.Style()
     the_style.theme_use('classic')
 
-    app = LocalFrequencySupportTool(root)
+    app = LocalFrequencySupportTool(root, reader=reader)
     root.geometry("1000x1000")
-
-    if reader is not None:
-        app.update_reader(reader)
-
     root.mainloop()
 
 
