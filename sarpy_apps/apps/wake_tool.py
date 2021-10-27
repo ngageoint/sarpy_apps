@@ -344,25 +344,14 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         Populate the metaicon.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None or \
-                self.image_panel.canvas.variables.canvas_image_object.image_reader is None:
-            image_reader = None
-            the_index = None
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-            the_index = self.image_panel.canvas.get_image_index()
-        self.populate_metaicon(image_reader, the_index)
+        self.populate_metaicon(self.variables.image_reader)
 
     def my_populate_metaviewer(self):
         """
         Populate the metaviewer.
         """
 
-        if self.image_panel.canvas.variables.canvas_image_object is None:
-            image_reader = None
-        else:
-            image_reader = self.image_panel.canvas.variables.canvas_image_object.image_reader
-        self.populate_metaviewer(image_reader)
+        self.populate_metaviewer(self.variables.image_reader)
 
     def arrow_draw_command(self):
         """
@@ -406,10 +395,8 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         last_shape_id = self.image_panel.canvas.current_shape_id
         if self.variables.horizontal_line_id is None:
             self.variables.horizontal_line_id = self.image_panel.canvas.create_new_line(
-                horizontal_line_coords,
-                increment_color=False,
-                fill=self.variables.horizontal_line_color,
-                width=self.variables.horizontal_line_width)
+                horizontal_line_coords, increment_color=False, color=self.variables.horizontal_line_color,
+                regular_options={'width': self.variables.horizontal_line_width})
         else:
             self.image_panel.canvas.modify_existing_shape_using_canvas_coords(
                 self.variables.horizontal_line_id, horizontal_line_coords)

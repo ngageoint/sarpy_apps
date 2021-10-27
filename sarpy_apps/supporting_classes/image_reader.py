@@ -98,8 +98,7 @@ class GeneralCanvasImageReader(CanvasImageReader):
         self._base_reader = value
         # noinspection PyProtectedMember
         self._chippers = value._get_chippers_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
+        self.index = 0
 
     @property
     def reader_type(self):
