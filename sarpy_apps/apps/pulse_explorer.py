@@ -22,7 +22,8 @@ from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.widgets import basic_widgets
 
 from sarpy_apps.supporting_classes.file_filters import crsd_files, all_files
-from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.widget_with_metadata import \
+    WidgetWithMetadata
 
 from sarpy.io.general.base import SarpyIOError, FlatReader
 from sarpy.io.received.converter import open_received
@@ -32,10 +33,9 @@ from sarpy.processing.fft_base import fftshift
 
 from sarpy_apps.supporting_classes.image_reader import CRSDTypeCanvasImageReader
 
-
 logger = logging.getLogger(__name__)
 
-_PULSE_DISPLAY_VALUES = ('RFSignal', )
+_PULSE_DISPLAY_VALUES = ('RFSignal',)
 
 
 def _reramp(pulse_data, sampling_rate, deramp_rate):
@@ -54,7 +54,7 @@ def _reramp(pulse_data, sampling_rate, deramp_rate):
     """
 
     rcv_window_length = pulse_data.size / sampling_rate
-    deramp_bandwidth = abs(rcv_window_length*deramp_rate)
+    deramp_bandwidth = abs(rcv_window_length * deramp_rate)
     upsample_factor = (deramp_bandwidth + sampling_rate) / sampling_rate
 
     sample_size = round(upsample_factor * pulse_data.size)
@@ -62,7 +62,8 @@ def _reramp(pulse_data, sampling_rate, deramp_rate):
     use_data = resample(pulse_data - numpy.mean(pulse_data), sample_size)
     time_interval = 1 / (sampling_rate * upsample_factor * oversample_factor)
     times = time_interval * numpy.arange(sample_size) - 0.5 * rcv_window_length
-    return use_data*numpy.exp(1j*numpy.pi*deramp_rate*times*times), 1./time_interval
+    return use_data * numpy.exp(
+        1j * numpy.pi * deramp_rate * times * times), 1. / time_interval
 
 
 def _stft(data, sampling_rate):
@@ -86,10 +87,10 @@ def _stft(data, sampling_rate):
             'This short time fourier transform function only applies to a '
             'one-dimensional numpy array')
 
-    nfft = 2**int(numpy.ceil(numpy.log2(numpy.sqrt(data.shape[0]))) + 2)
-    nperseg = int(0.97*nfft)
+    nfft = 2 ** int(numpy.ceil(numpy.log2(numpy.sqrt(data.shape[0]))) + 2)
+    nperseg = int(0.97 * nfft)
     window = kaiser(nperseg, 5)
-    noverlap = int(0.9*nfft)
+    noverlap = int(0.9 * nfft)
     frequencies, times, trans_data = spectrogram(
         data, sampling_rate, window=window, nperseg=nperseg, noverlap=noverlap,
         nfft=nfft, return_onesided=False)
@@ -121,14 +122,15 @@ def _rf_signal(reader, index, pulse):
 
     if fic_rate == 0:
         times, frequencies, stft_data = _stft(pulse_data, sampling_rate)
-        frequencies += params.F0Ref + dfic0 - 0.5*sampling_rate
+        frequencies += params.F0Ref + dfic0 - 0.5 * sampling_rate
     else:
-        reramped, reramped_sampling_rate = _reramp(pulse_data, sampling_rate, fic_rate)
+        reramped, reramped_sampling_rate = _reramp(pulse_data, sampling_rate,
+                                                   fic_rate)
         times, frequencies, stft_data = _stft(reramped, reramped_sampling_rate)
         frequencies += \
             params.F0Ref + dfic0 + \
-            0.5*fic_rate*pulse_data.size/reramped_sampling_rate - \
-            0.5*reramped_sampling_rate
+            0.5 * fic_rate * pulse_data.size / reramped_sampling_rate - \
+            0.5 * reramped_sampling_rate
     return times, frequencies, stft_data
 
 
@@ -198,7 +200,8 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         if not (0 <= value < len(signal_data_sizes)):
             logging.error(
                 'The index property must be 0 <= index < {}, '
-                'and got argument {}. Setting to 0.'.format(len(signal_data_sizes), value))
+                'and got argument {}. Setting to 0.'.format(
+                    len(signal_data_sizes), value))
             value = 0
         self._index = value
         self._signal_data_size = signal_data_sizes[value]
@@ -223,11 +226,14 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
                 pass
 
             if reader is None:
-                raise SarpyIOError('Could not open file {} as a CRSD reader'.format(value))
+                raise SarpyIOError(
+                    'Could not open file {} as a CRSD reader'.format(value))
             value = reader
 
         if not isinstance(value, CRSDTypeReader):
-            raise TypeError('base_reader must be a CRSDReader, got type {}'.format(type(value)))
+            raise TypeError(
+                'base_reader must be a CRSDReader, got type {}'.format(
+                    type(value)))
         self._base_reader = value
         # noinspection PyProtectedMember
         self._chippers = value._get_chippers_as_tuple()
@@ -282,9 +288,11 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             return
 
         if self._pulse_display == 'RFSignal':
-            times, frequencies, data = _rf_signal(self.base_reader, self.index, self.pulse)
+            times, frequencies, data = _rf_signal(self.base_reader, self.index,
+                                                  self.pulse)
         else:
-            raise ValueError('Got unhandled pulse display value `{}`'.format(self.pulse_display))
+            raise ValueError('Got unhandled pulse display value `{}`'.format(
+                self.pulse_display))
 
         self._times = times
         self._frequencies = frequencies
@@ -298,21 +306,9 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             return self._pulse_data.__getitem__(item)
         return self.remap_complex_data(self._pulse_data.__getitem__(item))
 
+
 ###########
 # The main app
-
-class AppVariables(object):
-    """
-    App variables for the aperture tool.
-    """
-
-    browse_directory = StringDescriptor(
-        'browse_directory', default_value=os.path.expanduser('~'),
-        docstring='The directory for browsing for file selection.')  # type: str
-    image_reader = TypedDescriptor(
-        'image_reader', STFTCanvasImageReader,
-        docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
-
 
 class Operation(Enum):
     REV = auto()
@@ -321,6 +317,19 @@ class Operation(Enum):
     NEXT = auto()
     FWD = auto()
 
+
+class IntScale(basic_widgets.Scale):
+    """
+    Subclass of ttk.Scale which restricts values to integers.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(IntScale, self).__init__(*args, command=self._value_changed, **kwargs)
+
+    def _value_changed(self, newvalue):
+        newvalue = round(float(newvalue), 1.0)
+        self.winfo_toplevel().globalsetvar(self.cget('variable'), (newvalue))
+        self.chain(newvalue)
 
 class SliderWidget(basic_widgets.Frame):
     """
@@ -339,18 +348,22 @@ class SliderWidget(basic_widgets.Frame):
 
         self.label_1 = basic_widgets.Label(self, text='1')
 
+        self.combobox_style = ttk.Style()
+        self.combobox_style.configure('Channel.TCombobox', relief='flat',
+                                      background='PaleTurquoise3')
         self.label_channel = basic_widgets.Label(self, text='Channel')
         self.cbx_channel = basic_widgets.Combobox(self, state='readonly')
-        self.var_cbx_channel = tkinter.IntVar(value=0)
-        self.cbx_channel.configure(justify='left',
-                                   textvariable=self.var_cbx_channel,
-                                   values=[], width=15)
+        self.var_cbx_channel = tkinter.StringVar()
+        self.cbx_channel.configure(font=('TkFixedFont', 11), justify='center',
+                                   textvariable=self.var_cbx_channel, width=6,
+                                   values=[], style='Channel.TCombobox',
+                                   state='disabled')
 
         self.label_pulse = basic_widgets.Label(self, text='Pulse')
         self.entry_pulse = basic_widgets.Entry(self)
-        self.var_entry = tkinter.IntVar(value=1)
-        self.entry_pulse.configure(font=('TkFixedFont', 12), justify='right',
-                             textvariable=self.var_entry, width=6)
+        self.var_pulse_number = tkinter.StringVar(value='1')
+        self.entry_pulse.configure(font=('TkFixedFont', 11), justify='right',
+                                   textvariable=self.var_pulse_number, width=6)
 
         self.fullscale = basic_widgets.Label(self, text='100')
 
@@ -367,11 +380,19 @@ class SliderWidget(basic_widgets.Frame):
         self.columnconfigure(4, weight=1)
         self.columnconfigure(5, weight=0)
 
-        self.scale = basic_widgets.Scale(self)
-        self.var_scale = tkinter.IntVar(value=1)
-        self.scale.configure(from_=1, to=100, length=600, orient='horizontal',
-                             variable=self.var_scale)
-        self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5, sticky='esw')
+        self.scale = basic_widgets.Scale(self, from_=1, to=100, length=600,
+                                         orient='horizontal',
+                                         command=lambda s: \
+                                             self.var_pulse_number.set(f"{int(float(s))}"))
+        # self.var_scale = tkinter.IntVar(value=1)
+        self.scale.configure(variable=self.var_pulse_number)
+        self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5,
+                        sticky='esw')
+
+    @staticmethod
+    def make_combobox_tuple(num):
+        int_list = list(range(1, num + 1))
+        return tuple([str(v) for v in int_list])
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -392,10 +413,12 @@ class DirectionWidget(basic_widgets.Frame):
 
         self.button_style = ttk.Style()
         self.button_style.configure('ToggleOff.TButton', font=('Arial', 24),
-                                    foreground="gray50", background="PaleTurquoise3",
+                                    foreground="gray50",
+                                    background="PaleTurquoise3",
                                     sticky='CENTER')
         self.button_style.configure('ToggleOn.TButton', font=('Arial', 24),
-                                    foreground="black", background="PaleTurquoise1",
+                                    foreground="black",
+                                    background="PaleTurquoise1",
                                     sticky='CENTER')
 
         self.button_rev = \
@@ -446,18 +469,31 @@ class DirectionWidget(basic_widgets.Frame):
         """
         self.mode = Operation.STOP if self.mode == new_mode else new_mode
         if self.mode == Operation.REV:
-            self.set_button(self.button_rev,True)
-            self.set_button(self.button_fwd,False)
+            self.set_button(self.button_rev, True)
+            self.set_button(self.button_fwd, False)
         elif self.mode == Operation.PREV:
             pass
         elif self.mode == Operation.FWD:
-            self.set_button(self.button_rev,False)
-            self.set_button(self.button_fwd,True)
+            self.set_button(self.button_rev, False)
+            self.set_button(self.button_fwd, True)
         elif self.mode == Operation.NEXT:
             pass
         else:
-            self.set_button(self.button_rev,False)
-            self.set_button(self.button_fwd,False)
+            self.set_button(self.button_rev, False)
+            self.set_button(self.button_fwd, False)
+
+
+class AppVariables(object):
+    """
+    App variables for the aperture tool.
+    """
+
+    browse_directory = StringDescriptor(
+        'browse_directory', default_value=os.path.expanduser('~'),
+        docstring='The directory for browsing for file selection.')  # type: str
+    image_reader = TypedDescriptor(
+        'image_reader', STFTCanvasImageReader,
+        docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
 
 
 class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
@@ -486,6 +522,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.pyplot_panel.cmap_name = 'viridis'
         self.pyplot_panel.set_ylabel('Freq (GHz)')
         self.pyplot_panel.set_xlabel('Time (\u03BCsec)')
+        self.pyplot_panel.set_title('[this space available]')
 
         self.scanner_panel = basic_widgets.Frame(self)  # type: basic_widgets.Frame
         self.scanner_panel.columnconfigure(0, weight=0)
@@ -515,14 +552,17 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         menubar = tkinter.Menu()
         # file menu
         filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open Image", command=self.callback_select_files)
-        filemenu.add_command(label="Settings...", command=self.callback_settings_popup)
+        filemenu.add_command(label="Open Image",
+                             command=self.callback_select_files)
+        filemenu.add_command(label="Settings...",
+                             command=self.callback_settings_popup)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.exit)
         # menus for informational popups
         popups_menu = tkinter.Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        popups_menu.add_command(label="Metaviewer",
+                                command=self.metaviewer_popup)
         # ensure menus cascade
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
@@ -555,7 +595,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         if file_name is None:
             the_title = "Pulse Explorer"
         else:
-            the_title = "Pulse Explorer for {}".format(os.path.split(file_name)[1])
+            the_title = "Pulse Explorer for {}".format(
+                os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
     def exit(self):
@@ -618,6 +659,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.set_frame_title()
         # refresh appropriate GUI elements
         # self.pyplot_panel.make_blank()
+        self.update_gui_elements()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
 
@@ -637,7 +679,20 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         times = 1.0e6 * self.variables.image_reader.times
         frequencies = 1.0e-9 * self.variables.image_reader.frequencies
         image_data = self.variables.image_reader.pulse_data[:, :]
-        self.pyplot_panel.update_pcolormesh(times, frequencies, image_data, shading='gouraud', snap=True)
+        self.pyplot_panel.update_pcolormesh(times, frequencies, image_data,
+                                            shading='gouraud', snap=True)
+
+    def update_gui_elements(self):
+        # Update channels combobox.
+        new_values = self.slider.make_combobox_tuple(
+            self.variables.image_reader.image_count)
+        self.slider.cbx_channel['values'] = new_values
+        self.slider.cbx_channel.set(new_values[0])
+        self.slider.cbx_channel.configure(state='readonly')
+        # Update scale and attached entry.
+        pass
+        # Update number of pulses.
+        pass
 
     def my_populate_metaicon(self):
         """
@@ -678,6 +733,7 @@ def main(reader=None):
 
 if __name__ == '__main__':
     import argparse
+
     parser = argparse.ArgumentParser(
         description="Open the pulse explorer with optional input file.",
         formatter_class=argparse.RawTextHelpFormatter)
@@ -688,7 +744,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(reader=args.input)
-
 
     # import os
     # from matplotlib import pyplot
