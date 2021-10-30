@@ -318,18 +318,18 @@ class Operation(Enum):
     FWD = auto()
 
 
-class IntScale(basic_widgets.Scale):
-    """
-    Subclass of ttk.Scale which restricts values to integers.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(IntScale, self).__init__(*args, command=self._value_changed, **kwargs)
-
-    def _value_changed(self, newvalue):
-        newvalue = round(float(newvalue), 1.0)
-        self.winfo_toplevel().globalsetvar(self.cget('variable'), (newvalue))
-        self.chain(newvalue)
+# class IntScale(basic_widgets.Scale):
+#     """
+#     Subclass of ttk.Scale which restricts values to integers.
+#     """
+#
+#     def __init__(self, *args, **kwargs):
+#         super(IntScale, self).__init__(*args, command=self._value_changed, **kwargs)
+#
+#     def _value_changed(self, newvalue):
+#         newvalue = round(float(newvalue), 1.0)
+#         self.winfo_toplevel().globalsetvar(self.cget('variable'), (newvalue))
+#         self.chain(newvalue)
 
 class SliderWidget(basic_widgets.Frame):
     """
@@ -349,13 +349,13 @@ class SliderWidget(basic_widgets.Frame):
         self.label_1 = basic_widgets.Label(self, text='1')
 
         self.combobox_style = ttk.Style()
-        self.combobox_style.configure('Channel.TCombobox', relief='flat',
-                                      background='PaleTurquoise3')
+        self.combobox_style.configure('Channel.TCombobox')
+        self.popdown_style = ttk.Style()
         self.label_channel = basic_widgets.Label(self, text='Channel')
         self.cbx_channel = basic_widgets.Combobox(self, state='readonly')
         self.var_cbx_channel = tkinter.StringVar()
         self.cbx_channel.configure(font=('TkFixedFont', 11), justify='center',
-                                   textvariable=self.var_cbx_channel, width=6,
+                                   textvariable=self.var_cbx_channel, width=30,
                                    values=[], style='Channel.TCombobox',
                                    state='disabled')
 
@@ -384,7 +384,6 @@ class SliderWidget(basic_widgets.Frame):
                                          orient='horizontal',
                                          command=lambda s: \
                                              self.var_pulse_number.set(f"{int(float(s))}"))
-        # self.var_scale = tkinter.IntVar(value=1)
         self.scale.configure(variable=self.var_pulse_number)
         self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5,
                         sticky='esw')
@@ -415,11 +414,11 @@ class DirectionWidget(basic_widgets.Frame):
         self.button_style.configure('ToggleOff.TButton', font=('Arial', 24),
                                     foreground="gray50",
                                     background="PaleTurquoise3",
-                                    sticky='CENTER')
+                                    width=3, sticky='CENTER')
         self.button_style.configure('ToggleOn.TButton', font=('Arial', 24),
                                     foreground="black",
                                     background="PaleTurquoise1",
-                                    sticky='CENTER')
+                                    width=3, sticky='CENTER')
 
         self.button_rev = \
             basic_widgets.Button(self.parent, text="\u23EA",
@@ -519,7 +518,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.style_pyplot_panel.configure('TLabelframe', labelmargins=10)
         self.pyplot_panel = PyplotImagePanel(self)  # type: PyplotImagePanel
 
-        self.pyplot_panel.cmap_name = 'viridis'
+        self.pyplot_panel.cmap_name = 'turbo'
         self.pyplot_panel.set_ylabel('Freq (GHz)')
         self.pyplot_panel.set_xlabel('Time (\u03BCsec)')
         self.pyplot_panel.set_title('[this space available]')
@@ -561,8 +560,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         # menus for informational popups
         popups_menu = tkinter.Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        popups_menu.add_command(label="Metaviewer",
-                                command=self.metaviewer_popup)
+        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         # ensure menus cascade
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
@@ -572,14 +570,15 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.update_reader(reader)
 
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed) << USE THIS fir index and pulse
+        # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed) << USE THIS for index and pulse
 
     def set_frame_title(self):
         """
         Sets the LabelFrame title.
         """
 
-        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        file_name = None if self.variables.image_reader is None \
+            else self.variables.image_reader.file_name
         if file_name is None:
             the_title = " . . . "
         else:
@@ -591,7 +590,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         Sets the window title.
         """
 
-        file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        file_name = None if self.variables.image_reader is None \
+            else self.variables.image_reader.file_name
         if file_name is None:
             the_title = "Pulse Explorer"
         else:
@@ -659,7 +659,9 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.set_frame_title()
         # refresh appropriate GUI elements
         # self.pyplot_panel.make_blank()
-        self.update_gui_elements()
+        identifiers = [entry.Identifier for entry
+                       in the_reader.base_reader.crsd_meta.Channel.Parameters]
+        self.update_gui_elements(identifiers)
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
 
@@ -682,12 +684,12 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.pyplot_panel.update_pcolormesh(times, frequencies, image_data,
                                             shading='gouraud', snap=True)
 
-    def update_gui_elements(self):
+    def update_gui_elements(self, identifiers):
         # Update channels combobox.
-        new_values = self.slider.make_combobox_tuple(
-            self.variables.image_reader.image_count)
-        self.slider.cbx_channel['values'] = new_values
-        self.slider.cbx_channel.set(new_values[0])
+        # Get channel identifiers from metadata.
+        # new_values = self.slider.make_combobox_tuple(len(identifiers))
+        self.slider.cbx_channel['values'] = identifiers
+        self.slider.cbx_channel.set(identifiers[0])
         self.slider.cbx_channel.configure(state='readonly')
         # Update scale and attached entry.
         pass
@@ -721,7 +723,7 @@ def main(reader=None):
     root = tkinter.Tk()
 
     the_style = ttk.Style()
-    the_style.theme_use('classic')
+    the_style.theme_use('default')
 
     app = PulseExplorer(root, reader)
 
