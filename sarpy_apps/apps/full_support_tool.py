@@ -211,11 +211,11 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
-        self.row_centered_image_panel.hide_tools(['shape_drawing', 'select'])
+        self.row_centered_image_panel.hide_tools(['shape_drawing', 'select', 'coords', 'measure'])
         self.row_centered_image_panel.hide_shapes()
         self.row_centered_image_panel.hide_select_index()
 
-        self.column_centered_image_panel.hide_tools(['shape_drawing', 'select'])
+        self.column_centered_image_panel.hide_tools(['shape_drawing', 'select', 'coords', 'measure'])
         self.column_centered_image_panel.hide_shapes()
         self.column_centered_image_panel.hide_select_index()
 
