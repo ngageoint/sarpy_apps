@@ -318,33 +318,23 @@ class Operation(Enum):
     FWD = auto()
 
 
-# class IntScale(basic_widgets.Scale):
-#     """
-#     Subclass of ttk.Scale which restricts values to integers.
-#     """
-#
-#     def __init__(self, *args, **kwargs):
-#         super(IntScale, self).__init__(*args, command=self._value_changed, **kwargs)
-#
-#     def _value_changed(self, newvalue):
-#         newvalue = round(float(newvalue), 1.0)
-#         self.winfo_toplevel().globalsetvar(self.cget('variable'), (newvalue))
-#         self.chain(newvalue)
-
 class SliderWidget(basic_widgets.Frame):
     """
     Widget panel with slider for forward/reverse and manual scan.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, reader):
         """
 
         Parameters
         ----------
         parent: basic_widgets.Frame
+        reader: STFTCanvasImageReader
         """
 
         super().__init__(parent)
+
+        self.reader = reader
 
         self.label_1 = basic_widgets.Label(self, text='1')
 
@@ -353,8 +343,9 @@ class SliderWidget(basic_widgets.Frame):
         self.popdown_style = ttk.Style()
         self.label_channel = basic_widgets.Label(self, text='Channel')
         self.cbx_channel = basic_widgets.Combobox(self, state='readonly')
+        self.cbx_channel.bind('<<ComboboxSelected>>', self.select_channel)
         self.var_cbx_channel = tkinter.StringVar()
-        self.cbx_channel.configure(font=('TkFixedFont', 11), justify='center',
+        self.cbx_channel.configure(font=('TkFixedFont', 10), justify='left',
                                    textvariable=self.var_cbx_channel, width=30,
                                    values=[], style='Channel.TCombobox',
                                    state='disabled')
@@ -362,7 +353,7 @@ class SliderWidget(basic_widgets.Frame):
         self.label_pulse = basic_widgets.Label(self, text='Pulse')
         self.entry_pulse = basic_widgets.Entry(self)
         self.var_pulse_number = tkinter.StringVar(value='1')
-        self.entry_pulse.configure(font=('TkFixedFont', 11), justify='right',
+        self.entry_pulse.configure(font=('TkFixedFont', 10), justify='right',
                                    textvariable=self.var_pulse_number, width=6)
 
         self.fullscale = basic_widgets.Label(self, text='100')
@@ -388,10 +379,10 @@ class SliderWidget(basic_widgets.Frame):
         self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5,
                         sticky='esw')
 
-    @staticmethod
-    def make_combobox_tuple(num):
-        int_list = list(range(1, num + 1))
-        return tuple([str(v) for v in int_list])
+    def select_channel(self, value):
+        self.cbx_channel.selection_clear()
+        channel = self.cbx_channel.current()
+        self.reader.index(channel)
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -399,12 +390,13 @@ class DirectionWidget(basic_widgets.Frame):
     Button pair to select forward/reverse/stopped direction.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, reader):
         """
 
         Parameters
         ----------
         parent: basic_widgets.Frame
+        reader: STFTCanvasImageReader
         """
 
         super().__init__(parent)
@@ -530,8 +522,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.scanner_panel.columnconfigure(3, weight=0)
         self.scanner_panel.columnconfigure(4, weight=0)
 
-        self.dir_buttons = DirectionWidget(self.scanner_panel)
-        self.slider = SliderWidget(self.scanner_panel)
+        self.dir_buttons = DirectionWidget(self.scanner_panel, reader)
+        self.slider = SliderWidget(self.scanner_panel, reader)
 
         self.dir_buttons.button_rev.grid(row=0, column=0, sticky='w')
         self.dir_buttons.button_prev.grid(row=0, column=1, sticky='w')
