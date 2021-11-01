@@ -351,6 +351,13 @@ class SICDTypeCanvasImageReader(ComplexCanvasImageReader):
             return None
         return self.base_reader.get_sicds_as_tuple()[self._index]
 
+    def transform_coordinates(self, image_coordinates):
+        sicd = self.get_sicd()
+        if sicd is None:
+            return None, 'NONE'
+
+        return sicd.project_image_to_ground_geo(image_coordinates, projection_type='HAE'), 'LLH_HAE'
+
 
 class QuadPolCanvasImageReader(ComplexCanvasImageReader):
     __slots__ = (
@@ -527,6 +534,26 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
             raise ValueError('Got unhandled case for collection {}'.format(self._index_ordering))
         return rgb_image
 
+    def get_sicd(self):
+        """
+        Gets the relevant SICD structure.
+
+        Returns
+        -------
+        None|SICDType
+        """
+
+        if self._index is None:
+            return None
+        return self.base_reader.get_sicds_as_tuple()[self._index]
+
+    def transform_coordinates(self, image_coordinates):
+        sicd = self.get_sicd()
+        if sicd is None:
+            return None, 'NONE'
+
+        return sicd.project_image_to_ground_geo(image_coordinates, projection_type='HAE'), 'LLH_HAE'
+
 
 #######
 # Phase history specific type reader
@@ -702,3 +729,10 @@ class DerivedCanvasImageReader(GeneralCanvasImageReader):
         if self._index is None:
             return None
         return self.base_reader.get_sidds_as_tuple()[self._index]
+
+    def transform_coordinates(self, image_coordinates):
+        sidd = self.get_sidd()
+        if sidd is None:
+            return None, 'NONE'
+
+        return sidd.project_image_to_ground_geo(image_coordinates, projection_type='HAE'), 'LLH_HAE'
