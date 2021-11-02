@@ -36,7 +36,6 @@ from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.sicd import SICDReader
 from sarpy.consistency.sicd_consistency import check_file
 from sarpy.io.general.base import SarpyIOError
-from sarpy.compliance import string_types
 
 
 class _Feedback(WidgetPanel):
@@ -343,10 +342,10 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
-        elif isinstance(the_reader, string_types):
+        elif isinstance(the_reader, str):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
-        if isinstance(the_reader, string_types):
+        if isinstance(the_reader, str):
             the_reader = SICDTypeCanvasImageReader(the_reader)
 
         if isinstance(the_reader, SICDTypeReader):

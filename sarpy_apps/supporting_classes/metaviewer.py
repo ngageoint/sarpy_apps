@@ -9,7 +9,6 @@ import tkinter
 
 from tk_builder.widgets import basic_widgets
 
-from sarpy.compliance import integer_types, string_types
 from sarpy.io.general.base import AbstractReader
 from sarpy.io.general.nitf import NITFDetails, NITFReader
 from sarpy.io.complex.base import SICDTypeReader
@@ -21,10 +20,7 @@ from sarpy.io.product.base import SIDDTypeReader
 def _primitive_list(the_list):
     primitive = True
     for entry in the_list:
-        primitive &= (isinstance(entry, float) or
-                      isinstance(entry, integer_types) or
-                      isinstance(entry, string_types) or
-                      isinstance(entry, list))
+        primitive &= isinstance(entry, (float, int, str, list))
     return primitive
 
 
