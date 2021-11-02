@@ -382,7 +382,7 @@ class SliderWidget(basic_widgets.Frame):
     def select_channel(self, value):
         self.cbx_channel.selection_clear()
         channel = self.cbx_channel.current()
-        self.reader.index(channel)
+        # self.reader.index(channel)
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -413,19 +413,19 @@ class DirectionWidget(basic_widgets.Frame):
                                     width=3, sticky='CENTER')
 
         self.button_rev = \
-            basic_widgets.Button(self.parent, text="\u23EA",
+            basic_widgets.Button(self.parent, text="\u25C0",
                                  style='ToggleOff.TButton',
                                  command=lambda: self.action(Operation.REV))
         self.button_prev = \
-            basic_widgets.Button(self.parent, text="\u25C0",
+            basic_widgets.Button(self.parent, text="-1",
                                  style='ToggleOff.TButton',
                                  command=lambda: self.action(Operation.PREV))
         self.button_next = \
-            basic_widgets.Button(self.parent, text="\u25B6",
+            basic_widgets.Button(self.parent, text="+1",
                                  style='ToggleOff.TButton',
                                  command=lambda: self.action(Operation.NEXT))
         self.button_fwd = \
-            basic_widgets.Button(self.parent, text="\u23E9",
+            basic_widgets.Button(self.parent, text="\u25B6",
                                  style='ToggleOff.TButton',
                                  command=lambda: self.action(Operation.FWD))
 
@@ -561,8 +561,12 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         self.update_reader(reader)
 
+        # self.slider.entry_pulse.event_generate('<<ComboboxSelected>>')
+        self.
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        # self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed) << USE THIS for index and pulse
+        # USE THIS for index and pulse
+        self.
+        self.pyplot_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
     def set_frame_title(self):
         """
