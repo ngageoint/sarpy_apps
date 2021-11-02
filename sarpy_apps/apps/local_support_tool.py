@@ -29,7 +29,6 @@ from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.utils import get_physical_coordinates
 from sarpy.visualization.remap import NRL
 from sarpy.processing.fft_base import fft2_sicd, fftshift
-from sarpy.compliance import string_types
 
 
 class AppVariables(object):
@@ -221,10 +220,10 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
-        elif isinstance(the_reader, string_types):
+        elif isinstance(the_reader, str):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
-        if isinstance(the_reader, string_types):
+        if isinstance(the_reader, str):
             the_reader = SICDTypeCanvasImageReader(the_reader)
 
         if isinstance(the_reader, SICDTypeReader):

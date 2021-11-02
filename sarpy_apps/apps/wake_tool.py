@@ -23,7 +23,6 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ShapeTypeConstants
 
-from sarpy.compliance import string_types
 from sarpy.io.complex.base import SICDTypeReader
 
 
@@ -312,10 +311,10 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
-        elif isinstance(the_reader, string_types):
+        elif isinstance(the_reader, str):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
-        if isinstance(the_reader, string_types):
+        if isinstance(the_reader, str):
             the_reader = SICDTypeCanvasImageReader(the_reader)
 
         if isinstance(the_reader, SICDTypeReader):

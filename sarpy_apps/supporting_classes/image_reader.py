@@ -13,7 +13,6 @@ import gc
 
 from tk_builder.image_reader import CanvasImageReader
 
-from sarpy.compliance import string_types, int_func
 from sarpy.io.general.base import AbstractReader, SarpyIOError
 from sarpy.visualization.remap import get_remap_list, get_registered_remap, RemapFunction
 
@@ -91,7 +90,7 @@ class GeneralCanvasImageReader(CanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             value = open_general(value)
         if not isinstance(value, AbstractReader):
             raise TypeError('base_reader must be of type AbstractReader, got type {}'.format(type(value)))
@@ -212,7 +211,7 @@ class ComplexCanvasImageReader(GeneralCanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             reader = None
 
             # try to open as sicd type
@@ -317,7 +316,7 @@ class SICDTypeCanvasImageReader(ComplexCanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             reader = None
             try:
                 reader = open_complex(value)
@@ -386,7 +385,7 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             value = open_complex(value)
         elif isinstance(value, (list, tuple)):
             value = AggregateComplexReader(value)
@@ -424,7 +423,7 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
         if self._sicd_partitions is None:
             return
 
-        value = int_func(value)
+        value = int(value)
         if not (0 <= value < len(self.sicd_partition)):
             raise ValueError('index must be on the range 0 <= index < {}'.format(len(self.sicd_partition)))
         indices = self.sicd_partition[value]
@@ -582,7 +581,7 @@ class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             reader = None
             try:
                 reader = open_phase_history(value)
@@ -640,7 +639,7 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             reader = None
             try:
                 reader = open_received(value)
@@ -699,7 +698,7 @@ class DerivedCanvasImageReader(GeneralCanvasImageReader):
 
     @base_reader.setter
     def base_reader(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             value = open_product(value)
         if not isinstance(value, SIDDTypeReader):
             raise TypeError('base_reader must be a SIDDTypeReader, got type {}'.format(type(value)))
