@@ -31,12 +31,10 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
-from sarpy.compliance import int_func
 from sarpy.io.complex.base import FlatSICDReader
 from sarpy.processing.fft_base import fft_sicd, fft2_sicd, fftshift
 from sarpy.processing.normalize_sicd import DeskewCalculator
 from sarpy.io.complex.base import SICDTypeReader
-from sarpy.compliance import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +87,7 @@ def create_deskewed_transform(reader, dimension=0, suffix='.sarpy.cache'):
         return file_name, memmap, mean_value
 
     # fetch full rows, and transform then shift along the row direction
-    block_size = int_func(numpy.ceil(pixels_threshold/data_size[1]))
+    block_size = int(numpy.ceil(pixels_threshold/data_size[1]))
     start_col = 0
     while start_col < data_size[1]:
         end_col = min(start_col+block_size, data_size[1])
@@ -99,7 +97,7 @@ def create_deskewed_transform(reader, dimension=0, suffix='.sarpy.cache'):
             mean_value += numpy.sum(numpy.abs(data), axis=1)
         start_col = end_col
     # fetch full columns, and transform then shift along the column direction
-    block_size = int_func(numpy.ceil(pixels_threshold/data_size[0]))
+    block_size = int(numpy.ceil(pixels_threshold/data_size[0]))
     start_row = 0
     while start_row < data_size[0]:
         end_row = min(start_row+block_size, data_size[0])
@@ -211,11 +209,11 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
         primary.config(menu=menubar)
 
         # hide extraneous tool elements
-        self.row_centered_image_panel.hide_tools(['shape_drawing', 'select'])
+        self.row_centered_image_panel.hide_tools(['shape_drawing', 'select', 'coords', 'measure'])
         self.row_centered_image_panel.hide_shapes()
         self.row_centered_image_panel.hide_select_index()
 
-        self.column_centered_image_panel.hide_tools(['shape_drawing', 'select'])
+        self.column_centered_image_panel.hide_tools(['shape_drawing', 'select', 'coords', 'measure'])
         self.column_centered_image_panel.hide_shapes()
         self.column_centered_image_panel.hide_select_index()
 
@@ -483,10 +481,10 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
 
         if update_browse is not None:
             self.variables.browse_directory = update_browse
-        elif isinstance(the_reader, string_types):
+        elif isinstance(the_reader, str):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
-        if isinstance(the_reader, string_types):
+        if isinstance(the_reader, str):
             the_reader = SICDTypeCanvasImageReader(the_reader)
 
         if isinstance(the_reader, SICDTypeReader):
