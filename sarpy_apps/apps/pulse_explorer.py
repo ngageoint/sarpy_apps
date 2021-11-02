@@ -343,7 +343,7 @@ class SliderWidget(basic_widgets.Frame):
         self.popdown_style = ttk.Style()
         self.label_channel = basic_widgets.Label(self, text='Channel')
         self.cbx_channel = basic_widgets.Combobox(self, state='readonly')
-        self.cbx_channel.bind('<<ComboboxSelected>>', self.select_channel)
+        self.cbx_channel.bind('<<ComboboxChanged>>', self.select_channel)
         self.var_cbx_channel = tkinter.StringVar()
         self.cbx_channel.configure(font=('TkFixedFont', 10), justify='left',
                                    textvariable=self.var_cbx_channel, width=30,
@@ -379,7 +379,7 @@ class SliderWidget(basic_widgets.Frame):
         self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5,
                         sticky='esw')
 
-    def select_channel(self, value):
+    def select_channel(self, event):
         self.cbx_channel.selection_clear()
         channel = self.cbx_channel.current()
         # self.reader.index(channel)
@@ -562,10 +562,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.update_reader(reader)
 
         # self.slider.entry_pulse.event_generate('<<ComboboxSelected>>')
-        self.
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         # USE THIS for index and pulse
-        self.
         self.pyplot_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
 
     def set_frame_title(self):
