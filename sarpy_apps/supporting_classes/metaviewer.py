@@ -114,7 +114,7 @@ class Metaviewer(basic_widgets.Treeview):
         # empty any present entries
         self.empty_entries()
 
-        if isinstance(reader, (SICDTypeReader, SIDDTypeReader)):
+        if isinstance(reader, SICDTypeReader):
             sicds = reader.get_sicds_as_tuple()
             if sicds is None:
                 return
