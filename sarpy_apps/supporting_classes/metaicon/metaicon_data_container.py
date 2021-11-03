@@ -641,7 +641,7 @@ class MetaIconDataContainer(object):
                     plane.RowUnitVector.get_array(dtype='float64'),
                     plane.ColUnitVector.get_array(dtype='float64'))
                 north = calculator.North
-            variables['north'] = ((north + 180.0) % 360)
+            variables['north'] = ((180.0 - north) % 360)
 
             try:
                 exp_phen = sidd.ExploitationFeatures.Collections[0].Phenomenology
