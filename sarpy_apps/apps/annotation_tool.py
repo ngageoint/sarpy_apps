@@ -1833,8 +1833,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
                     showinfo('File Annotation Error',
                              message='Opening annotation file {} failed with error {}.'.format(
                                  annotation_filename, e))
-                    annotation_filename = None
-                    annotation_collection = None
+                    return
 
         if annotation_collection is None:
             annotation_collection = self._get_default_collection()
@@ -1911,13 +1910,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         if annotation_fname in ['', ()]:
             return
 
-        try:
-            annotations = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_fname)
-        except Exception as e:
-            showinfo('Parsing failed', message='Parsing this annotations file failed with message:\n{}'.format(e))
-            return
-
-        self.set_annotations(annotations)
+        self.set_annotations(annotation_fname)
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
