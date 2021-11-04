@@ -1,6 +1,7 @@
 # This details the important differences introduced in sarpy_apps 1.1
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .7 - Correcting bug in annotation tools for setting json file
 * .6 - Correcting SIDD metaicon North direction display and correcting SIDD metaviewer bug
 * .5 - Adjustments for new image canvas tools on toolbar
 * .4 - Adding plain annotation tool and associated refactoring labeling and rcs tools
