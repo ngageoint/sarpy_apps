@@ -678,12 +678,7 @@ class LabelingTool(AnnotationTool):
         if annotation_fname in ['', ()]:
             return
 
-        try:
-            annotations = self._NEW_FILE_ANNOTATION_TYPE.from_file(annotation_fname)
-        except Exception as e:
-            showinfo('Parsing failed', message='Parsing this label annotations file failed with message:\n{}'.format(e))
-            return
-        self.set_annotations(annotations)
+        self.set_annotations(annotation_fname)
 
     def create_new_annotation_file(self):
         if not self._verify_image_selected():
@@ -726,7 +721,7 @@ class LabelingTool(AnnotationTool):
     def _prompt_for_label_schema(self):
         browse_dir = self.variables.browse_directory
         label_schema_file = askopenfilename(
-            title='Select output label schema',
+            title='Select Label Schema',
             initialdir=browse_dir,
             filetypes=[json_files, all_files])
 
