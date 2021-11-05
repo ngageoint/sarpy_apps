@@ -13,7 +13,7 @@ import numpy
 from scipy.signal import spectrogram, resample
 
 import tkinter
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 from tkinter.filedialog import askopenfilename
 
@@ -334,6 +334,8 @@ class SliderWidget(basic_widgets.Frame):
 
         super().__init__(parent)
 
+        self['padding'] = 5
+
         self.reader = reader
 
         self.label_1 = basic_widgets.Label(self, text='1')
@@ -355,7 +357,7 @@ class SliderWidget(basic_widgets.Frame):
         self.entry_pulse.configure(font=('TkFixedFont', 10), justify='right',
                                    textvariable=self.var_pulse_number, width=6)
 
-        self.fullscale = basic_widgets.Label(self, text='100')
+        self.fullscale = basic_widgets.Label(self, text='TBD')
 
         self.label_1.grid(row=0, column=0, padx=5, sticky='w')
         self.label_channel.grid(row=0, column=1, padx=5, sticky='e')
@@ -377,15 +379,8 @@ class SliderWidget(basic_widgets.Frame):
                                                  f"{int(float(s))}")
                                          )
         self.scale.configure(variable=self.var_pulse_number)
-        self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5,
+        self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=8,
                         sticky='esw')
-
-    # def handle_select_channel(self, event):
-    #     self.reader.index = self.cbx_channel.current()
-    #
-    # def callback_channel_changed(self, event):
-    #     self.variables.image_reader.index = self.cbx_channel.current()
-    #     self.cbx_channel.selection_clear()
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -421,12 +416,10 @@ class DirectionWidget(basic_widgets.Frame):
                                  command=lambda: self.action(Operation.REV))
         self.button_prev = \
             basic_widgets.Button(self.parent, text="-1",
-                                 style='ToggleOff.TButton',
-                                 command=lambda: self.action(Operation.PREV))
+                                 style='ToggleOff.TButton')
         self.button_next = \
             basic_widgets.Button(self.parent, text="+1",
-                                 style='ToggleOff.TButton',
-                                 command=lambda: self.action(Operation.NEXT))
+                                 style='ToggleOff.TButton')
         self.button_fwd = \
             basic_widgets.Button(self.parent, text="\u25B6",
                                  style='ToggleOff.TButton',
@@ -469,13 +462,9 @@ class DirectionWidget(basic_widgets.Frame):
         if self.mode == Operation.REV:
             self.set_button(self.button_rev, True)
             self.set_button(self.button_fwd, False)
-        elif self.mode == Operation.PREV:
-            self.event_generate('<<StepPrev>>')
         elif self.mode == Operation.FWD:
             self.set_button(self.button_rev, False)
             self.set_button(self.button_fwd, True)
-        elif self.mode == Operation.NEXT:
-            self.event_generate('<<StepNext>>')
         else:
             self.set_button(self.button_rev, False)
             self.set_button(self.button_fwd, False)
@@ -522,7 +511,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.pyplot_panel.set_xlabel('Time (\u03BCsec)')
         self.pyplot_panel.set_title('[this space available]')
 
-        self.scanner_panel = basic_widgets.Frame(self)  # type: basic_widgets.Frame
+        self.scanner_panel = basic_widgets.Frame(self, padding=10)  # type: basic_widgets.Frame
         self.scanner_panel.columnconfigure(0, weight=0)
         self.scanner_panel.columnconfigure(1, weight=0)
         self.scanner_panel.columnconfigure(2, weight=1)
@@ -571,12 +560,11 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.update_reader(reader)
 
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        # USE THIS for index and pulse
         self.slider.cbx_channel.bind('<<ComboboxSelected>>', self.handle_image_index_changed)
         self.slider.scale.bind('<ButtonRelease-1>', self.handle_pulse_changed)
         self.slider.entry_pulse.bind('<FocusOut>', self.handle_pulse_changed)
-        self.dir_buttons.bind('<<StepPrev>>', self.pulse_step_prev)
-        self.dir_buttons.bind('<<StepNext>>', self.pulse_step_next)
+        self.dir_buttons.button_prev.bind('<Button-1>', self.pulse_step_prev)
+        self.dir_buttons.button_next.bind('<Button-1>', self.pulse_step_next)
 
     def set_frame_title(self):
         """
@@ -643,26 +631,39 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
     def handle_pulse_changed(self, event):
         new_pulse = int(self.slider.var_pulse_number.get())
-        if new_pulse != self.variables.image_reader.pulse:
-            self.variables.image_reader.pulse = new_pulse
-        self.display_in_pyplot_frame()
+        try:
+            if new_pulse != self.variables.image_reader.pulse:
+                self.variables.image_reader.pulse = new_pulse
+            self.display_in_pyplot_frame()
+        except AttributeError:
+            messagebox.showwarning(message="Image must be opened first.")
+            self.slider.var_pulse_number.set(1)
+
 
     def pulse_step_prev(self, event):
-        print('prev')
-        new_pulse = int(self.slider.var_pulse_number.get()) - 1
-        if new_pulse > 0:
-            self.slider.var_pulse_number.set(new_pulse)
-            self.variables.image_reader.pulse = new_pulse
-            self.display_in_pyplot_frame()
+        try:
+            new_pulse = int(self.slider.var_pulse_number.get()) - 1
+        except AttributeError:
+            messagebox.showwarning(message="Image must be opened first.")
+            self.slider.var_pulse_number.set(1)
+        else:
+            if new_pulse > 0:
+                self.slider.var_pulse_number.set(new_pulse)
+                self.variables.image_reader.pulse = new_pulse - 1
+                self.display_in_pyplot_frame()
 
     def pulse_step_next(self, event):
-        print('next')
         new_pulse = int(self.slider.var_pulse_number.get()) + 1
-        max_pulse = self.variables.image_reader.pulse_count
-        if new_pulse < max_pulse:
-            self.slider.var_pulse_number.set(new_pulse)
-            self.variables.image_reader.pulse = new_pulse
-            self.display_in_pyplot_frame()
+        try:
+            max_pulse = self.variables.image_reader.pulse_count
+        except AttributeError:
+            messagebox.showwarning(message="Image must be opened first.")
+            self.slider.var_pulse_number.set(1)
+        else:
+            if new_pulse <= max_pulse:
+                self.slider.var_pulse_number.set(new_pulse)
+                self.variables.image_reader.pulse = new_pulse - 1
+                self.display_in_pyplot_frame()
 
     def update_reader(self, the_reader, update_browse=None):
         """
