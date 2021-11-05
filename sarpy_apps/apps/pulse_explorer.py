@@ -343,7 +343,6 @@ class SliderWidget(basic_widgets.Frame):
         self.popdown_style = ttk.Style()
         self.label_channel = basic_widgets.Label(self, text='Channel')
         self.cbx_channel = basic_widgets.Combobox(self, state='readonly')
-        self.cbx_channel.bind('<<ComboboxChanged>>', self.select_channel)
         self.var_cbx_channel = tkinter.StringVar()
         self.cbx_channel.configure(font=('TkFixedFont', 10), justify='left',
                                    textvariable=self.var_cbx_channel, width=30,
@@ -374,15 +373,19 @@ class SliderWidget(basic_widgets.Frame):
         self.scale = basic_widgets.Scale(self, from_=1, to=100, length=600,
                                          orient='horizontal',
                                          command=lambda s: \
-                                             self.var_pulse_number.set(f"{int(float(s))}"))
+                                             self.var_pulse_number.set(
+                                                 f"{int(float(s))}")
+                                         )
         self.scale.configure(variable=self.var_pulse_number)
         self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=5,
                         sticky='esw')
 
-    def select_channel(self, event):
-        self.cbx_channel.selection_clear()
-        channel = self.cbx_channel.current()
-        # self.reader.index(channel)
+    # def handle_select_channel(self, event):
+    #     self.reader.index = self.cbx_channel.current()
+    #
+    # def callback_channel_changed(self, event):
+    #     self.variables.image_reader.index = self.cbx_channel.current()
+    #     self.cbx_channel.selection_clear()
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -431,6 +434,10 @@ class DirectionWidget(basic_widgets.Frame):
 
         self.mode = Operation.STOP
 
+        # Remove these eventually.
+        self.button_rev.state(['disabled'])
+        self.button_fwd.state(['disabled'])
+
     @staticmethod
     def set_button(button, mode):
         """
@@ -463,12 +470,12 @@ class DirectionWidget(basic_widgets.Frame):
             self.set_button(self.button_rev, True)
             self.set_button(self.button_fwd, False)
         elif self.mode == Operation.PREV:
-            pass
+            self.event_generate('<<StepPrev>>')
         elif self.mode == Operation.FWD:
             self.set_button(self.button_rev, False)
             self.set_button(self.button_fwd, True)
         elif self.mode == Operation.NEXT:
-            pass
+            self.event_generate('<<StepNext>>')
         else:
             self.set_button(self.button_rev, False)
             self.set_button(self.button_fwd, False)
@@ -522,8 +529,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.scanner_panel.columnconfigure(3, weight=0)
         self.scanner_panel.columnconfigure(4, weight=0)
 
-        self.dir_buttons = DirectionWidget(self.scanner_panel, reader)
-        self.slider = SliderWidget(self.scanner_panel, reader)
+        self.dir_buttons = DirectionWidget(self.scanner_panel, reader)  # type: DirectionWidget
+        self.slider = SliderWidget(self.scanner_panel, reader)  # type: SliderWidget
 
         self.dir_buttons.button_rev.grid(row=0, column=0, sticky='w')
         self.dir_buttons.button_prev.grid(row=0, column=1, sticky='w')
@@ -538,6 +545,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.rowconfigure(1, weight=0)
         self.pack(expand=True, fill='both')
         self.set_frame_title()
+
+        self.current_pulse = 0
 
         # define menus
         menubar = tkinter.Menu()
@@ -561,10 +570,13 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         self.update_reader(reader)
 
-        # self.slider.entry_pulse.event_generate('<<ComboboxSelected>>')
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         # USE THIS for index and pulse
-        self.pyplot_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
+        self.slider.cbx_channel.bind('<<ComboboxSelected>>', self.handle_image_index_changed)
+        self.slider.scale.bind('<ButtonRelease-1>', self.handle_pulse_changed)
+        self.slider.entry_pulse.bind('<FocusOut>', self.handle_pulse_changed)
+        self.dir_buttons.bind('<<StepPrev>>', self.pulse_step_prev)
+        self.dir_buttons.bind('<<StepNext>>', self.pulse_step_next)
 
     def set_frame_title(self):
         """
@@ -593,6 +605,12 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
                 os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
+    def set_pulse_count(self):
+        """
+        Sets the pulse count.
+        """
+        pass
+
     def exit(self):
         self.root.destroy()
 
@@ -618,7 +636,33 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         event
         """
 
+        self.variables.image_reader.index = self.slider.cbx_channel.current()
+        self.display_in_pyplot_frame()
         self.my_populate_metaicon()
+        self.slider.cbx_channel.selection_clear()
+
+    def handle_pulse_changed(self, event):
+        new_pulse = int(self.slider.var_pulse_number.get())
+        if new_pulse != self.variables.image_reader.pulse:
+            self.variables.image_reader.pulse = new_pulse
+        self.display_in_pyplot_frame()
+
+    def pulse_step_prev(self, event):
+        print('prev')
+        new_pulse = int(self.slider.var_pulse_number.get()) - 1
+        if new_pulse > 0:
+            self.slider.var_pulse_number.set(new_pulse)
+            self.variables.image_reader.pulse = new_pulse
+            self.display_in_pyplot_frame()
+
+    def pulse_step_next(self, event):
+        print('next')
+        new_pulse = int(self.slider.var_pulse_number.get()) + 1
+        max_pulse = self.variables.image_reader.pulse_count
+        if new_pulse < max_pulse:
+            self.slider.var_pulse_number.set(new_pulse)
+            self.variables.image_reader.pulse = new_pulse
+            self.display_in_pyplot_frame()
 
     def update_reader(self, the_reader, update_browse=None):
         """
