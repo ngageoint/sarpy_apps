@@ -323,6 +323,12 @@ class SliderWidget(basic_widgets.Frame):
     Widget panel with slider for forward/reverse and manual scan.
     """
 
+    @staticmethod
+    def _only_numeric_input(p):
+        if p.isdigit() or p == "":
+            return True
+        return False
+
     def __init__(self, parent, reader):
         """
 
@@ -356,6 +362,9 @@ class SliderWidget(basic_widgets.Frame):
         self.var_pulse_number = tkinter.StringVar(value='1')
         self.entry_pulse.configure(font=('TkFixedFont', 10), justify='right',
                                    textvariable=self.var_pulse_number, width=6)
+        self.entry_callback = self.register(self._only_numeric_input)
+        self.entry_pulse.configure(validate="key",
+                                   validatecommand=(self.entry_callback, "%P"))
 
         self.fullscale = basic_widgets.Label(self, text='TBD')
 
@@ -563,6 +572,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.slider.cbx_channel.bind('<<ComboboxSelected>>', self.handle_image_index_changed)
         self.slider.scale.bind('<ButtonRelease-1>', self.handle_pulse_changed)
         self.slider.entry_pulse.bind('<FocusOut>', self.handle_pulse_changed)
+        self.slider.entry_pulse.bind('<Return>', self.handle_pulse_changed)
         self.dir_buttons.button_prev.bind('<Button-1>', self.pulse_step_prev)
         self.dir_buttons.button_next.bind('<Button-1>', self.pulse_step_next)
 
@@ -628,42 +638,37 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.display_in_pyplot_frame()
         self.my_populate_metaicon()
         self.slider.cbx_channel.selection_clear()
+        # Update number of pulses.
+        pulse_count = self.variables.image_reader.pulse_count
+        self.slider.fullscale.configure(text=str(pulse_count))
+        self.slider.scale.configure(to=pulse_count)
 
     def handle_pulse_changed(self, event):
         new_pulse = int(self.slider.var_pulse_number.get())
         try:
-            if new_pulse != self.variables.image_reader.pulse:
-                self.variables.image_reader.pulse = new_pulse
+            if (new_pulse - 1) != self.variables.image_reader.pulse:
+                self.variables.image_reader.pulse = new_pulse - 1
             self.display_in_pyplot_frame()
         except AttributeError:
             messagebox.showwarning(message="Image must be opened first.")
             self.slider.var_pulse_number.set(1)
 
+    def pulse_step(self, direction):
+        new_pulse = int(self.slider.var_pulse_number.get()) + direction
+        try:
+            if 0 < new_pulse <= self.variables.image_reader.pulse_count:
+                self.slider.var_pulse_number.set(new_pulse)
+                self.variables.image_reader.pulse = new_pulse - 1
+                self.display_in_pyplot_frame()
+        except AttributeError:
+            messagebox.showwarning(message="Image must be opened first.")
+            self.slider.var_pulse_number.set(1)
 
     def pulse_step_prev(self, event):
-        try:
-            new_pulse = int(self.slider.var_pulse_number.get()) - 1
-        except AttributeError:
-            messagebox.showwarning(message="Image must be opened first.")
-            self.slider.var_pulse_number.set(1)
-        else:
-            if new_pulse > 0:
-                self.slider.var_pulse_number.set(new_pulse)
-                self.variables.image_reader.pulse = new_pulse - 1
-                self.display_in_pyplot_frame()
+        self.pulse_step(-1)
 
     def pulse_step_next(self, event):
-        new_pulse = int(self.slider.var_pulse_number.get()) + 1
-        try:
-            max_pulse = self.variables.image_reader.pulse_count
-        except AttributeError:
-            messagebox.showwarning(message="Image must be opened first.")
-            self.slider.var_pulse_number.set(1)
-        else:
-            if new_pulse <= max_pulse:
-                self.slider.var_pulse_number.set(new_pulse)
-                self.variables.image_reader.pulse = new_pulse - 1
-                self.display_in_pyplot_frame()
+        self.pulse_step(+1)
 
     def update_reader(self, the_reader, update_browse=None):
         """
@@ -700,9 +705,10 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         # self.pyplot_panel.make_blank()
         identifiers = [entry.Identifier for entry
                        in the_reader.base_reader.crsd_meta.Channel.Parameters]
-        self.update_gui_elements(identifiers)
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+        self.update_combobox(identifiers)
+        self.slider.fullscale.configure(text=str(self.variables.image_reader.pulse_count))
 
     def callback_select_files(self):
         fname = askopenfilename(initialdir=self.variables.browse_directory,
@@ -723,17 +729,12 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.pyplot_panel.update_pcolormesh(times, frequencies, image_data,
                                             shading='gouraud', snap=True)
 
-    def update_gui_elements(self, identifiers):
+    def update_combobox(self, identifiers):
         # Update channels combobox.
         # Get channel identifiers from metadata.
-        # new_values = self.slider.make_combobox_tuple(len(identifiers))
         self.slider.cbx_channel['values'] = identifiers
         self.slider.cbx_channel.set(identifiers[0])
         self.slider.cbx_channel.configure(state='readonly')
-        # Update scale and attached entry.
-        pass
-        # Update number of pulses.
-        pass
 
     def my_populate_metaicon(self):
         """
