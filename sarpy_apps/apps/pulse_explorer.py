@@ -254,8 +254,12 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             self._pulse_data = None
 
         value = int(value)
+        # value should be between 0 and (pulse_count - 1).
         if not (0 <= value < self.pulse_count):
-            raise ValueError('Got invalid pulse number `{}`'.format(value))
+            value = max(0, min(self.pulse_count - 1, value))
+            messagebox.showwarning(message="Pulse number is out of range,\n"
+                                           + f"Setting to {value + 1}.")
+
         self._pulse = value
         self._set_pulse_data()
 
@@ -306,9 +310,6 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             return self._pulse_data.__getitem__(item)
         return self.remap_complex_data(self._pulse_data.__getitem__(item))
 
-
-###########
-# The main app
 
 class Operation(Enum):
     REV = auto()
@@ -491,6 +492,9 @@ class AppVariables(object):
         'image_reader', STFTCanvasImageReader,
         docstring='The crsd type canvas image reader object.')  # type: STFTCanvasImageReader
 
+
+###########
+# The main app
 
 class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
     def __init__(self, primary, reader=None, **kwargs):
