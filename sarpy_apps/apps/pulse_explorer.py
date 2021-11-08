@@ -138,7 +138,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
     __slots__ = (
         '_base_reader', '_chippers', '_index', '_data_size', '_remap_function',
         '_signal_data_size', '_pulse', '_pulse_display', '_pulse_data',
-        '_times', '_frequencies')
+        '_times', '_frequencies', '_slider')
 
     def __init__(self, reader):
         """
@@ -156,6 +156,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         self._times = None
         self._frequencies = None
         self.pulse_display = _PULSE_DISPLAY_VALUES[0]
+        self._slider = None
         CRSDTypeCanvasImageReader.__init__(self, reader)
 
     @property
@@ -262,6 +263,23 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
 
         self._pulse = value
         self._set_pulse_data()
+        if self.slider is not None:
+            self.slider.var_pulse_number = int(self.slider.label_pulse['text'])
+
+    @property
+    def slider(self):
+        """
+        Gets reference to Slider object.
+        """
+
+        return self._slider
+
+    @slider.setter
+    def slider(self, value):
+        """
+        Sets reference to Slider object.
+        """
+        self._slider = value
 
     @property
     def times(self):
@@ -550,6 +568,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         self.current_pulse = 0
 
+        self.variables.slider = self.slider
+
         # define menus
         menubar = tkinter.Menu()
         # file menu
@@ -646,6 +666,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         pulse_count = self.variables.image_reader.pulse_count
         self.slider.fullscale.configure(text=str(pulse_count))
         self.slider.scale.configure(to=pulse_count)
+        self.slider.var_pulse_number.set(1)
 
     def handle_pulse_changed(self, event):
         new_pulse = int(self.slider.var_pulse_number.get())
@@ -721,6 +742,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
             return
 
         the_reader = STFTCanvasImageReader(fname)
+        the_reader._root_ref = self.root
         self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
 
     def callback_settings_popup(self):
