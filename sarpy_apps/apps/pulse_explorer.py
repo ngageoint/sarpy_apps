@@ -138,7 +138,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
     __slots__ = (
         '_base_reader', '_chippers', '_index', '_data_size', '_remap_function',
         '_signal_data_size', '_pulse', '_pulse_display', '_pulse_data',
-        '_times', '_frequencies', '_slider')
+        '_times', '_frequencies')
 
     def __init__(self, reader):
         """
@@ -263,8 +263,9 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
 
         self._pulse = value
         self._set_pulse_data()
-        if self.slider is not None:
-            self.slider.var_pulse_number = int(self.slider.label_pulse['text'])
+
+        # if self.slider is not None:
+        #     self.slider.var_pulse_number = int(self.slider.label_pulse['text'])
 
     @property
     def slider(self):
@@ -342,12 +343,6 @@ class SliderWidget(basic_widgets.Frame):
     Widget panel with slider for forward/reverse and manual scan.
     """
 
-    @staticmethod
-    def _only_numeric_input(p):
-        if p.isdigit() or p == "":
-            return True
-        return False
-
     def __init__(self, parent, reader):
         """
 
@@ -385,7 +380,7 @@ class SliderWidget(basic_widgets.Frame):
         self.entry_pulse.configure(validate="key",
                                    validatecommand=(self.entry_callback, "%P"))
 
-        self.fullscale = basic_widgets.Label(self, text='TBD')
+        self.fullscale = basic_widgets.Label(self, text='1')
 
         self.label_1.grid(row=0, column=0, padx=5, sticky='w')
         self.label_channel.grid(row=0, column=1, padx=5, sticky='e')
@@ -400,16 +395,38 @@ class SliderWidget(basic_widgets.Frame):
         self.columnconfigure(4, weight=1)
         self.columnconfigure(5, weight=0)
 
-        self.scale = basic_widgets.Scale(self, from_=1, to=100, length=600,
-                                         orient='horizontal',
-                                         command=lambda s: \
-                                             self.var_pulse_number.set(
-                                                 f"{int(float(s))}")
-                                         )
-        self.scale.configure(variable=self.var_pulse_number)
-        self.scale.grid(row=1, column=0, columnspan=6, padx=5, pady=8,
-                        sticky='esw')
+        self.scale_pulse = basic_widgets.Scale(self, from_=1, to=1, length=600,
+                                               orient='horizontal',
+                                               command=lambda s: \
+                                                   self.var_pulse_number.set(
+                                                       f"{int(float(s))}")
+                                               )
+        self.scale_pulse.configure(variable=self.var_pulse_number)
+        self.scale_pulse.grid(row=1, column=0, columnspan=6, padx=5, pady=8,
+                              sticky='esw')
 
+    @staticmethod
+    def _only_numeric_input(p):
+        if p.isdigit() or p == "":
+            return True
+        return False
+
+    def set_pulse_count_widgets(self):
+        pc = self.reader.pulse_count  # 1-indexed
+        if pc is not None:
+            self.fullscale['text'] = str(pc)
+            self.scale_pulse['to'] = pc
+
+    def set_pulse_widgets(self, reader, pulse):
+        # value is 1-indexed
+        # return value is 0-indexed
+        # if reader is None:
+        print("Is None")
+        pc = self.reader.pulse_count  # 1-indexed
+        if pc is not None:
+            # self.reader.pulse = max(1, min(value, pc)) - 1
+            self.var_pulse_number.set(max(1, min(pulse, pc)) - 1)
+        print("Or is it")
 
 class DirectionWidget(basic_widgets.Frame):
     """
@@ -440,17 +457,17 @@ class DirectionWidget(basic_widgets.Frame):
 
         self.button_rev = \
             basic_widgets.Button(self.parent, text="\u25C0",
-                                 style='ToggleOff.TButton',
+                                 style='ToggleOff.TButton', takefocus=0,
                                  command=lambda: self.action(Operation.REV))
         self.button_prev = \
             basic_widgets.Button(self.parent, text="-1",
-                                 style='ToggleOff.TButton')
+                                 style='ToggleOff.TButton', takefocus=0)
         self.button_next = \
             basic_widgets.Button(self.parent, text="+1",
-                                 style='ToggleOff.TButton')
+                                 style='ToggleOff.TButton', takefocus=0)
         self.button_fwd = \
             basic_widgets.Button(self.parent, text="\u25B6",
-                                 style='ToggleOff.TButton',
+                                 style='ToggleOff.TButton', takefocus=0,
                                  command=lambda: self.action(Operation.FWD))
 
         self.mode = Operation.STOP
@@ -594,11 +611,11 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
 
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.slider.cbx_channel.bind('<<ComboboxSelected>>', self.handle_image_index_changed)
-        self.slider.scale.bind('<ButtonRelease-1>', self.handle_pulse_changed)
+        self.slider.scale_pulse.bind('<ButtonRelease>', self.handle_pulse_changed)
         self.slider.entry_pulse.bind('<FocusOut>', self.handle_pulse_changed)
         self.slider.entry_pulse.bind('<Return>', self.handle_pulse_changed)
-        self.dir_buttons.button_prev.bind('<Button-1>', self.pulse_step_prev)
-        self.dir_buttons.button_next.bind('<Button-1>', self.pulse_step_next)
+        self.dir_buttons.button_prev.bind('<Button>', self.pulse_step_prev)
+        self.dir_buttons.button_next.bind('<Button>', self.pulse_step_next)
 
     def set_frame_title(self):
         """
@@ -665,7 +682,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         # Update number of pulses.
         pulse_count = self.variables.image_reader.pulse_count
         self.slider.fullscale.configure(text=str(pulse_count))
-        self.slider.scale.configure(to=pulse_count)
+        self.slider.scale_pulse.configure(to=pulse_count)
         self.slider.var_pulse_number.set(1)
 
     def handle_pulse_changed(self, event):
@@ -728,12 +745,14 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.set_frame_title()
         # refresh appropriate GUI elements
         # self.pyplot_panel.make_blank()
-        identifiers = [entry.Identifier for entry
-                       in the_reader.base_reader.crsd_meta.Channel.Parameters]
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+        identifiers = [entry.Identifier for entry
+                       in the_reader.base_reader.crsd_meta.Channel.Parameters]
         self.update_combobox(identifiers)
-        self.slider.fullscale.configure(text=str(self.variables.image_reader.pulse_count))
+        self.slider.fullscale['text'] = str(self.variables.image_reader.pulse_count)
+        self.slider.scale_pulse['to'] = self.variables.image_reader.pulse_count
+        self.slider.set_pulse_widgets(reader=the_reader, pulse=1)
 
     def callback_select_files(self):
         fname = askopenfilename(initialdir=self.variables.browse_directory,
