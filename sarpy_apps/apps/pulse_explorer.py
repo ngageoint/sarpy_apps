@@ -140,7 +140,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         '_signal_data_size', '_pulse', '_pulse_display', '_pulse_data',
         '_times', '_frequencies')
 
-    def __init__(self, reader):
+    def __init__(self, reader, variables):
         """
 
         Parameters
@@ -157,6 +157,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         self._frequencies = None
         self.pulse_display = _PULSE_DISPLAY_VALUES[0]
         self._slider = None
+        self.variables = variables
         CRSDTypeCanvasImageReader.__init__(self, reader)
 
     @property
@@ -260,9 +261,11 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             value = max(0, min(self.pulse_count - 1, value))
             messagebox.showwarning(message="Pulse number is out of range,\n"
                                            + f"Setting to {value + 1}.")
-
         self._pulse = value
         self._set_pulse_data()
+        if self.variables.slider is not None:
+            self.variables.slider.var_pulse_number.set(value + 1)
+
 
         # if self.slider is not None:
         #     self.slider.var_pulse_number = int(self.slider.label_pulse['text'])
@@ -343,20 +346,18 @@ class SliderWidget(basic_widgets.Frame):
     Widget panel with slider for forward/reverse and manual scan.
     """
 
-    def __init__(self, parent, reader):
+    def __init__(self, parent, variables):
         """
 
         Parameters
         ----------
         parent: basic_widgets.Frame
-        reader: STFTCanvasImageReader
         """
 
         super().__init__(parent)
+        self.variables = variables
 
         self['padding'] = 5
-
-        self.reader = reader
 
         self.label_1 = basic_widgets.Label(self, text='1')
 
@@ -405,6 +406,7 @@ class SliderWidget(basic_widgets.Frame):
         self.scale_pulse.grid(row=1, column=0, columnspan=6, padx=5, pady=8,
                               sticky='esw')
 
+
     @staticmethod
     def _only_numeric_input(p):
         if p.isdigit() or p == "":
@@ -417,32 +419,22 @@ class SliderWidget(basic_widgets.Frame):
             self.fullscale['text'] = str(pc)
             self.scale_pulse['to'] = pc
 
-    def set_pulse_widgets(self, reader, pulse):
-        # value is 1-indexed
-        # return value is 0-indexed
-        # if reader is None:
-        print("Is None")
-        pc = self.reader.pulse_count  # 1-indexed
-        if pc is not None:
-            # self.reader.pulse = max(1, min(value, pc)) - 1
-            self.var_pulse_number.set(max(1, min(pulse, pc)) - 1)
-        print("Or is it")
-
 class DirectionWidget(basic_widgets.Frame):
     """
     Button pair to select forward/reverse/stopped direction.
     """
 
-    def __init__(self, parent, reader):
+    def __init__(self, parent, variables):
         """
 
         Parameters
         ----------
         parent: basic_widgets.Frame
-        reader: STFTCanvasImageReader
         """
 
         super().__init__(parent)
+
+        self.variables = variables
         self.parent = parent
 
         self.button_style = ttk.Style()
@@ -566,8 +558,9 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.scanner_panel.columnconfigure(3, weight=0)
         self.scanner_panel.columnconfigure(4, weight=0)
 
-        self.dir_buttons = DirectionWidget(self.scanner_panel, reader)  # type: DirectionWidget
-        self.slider = SliderWidget(self.scanner_panel, reader)  # type: SliderWidget
+        self.dir_buttons = DirectionWidget(self.scanner_panel, self.variables)  # type: DirectionWidget
+        self.slider = SliderWidget(self.scanner_panel, self.variables)  # type: SliderWidget
+        self.variables.slider = self.slider
 
         self.dir_buttons.button_rev.grid(row=0, column=0, sticky='w')
         self.dir_buttons.button_prev.grid(row=0, column=1, sticky='w')
@@ -686,21 +679,22 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.slider.var_pulse_number.set(1)
 
     def handle_pulse_changed(self, event):
-        new_pulse = int(self.slider.var_pulse_number.get())
+        new_pulse = int(self.slider.var_pulse_number.get()) - 1  # 0-indexed
         try:
-            if (new_pulse - 1) != self.variables.image_reader.pulse:
-                self.variables.image_reader.pulse = new_pulse - 1
+            if new_pulse != self.variables.image_reader.pulse:
+                self.variables.image_reader.pulse = new_pulse
             self.display_in_pyplot_frame()
         except AttributeError:
             messagebox.showwarning(message="Image must be opened first.")
             self.slider.var_pulse_number.set(1)
 
     def pulse_step(self, direction):
+        # new_pulse is 1-indexed.
         new_pulse = int(self.slider.var_pulse_number.get()) + direction
         try:
             if 0 < new_pulse <= self.variables.image_reader.pulse_count:
-                self.slider.var_pulse_number.set(new_pulse)
-                self.variables.image_reader.pulse = new_pulse - 1
+                self.slider.var_pulse_number.set(new_pulse)  # 1-indexed
+                self.variables.image_reader.pulse = new_pulse - 1  # 0-indexed
                 self.display_in_pyplot_frame()
         except AttributeError:
             messagebox.showwarning(message="Image must be opened first.")
@@ -731,10 +725,10 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
             self.variables.browse_directory = os.path.split(the_reader)[0]
 
         if isinstance(the_reader, str):
-            the_reader = STFTCanvasImageReader(the_reader)
+            the_reader = STFTCanvasImageReader(the_reader, variables=self.variables)
 
         if isinstance(the_reader, CRSDTypeReader):
-            the_reader = STFTCanvasImageReader(the_reader)
+            the_reader = STFTCanvasImageReader(the_reader, variables=self.variables)
 
         if not isinstance(the_reader, STFTCanvasImageReader):
             raise TypeError('Got unexpected input for the reader')
@@ -743,8 +737,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.variables.image_reader = the_reader
         self.display_in_pyplot_frame()
         self.set_frame_title()
-        # refresh appropriate GUI elements
-        # self.pyplot_panel.make_blank()
+        self.pyplot_panel.make_blank()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
         identifiers = [entry.Identifier for entry
@@ -752,7 +745,8 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         self.update_combobox(identifiers)
         self.slider.fullscale['text'] = str(self.variables.image_reader.pulse_count)
         self.slider.scale_pulse['to'] = self.variables.image_reader.pulse_count
-        self.slider.set_pulse_widgets(reader=the_reader, pulse=1)
+        self.slider.var_pulse_number.set(1)
+        # self.slider.set_pulse_widgets(reader=the_reader, pulse=1)
 
     def callback_select_files(self):
         fname = askopenfilename(initialdir=self.variables.browse_directory,
@@ -760,7 +754,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
         if fname is None or fname in ['', ()]:
             return
 
-        the_reader = STFTCanvasImageReader(fname)
+        the_reader = STFTCanvasImageReader(fname, variables=self.variables)
         the_reader._root_ref = self.root
         self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
 
