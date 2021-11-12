@@ -1638,7 +1638,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
-        self.metadata_menu.add_command(label='ValidData', command=self.show_valid_data)
+        self._valid_data_shown = tkinter.IntVar(self, value=0)
+        self.metadata_menu.add_checkbutton(
+            label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
         # configure menubar
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
@@ -1724,9 +1726,19 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         if self.variables.image_reader is None or \
                 not isinstance(self.variables.image_reader, SICDTypeCanvasImageReader):
             return
-        sicd = self.variables.image_reader.get_sicd()
-        if sicd.ImageData.ValidData is not None:
-            self.image_panel.canvas.show_valid_data(sicd.ImageData.ValidData.get_array(dtype='float64'))
+        the_value = self._valid_data_shown.get()
+        if the_value == 1:
+            # we just checked on
+            sicd = self.variables.image_reader.get_sicd()
+            if sicd.ImageData.ValidData is not None:
+                self.image_panel.canvas.show_valid_data(sicd.ImageData.ValidData.get_array(dtype='float64'))
+        else:
+            # we checked it off
+            try:
+                valid_data_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('VALID_DATA')
+                self.image_panel.canvas.hide_shape(valid_data_id)
+            except KeyError:
+                pass
 
     def set_reader(self, the_reader, update_browse=None):
         """

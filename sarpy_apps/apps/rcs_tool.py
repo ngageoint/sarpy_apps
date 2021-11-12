@@ -394,7 +394,9 @@ class RCSTool(AnnotationTool):
         # configure menubar
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
-        self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
+        self._valid_data_shown = tkinter.IntVar(self, value=0)
+        self.metadata_menu.add_checkbutton(
+            label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
         self.master.config(menu=self.menu_bar)
 
         # hide unwanted elements on the panel toolbars
