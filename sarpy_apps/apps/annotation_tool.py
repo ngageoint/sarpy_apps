@@ -1638,6 +1638,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self.metadata_menu.add_command(label='ValidData', command=self.show_valid_data)
         # configure menubar
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
@@ -1718,6 +1719,14 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         response = self._prompt_unsaved()
         if response:
             self.master.destroy()
+
+    def show_valid_data(self):
+        if self.variables.image_reader is None or \
+                not isinstance(self.variables.image_reader, SICDTypeCanvasImageReader):
+            return
+        sicd = self.variables.image_reader.get_sicd()
+        if sicd.ImageData.ValidData is not None:
+            self.image_panel.canvas.show_valid_data(sicd.ImageData.ValidData.get_array(dtype='float64'))
 
     def set_reader(self, the_reader, update_browse=None):
         """

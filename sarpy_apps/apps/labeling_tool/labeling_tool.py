@@ -588,6 +588,7 @@ class LabelingTool(AnnotationTool):
         self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self.metadata_menu.add_command(label='ValidData', command=self.show_valid_data)
         # configure menubar
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)

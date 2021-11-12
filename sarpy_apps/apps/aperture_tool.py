@@ -1079,6 +1079,7 @@ class RegionSelection(Frame, WidgetWithMetadata):
         popups_menu = tkinter.Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        popups_menu.add_command(label='ValidData', command=self.show_valid_data)
         # ensure menus cascade
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
@@ -1111,6 +1112,13 @@ class RegionSelection(Frame, WidgetWithMetadata):
 
     def exit(self):
         self.root.destroy()
+
+    def show_valid_data(self):
+        if self.variables.image_reader is None:
+            return
+        sicd = self.variables.image_reader.get_sicd()
+        if sicd.ImageData.ValidData is not None:
+            self.image_panel.canvas.show_valid_data(sicd.ImageData.ValidData.get_array(dtype='float64'))
 
     def aperture_tool_popup(self):
         """
