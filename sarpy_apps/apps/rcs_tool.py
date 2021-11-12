@@ -507,6 +507,7 @@ class RCSTool(AnnotationTool):
         self.my_populate_metaviewer()
 
         self.set_annotations(None)
+        self.show_valid_data()
 
     def select_annotation_file(self):
         if not self._verify_image_selected():

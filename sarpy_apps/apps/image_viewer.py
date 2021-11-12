@@ -184,6 +184,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         """
 
         self.my_populate_metaicon()
+        self.show_valid_data()
 
     def update_reader(self, the_reader, update_browse=None):
         """
@@ -231,6 +232,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.pyplot_panel.make_blank()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+        self.show_valid_data()
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)

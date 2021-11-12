@@ -225,6 +225,7 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         self.my_populate_metaicon()
         self.set_default_selection()
+        self.show_valid_data()
 
     def update_reader(self, the_reader, update_browse=None):
         """
@@ -264,6 +265,7 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
         self.set_default_selection()
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
+        self.show_valid_data()
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)

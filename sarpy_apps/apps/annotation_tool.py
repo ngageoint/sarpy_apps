@@ -1797,6 +1797,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.my_populate_metaviewer()
 
         self.set_annotations(None)
+        self.show_valid_data()
 
     def my_populate_metaicon(self):
         """
@@ -2534,6 +2535,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self._initialize_annotation_file(
             self.variables.annotation_file_name, self.variables.file_annotation_collection)
         self.my_populate_metaicon()
+        self.show_valid_data()
 
     def shape_create_on_canvas(self, event):
         """

@@ -1213,6 +1213,7 @@ class RegionSelection(Frame, WidgetWithMetadata):
 
         self.my_populate_metaicon()
         self.aperture_tool.handle_reader_update()
+        self.show_valid_data()
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
@@ -1270,6 +1271,7 @@ class RegionSelection(Frame, WidgetWithMetadata):
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
         self.aperture_tool.handle_reader_update()
+        self.show_valid_data()
 
     def my_populate_metaicon(self):
         """
