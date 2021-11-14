@@ -333,12 +333,82 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         return self.remap_complex_data(self._pulse_data.__getitem__(item))
 
 
-class Operation(Enum):
+class Action(Enum):
+    BEGIN = auto()
     REV = auto()
     PREV = auto()
     STOP = auto()
     NEXT = auto()
     FWD = auto()
+    END = auto()
+
+# Define @prime decorator for ActionFSM class.
+def prime(func):
+    def wrapper(*_args, **_kwargs):
+        v = func(*_args, **_kwargs)
+        v.send(None)
+        return v
+    return wrapper
+
+class ActionFSM:
+
+    def __init__(self):
+
+        self.min_pulse = 1
+        self.max_pulse = 14
+        self.pulse = self.min_pulse
+
+        self.stop = self._create_stop()
+        self.rev = self._create_rev()
+        self.fwd = self._create_fwd()
+
+        self.current_state = self.stop
+
+        self.stopped = False
+
+    def send(self, action):
+        self.current_state.send(action)
+
+    @prime
+    def _create_rev(self):
+        while True:
+            action = yield
+
+            if action in [Action.BEGIN, Action.REV, Action.PREV, Action.NEXT]:
+                self.current_state = self.stop
+            elif action == Action.FWD:
+                self.current_state = self.fwd
+            else:
+                pass
+            print(self.current_state)
+
+    @prime
+    def _create_fwd(self):
+        while True:
+            action = yield
+
+            if action in [Action.END, Action.FWD, Action.PREV, Action.NEXT]:
+                self.current_state = self.stop
+            elif action == Action.REV:
+                self.current_state = self.rev
+            else:
+                pass
+            print(self.current_state)
+
+    @prime
+    def _create_stop(self):
+        while True:
+            action = yield
+
+            if action == Action.REV:
+                self.current_state = self.rev
+            elif action == Action.FWD:
+                self.current_state = self.fwd
+            elif action == Action.NEXT:
+                self.pulse = min(self.pulse + 1, self.max_pulse)
+            elif action == Action.PREV:
+                self.pulse = max(self.pulse - 1, self.min_pulse)
+            print(self.current_state)
 
 
 class SliderWidget(basic_widgets.Frame):
@@ -419,6 +489,7 @@ class SliderWidget(basic_widgets.Frame):
             self.fullscale['text'] = str(pc)
             self.scale_pulse['to'] = pc
 
+
 class DirectionWidget(basic_widgets.Frame):
     """
     Button pair to select forward/reverse/stopped direction.
@@ -436,6 +507,7 @@ class DirectionWidget(basic_widgets.Frame):
 
         self.variables = variables
         self.parent = parent
+        self.action_fsm = ActionFSM()
 
         self.button_style = ttk.Style()
         self.button_style.configure('ToggleOff.TButton', font=('Arial', 24),
@@ -450,23 +522,22 @@ class DirectionWidget(basic_widgets.Frame):
         self.button_rev = \
             basic_widgets.Button(self.parent, text="\u25C0",
                                  style='ToggleOff.TButton', takefocus=0,
-                                 command=lambda: self.action(Operation.REV))
+                                 command=lambda: self.action_fsm.send(Action.REV))
         self.button_prev = \
-            basic_widgets.Button(self.parent, text="-1",
-                                 style='ToggleOff.TButton', takefocus=0)
+            basic_widgets.Button(self.parent, text="-1", takefocus=0,
+                                 style='ToggleOff.TButton',
+                                 command=lambda: self.action_fsm.send(Action.PREV))
         self.button_next = \
-            basic_widgets.Button(self.parent, text="+1",
-                                 style='ToggleOff.TButton', takefocus=0)
+            basic_widgets.Button(self.parent, text="+1", takefocus=0,
+                                 style='ToggleOff.TButton',
+                                 command=lambda: self.action_fsm.send(Action.NEXT))
         self.button_fwd = \
             basic_widgets.Button(self.parent, text="\u25B6",
                                  style='ToggleOff.TButton', takefocus=0,
-                                 command=lambda: self.action(Operation.FWD))
+                                 command=lambda: self.action_fsm.send(Action.FWD))
 
-        self.mode = Operation.STOP
+        # self.action_fsm.current_state = Action.STOP
 
-        # Remove these eventually.
-        self.button_rev.state(['disabled'])
-        self.button_fwd.state(['disabled'])
 
     @staticmethod
     def set_button(button, mode):
@@ -486,25 +557,30 @@ class DirectionWidget(basic_widgets.Frame):
             button.state(['!pressed'])
             button.configure(style='ToggleOff.TButton')
 
-    def action(self, new_mode):
-        """
-        Set direction based on buttons' states and new button press.
-
-        Parameters
-        ----------
-        new_mode: Enum.Operation
-            Button that was pressed, Operation.Rev = left arrow, Operation.Fwd = right arrow
-        """
-        self.mode = Operation.STOP if self.mode == new_mode else new_mode
-        if self.mode == Operation.REV:
-            self.set_button(self.button_rev, True)
-            self.set_button(self.button_fwd, False)
-        elif self.mode == Operation.FWD:
-            self.set_button(self.button_rev, False)
-            self.set_button(self.button_fwd, True)
-        else:
-            self.set_button(self.button_rev, False)
-            self.set_button(self.button_fwd, False)
+    # def action(self, new_mode):
+    #     """
+    #     Set direction based on buttons' states and new button press.
+    #
+    #     Parameters
+    #     ----------
+    #     new_mode: Enum.Action
+    #         Button that was pressed, Action.Rev = left arrow, Action.Fwd = right arrow
+    #     """
+    #     self.mode = Action.STOP if self.mode == new_mode else new_mode
+    #
+    #     if self.mode == Action.REV:
+    #         self.set_button(self.button_rev, True)
+    #         self.set_button(self.button_fwd, False)
+    #     elif self.mode == Action.FWD:
+    #         self.set_button(self.button_rev, False)
+    #         self.set_button(self.button_fwd, True)
+    #     elif new.mode == Action.PREV:
+    #     elif new.mode == Action.NEXT:
+    #
+    # def action_rev(self):
+    #     if self.mode == Action.REV:
+    #         self.mode = Action.STOP
+    #         elif self.mode ==
 
 
 class AppVariables(object):
@@ -698,6 +774,7 @@ class PulseExplorer(basic_widgets.Frame, WidgetWithMetadata):
                 self.display_in_pyplot_frame()
         except AttributeError:
             messagebox.showwarning(message="Image must be opened first.")
+            self.slider.entry_pulse.focus_set()
             self.slider.var_pulse_number.set(1)
 
     def pulse_step_prev(self, event):
