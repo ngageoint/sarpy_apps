@@ -7,6 +7,7 @@ __author__ = ("Thomas Rackers", "Thomas McCullough")
 
 import logging
 import os
+import time
 from enum import Enum, auto
 
 import numpy
@@ -341,6 +342,7 @@ class Action(Enum):
     NEXT = auto()
     FWD = auto()
     END = auto()
+    WAIT = auto()
 
 # Define @prime decorator for ActionFSM class.
 def prime(func):
@@ -355,12 +357,14 @@ class ActionFSM:
     def __init__(self):
 
         self.min_pulse = 1
-        self.max_pulse = 14
+        self.max_pulse = 14  # TODO: Fix this
         self.pulse = self.min_pulse
 
         self.stop = self._create_stop()
         self.rev = self._create_rev()
+        self.rev_w = self._create_rev_w()
         self.fwd = self._create_fwd()
+        self.fwd_w = self._create_fwd_w()
 
         self.current_state = self.stop
 
@@ -368,6 +372,10 @@ class ActionFSM:
 
     def send(self, action):
         self.current_state.send(action)
+
+    @staticmethod
+    def wait():
+        time.sleep(0.1)
 
     @prime
     def _create_rev(self):
@@ -380,7 +388,16 @@ class ActionFSM:
                 self.current_state = self.fwd
             else:
                 pass
-            print(self.current_state)
+
+    @prime
+    def _create_rev_w(self):
+        while True:
+            action = yield
+
+            if action in []:
+                pass
+            else:
+                pass
 
     @prime
     def _create_fwd(self):
@@ -393,7 +410,16 @@ class ActionFSM:
                 self.current_state = self.rev
             else:
                 pass
-            print(self.current_state)
+
+    @prime
+    def _create_fwd_w(self):
+        while True:
+            action = yield
+
+            if action in []:
+                pass
+            else:
+                pass
 
     @prime
     def _create_stop(self):
@@ -408,7 +434,6 @@ class ActionFSM:
                 self.pulse = min(self.pulse + 1, self.max_pulse)
             elif action == Action.PREV:
                 self.pulse = max(self.pulse - 1, self.min_pulse)
-            print(self.current_state)
 
 
 class SliderWidget(basic_widgets.Frame):
@@ -483,11 +508,11 @@ class SliderWidget(basic_widgets.Frame):
             return True
         return False
 
-    def set_pulse_count_widgets(self):
-        pc = self.reader.pulse_count  # 1-indexed
-        if pc is not None:
-            self.fullscale['text'] = str(pc)
-            self.scale_pulse['to'] = pc
+    # def set_pulse_count_widgets(self):
+    #     pc = self.reader.pulse_count  # 1-indexed
+    #     if pc is not None:
+    #         self.fullscale['text'] = str(pc)
+    #         self.scale_pulse['to'] = pc
 
 
 class DirectionWidget(basic_widgets.Frame):
@@ -536,8 +561,6 @@ class DirectionWidget(basic_widgets.Frame):
                                  style='ToggleOff.TButton', takefocus=0,
                                  command=lambda: self.action_fsm.send(Action.FWD))
 
-        # self.action_fsm.current_state = Action.STOP
-
 
     @staticmethod
     def set_button(button, mode):
@@ -550,6 +573,7 @@ class DirectionWidget(basic_widgets.Frame):
         mode: bool|int
             New button state, True = on/pressed or False = off/released
         """
+
         if mode:
             button.state(['pressed'])
             button.configure(style='ToggleOn.TButton')
