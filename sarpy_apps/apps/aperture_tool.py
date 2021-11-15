@@ -1079,6 +1079,9 @@ class RegionSelection(Frame, WidgetWithMetadata):
         popups_menu = tkinter.Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self._valid_data_shown = tkinter.IntVar(self, value=0)
+        popups_menu.add_checkbutton(
+            label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
         # ensure menus cascade
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Metadata", menu=popups_menu)
@@ -1111,6 +1114,24 @@ class RegionSelection(Frame, WidgetWithMetadata):
 
     def exit(self):
         self.root.destroy()
+
+    def show_valid_data(self):
+        if self.variables.image_reader is None:
+            return
+
+        the_value = self._valid_data_shown.get()
+        if the_value == 1:
+            # we just checked on
+            sicd = self.variables.image_reader.get_sicd()
+            if sicd.ImageData.ValidData is not None:
+                self.image_panel.canvas.show_valid_data(sicd.ImageData.ValidData.get_array(dtype='float64'))
+        else:
+            # we checked it off
+            try:
+                valid_data_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('VALID_DATA')
+                self.image_panel.canvas.hide_shape(valid_data_id)
+            except KeyError:
+                pass
 
     def aperture_tool_popup(self):
         """
@@ -1192,6 +1213,7 @@ class RegionSelection(Frame, WidgetWithMetadata):
 
         self.my_populate_metaicon()
         self.aperture_tool.handle_reader_update()
+        self.show_valid_data()
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
@@ -1249,6 +1271,7 @@ class RegionSelection(Frame, WidgetWithMetadata):
         self.my_populate_metaicon()
         self.my_populate_metaviewer()
         self.aperture_tool.handle_reader_update()
+        self.show_valid_data()
 
     def my_populate_metaicon(self):
         """
