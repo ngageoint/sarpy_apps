@@ -7,7 +7,7 @@ __author__ = ("Thomas Rackers", "Thomas McCullough")
 
 import logging
 import os
-import time
+from threading import Thread, Event
 from enum import Enum, auto
 
 import numpy
@@ -334,15 +334,27 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         return self.remap_complex_data(self._pulse_data.__getitem__(item))
 
 
+class ScanTimer(Thread):
+    def __init__(self, fsm):
+        Thread.__init__(self, daemon=True)
+        self.stopped = Event()
+        self.fsm = fsm
+
+    def run(self):
+        while not self.stopped.wait(2.0):
+            self.fsm.send(Action.STEP)
+
+    def stop(self):
+        self.stopped.set()
+
+
 class Action(Enum):
-    BEGIN = auto()
     REV = auto()
     PREV = auto()
     STOP = auto()
     NEXT = auto()
     FWD = auto()
-    END = auto()
-    WAIT = auto()
+    STEP = auto()
 
 # Define @prime decorator for ActionFSM class.
 def prime(func):
@@ -352,88 +364,83 @@ def prime(func):
         return v
     return wrapper
 
+
 class ActionFSM:
 
-    def __init__(self):
+    def __init__(self, variables):
 
-        self.min_pulse = 1
-        self.max_pulse = 14  # TODO: Fix this
-        self.pulse = self.min_pulse
+        self.variables = variables
+        # self.max_pulse = self.variables.image_reader.pulse_count
+        if self.variables.image_reader is not None:
+            self.variables.image_reader.pulse = 1
 
-        self.stop = self._create_stop()
         self.rev = self._create_rev()
-        self.rev_w = self._create_rev_w()
+        self.stop = self._create_stop()
         self.fwd = self._create_fwd()
-        self.fwd_w = self._create_fwd_w()
 
         self.current_state = self.stop
 
         self.stopped = False
 
+        self.scan_timer = ScanTimer(self)
+        self.scan_timer.start()
+
     def send(self, action):
         self.current_state.send(action)
-
-    @staticmethod
-    def wait():
-        time.sleep(0.1)
 
     @prime
     def _create_rev(self):
         while True:
             action = yield
+            prev_state = self.current_state
 
-            if action in [Action.BEGIN, Action.REV, Action.PREV, Action.NEXT]:
+            if action in [Action.REV, Action.PREV, Action.NEXT]:
                 self.current_state = self.stop
+                self.scan_timer.stop()
             elif action == Action.FWD:
                 self.current_state = self.fwd
-            else:
-                pass
-
-    @prime
-    def _create_rev_w(self):
-        while True:
-            action = yield
-
-            if action in []:
-                pass
-            else:
-                pass
-
-    @prime
-    def _create_fwd(self):
-        while True:
-            action = yield
-
-            if action in [Action.END, Action.FWD, Action.PREV, Action.NEXT]:
-                self.current_state = self.stop
-            elif action == Action.REV:
-                self.current_state = self.rev
-            else:
-                pass
-
-    @prime
-    def _create_fwd_w(self):
-        while True:
-            action = yield
-
-            if action in []:
-                pass
-            else:
-                pass
+            elif action == Action.STEP:
+                self.variables.image_reader.pulse = max(self.variables.image_reader.pulse - 1, 1)
+                if self.variables.image_reader.pulse == 1:
+                    self.current_state = self.stop
+                    self.scan_timer.stop()
+            print(f"{prev_state} ==> {action} ==> {self.current_state}")
 
     @prime
     def _create_stop(self):
         while True:
             action = yield
+            prev_state = self.current_state
 
             if action == Action.REV:
                 self.current_state = self.rev
             elif action == Action.FWD:
                 self.current_state = self.fwd
             elif action == Action.NEXT:
-                self.pulse = min(self.pulse + 1, self.max_pulse)
+                self.variables.image_reader.pulse = min(self.variables.image_reader.pulse + 1,
+                                                        self.variables.image_reader.pulse_count)
             elif action == Action.PREV:
-                self.pulse = max(self.pulse - 1, self.min_pulse)
+                self.variables.image_reader.pulse = max(self.variables.image_reader.pulse - 1, 1)
+            print(f"{prev_state} ==> {action} ==> {self.current_state}")
+
+    @prime
+    def _create_fwd(self):
+        while True:
+            action = yield
+            prev_state = self.current_state
+
+            if action in [Action.FWD, Action.PREV, Action.NEXT]:
+                self.current_state = self.stop
+                self.scan_timer.stop()
+            elif action == Action.REV:
+                self.current_state = self.rev
+            elif action == Action.STEP:
+                self.variables.image_reader.pulse = min(self.variables.image_reader.pulse + 1,
+                                                        self.variables.image_reader.pulse_count)
+                if self.variables.image_reader.pulse == self.variables.image_reader.pulse_count:
+                    self.current_state = self.stop
+                    self.scan_timer.stop()
+            print(f"{prev_state} ==> {action} ==> {self.current_state}")
 
 
 class SliderWidget(basic_widgets.Frame):
@@ -532,7 +539,7 @@ class DirectionWidget(basic_widgets.Frame):
 
         self.variables = variables
         self.parent = parent
-        self.action_fsm = ActionFSM()
+        self.action_fsm = ActionFSM(self.variables)
 
         self.button_style = ttk.Style()
         self.button_style.configure('ToggleOff.TButton', font=('Arial', 24),
