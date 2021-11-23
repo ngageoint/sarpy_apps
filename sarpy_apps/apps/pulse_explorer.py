@@ -291,11 +291,10 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             return
 
         if self._pulse_display == 'RFSignal':
-            times, frequencies, data = _rf_signal(self.base_reader, self.index,
-                                                  self.pulse)
+            times, frequencies, data = _rf_signal(self.base_reader, self.index, self.pulse)
         else:
-            raise ValueError('Got unhandled pulse display value `{}`'.format(
-                self.pulse_display))
+            raise ValueError(
+                'Got unhandled pulse display value `{}`'.format(self.pulse_display))
 
         self._times = times
         self._frequencies = frequencies
@@ -353,22 +352,17 @@ class SliderWidget(Frame):
 
         self.start_pulse_label = Label(self, text='0')
 
-        self.combobox_style = ttk.Style()
-        self.combobox_style.configure('Channel.TCombobox')
-        self.popdown_style = ttk.Style()
-
         self.label_channel = Label(self, text='Channel')
         self.cbx_channel = Combobox(self, state='readonly')
         self.var_cbx_channel = tkinter.StringVar()
         self.cbx_channel.configure(
-            font=('TkFixedFont', 10), justify='left', textvariable=self.var_cbx_channel,
-            width=30, values=[], style='Channel.TCombobox', state='disabled')
+            justify='left', textvariable=self.var_cbx_channel,
+            width=30, values=[], state='disabled')
 
         self.label_pulse = Label(self, text='Pulse')
         self.entry_pulse = Entry(self)
-        self.var_pulse_number = tkinter.StringVar(value='0')
-        self.entry_pulse.configure(
-            font=('TkFixedFont', 10), justify='right', textvariable=self.var_pulse_number, width=6)
+        self.entry_pulse.set_text('0')
+        self.entry_pulse.configure(justify='right', width=6)
         self.entry_callback = self.register(self._only_numeric_input)
         self.entry_pulse.configure(validate="key", validatecommand=(self.entry_callback, "%P"))
 
@@ -387,9 +381,10 @@ class SliderWidget(Frame):
         self.columnconfigure(4, weight=1)
         self.columnconfigure(5, weight=0)
 
+        self.var_pulse_number = tkinter.StringVar(value='0')
         self.scale_pulse = Scale(
             self, from_=0, to=0, length=600, orient='horizontal',
-            command=lambda s: self.var_pulse_number.set('{0:0.0f}'.format(s)))
+            command=lambda s: self.var_pulse_number.set(s))
         self.scale_pulse.configure(variable=self.var_pulse_number)
         self.scale_pulse.grid(
             row=1, column=0, columnspan=6, padx=5, pady=8, sticky='esw')
@@ -426,10 +421,10 @@ class DirectionWidget(Frame):
             'ToggleOn.TButton', font=('Arial', 24), foreground="black",
             background="PaleTurquoise1", width=3, sticky='CENTER')
 
-        self.button_rev = Button(self.parent, text="\u25C0", style='ToggleOff.TButton', takefocus=0)
+        self.button_rev = Button(self.parent, text="\u25C0", takefocus=0, style='ToggleOff.TButton')
         self.button_prev = Button(self.parent, text="-1", takefocus=0, style='ToggleOff.TButton')
         self.button_next = Button(self.parent, text="+1", takefocus=0, style='ToggleOff.TButton')
-        self.button_fwd = Button(self.parent, text="\u25B6", style='ToggleOff.TButton', takefocus=0)
+        self.button_fwd = Button(self.parent, text="\u25B6", takefocus=0, style='ToggleOff.TButton')
 
 
 class PulseExplorer(Frame, WidgetWithMetadata):
@@ -450,11 +445,12 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
 
-        self.pyplot_panel = PyplotImagePanel(self)  # type: PyplotImagePanel
+        self.pyplot_panel = PyplotImagePanel(self, navigation=True)  # type: PyplotImagePanel
 
         self.pyplot_panel.cmap_name = 'turbo'
         self.pyplot_panel.set_ylabel('Freq (GHz)')
         self.pyplot_panel.set_xlabel('Time (\u03BCsec)')
+        self.pyplot_panel.set_title('Pulse Visualization')
 
         self.scanner_panel = Frame(self, padding=10)  # type: Frame
         self.scanner_panel.columnconfigure(0, weight=0)
@@ -502,9 +498,9 @@ class PulseExplorer(Frame, WidgetWithMetadata):
 
         # self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
         self.slider.cbx_channel.bind('<<ComboboxSelected>>', self.handle_image_index_changed)
-        self.slider.scale_pulse.bind('<ButtonRelease>', self.handle_pulse_changed)
-        self.slider.entry_pulse.bind('<FocusOut>', self.handle_pulse_changed)
-        self.slider.entry_pulse.on_enter_or_return_key(self.handle_pulse_changed)
+        self.slider.scale_pulse.bind('<ButtonRelease>', self.handle_pulse_changed_slider)
+        self.slider.entry_pulse.bind('<FocusOut>', self.handle_pulse_changed_entry)
+        self.slider.entry_pulse.on_enter_or_return_key(self.handle_pulse_changed_entry)
 
         self.dir_buttons.button_rev.config(command=self.pulse_animate_backwards)
         self.dir_buttons.button_prev.config(command=self.pulse_step_prev)
@@ -525,16 +521,21 @@ class PulseExplorer(Frame, WidgetWithMetadata):
                 os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
 
-    def set_pulse(self, value):
+    def set_pulse(self, value, override=False):
         """
         Sets the pulse count.
+
+        Parameters
+        ----------
+        value : int
+        override : bool
         """
 
         if self.variables.image_reader is None:
             return
 
         value = int(value)
-        if value == self.variables.image_reader.pulse:
+        if value == self.variables.image_reader.pulse and not override:
             return
 
         if not (0 <= value < self.variables.image_reader.pulse_count):
@@ -553,6 +554,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         if self.variables.vmin != self.variables.vmax:
             self.variables.vcount += 1
 
+        self.slider.entry_pulse.set_text(str(value))
         self.slider.var_pulse_number.set(value)
         self.display_in_pyplot_frame()
 
@@ -588,30 +590,42 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         if self.variables.image_reader is None:
             return
 
-        print(f'initial - {self.variables.image_reader.index}')
         self._refresh_vdata()
         self.variables.animating = False
         self.variables.image_reader.index = self.slider.cbx_channel.current()
         self.my_populate_metaicon()
         self.slider.cbx_channel.selection_clear()
-        # Update number of pulses.
+        # Update number of pulses
         pulse_count = self.variables.image_reader.pulse_count
         self.slider.fullscale.configure(text=str(pulse_count-1))
         self.slider.scale_pulse.configure(to=pulse_count-1)
-        self.set_pulse(0)
-        print(f'final - {self.variables.image_reader.index}')
+        self.set_pulse(0, override=True)
 
-    def handle_pulse_changed(self, event):
+    def handle_pulse_changed_entry(self, event):
         if self.variables.image_reader is None:
             return
-        self.set_pulse(int(self.slider.var_pulse_number.get()))
+
+        if self.variables.animating:
+            self.variables.animating = False
+
+        self.set_pulse(int(self.slider.entry_pulse.get()))
+
+    def handle_pulse_changed_slider(self, event):
+        if self.variables.image_reader is None:
+            return
+
+        if self.variables.animating:
+            self.variables.animating = False
+
+        self.set_pulse(int(float(self.slider.var_pulse_number.get())))
 
     def pulse_step(self, direction):
         if self.variables.image_reader is None:
             return
 
-        current_pulse = int(self.slider.var_pulse_number.get())
+        current_pulse = int(float(self.slider.var_pulse_number.get()))
         new_pulse = current_pulse + direction
+        # todo: should we roll over by default?
         if new_pulse < 0:
             new_pulse += self.variables.image_reader.pulse_count
         elif new_pulse >= self.variables.image_reader.pulse_count:
@@ -619,35 +633,38 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         self.set_pulse(new_pulse)
 
     def pulse_step_prev(self):
+        if self.variables.animating:
+            self.variables.animating = False
         self.pulse_step(-1)
 
     def pulse_animate_backwards(self):
         if self.variables.animating:
             self.variables.animating = False
-        else:
-            self.variables.animating = True
-            self._pulse_animate(-1)
+            return
+
+        self.variables.animating = True
+        self._pulse_animate(-1)
 
     def pulse_step_next(self):
+        if self.variables.animating:
+            self.variables.animating = False
+
         self.pulse_step(+1)
 
     def pulse_animate_forward(self):
         if self.variables.animating:
             self.variables.animating = False
             return
-        else:
-            self.variables.animating = True
-            self._pulse_animate(1)
+
+        self.variables.animating = True
+        self._pulse_animate(1)
 
     def _pulse_animate(self, direction):
         if not self.variables.animating:
             return
-        elif direction == 1:
-            self.pulse_step_next()
-            self.after(self.variables.animation_delay, self._pulse_animate, 1)
-        else:
-            self.pulse_step_prev()
-            self.after(self.variables.animation_delay, self._pulse_animate, -1)
+
+        self.pulse_step(direction)
+        self.after(self.variables.animation_delay, self._pulse_animate, direction)
 
     def update_reader(self, the_reader, update_browse=None):
         """
@@ -700,20 +717,19 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         the_reader = STFTCanvasImageReader(fname)
         self.update_reader(the_reader, update_browse=os.path.split(fname)[0])
 
-    def callback_settings_popup(self):
-        pass
-
     def display_in_pyplot_frame(self):
         times = 1e6*self.variables.image_reader.times
         frequencies = 1e-9*self.variables.image_reader.frequencies
         image_data = self.variables.image_reader.pulse_data[:, :]
+        image_data = image_data[::-1, :]
         if self.variables.vcount > 0:
-            self.pyplot_panel.update_pcolormesh(
-                times, frequencies, image_data, shading='gouraud', snap=True,
-                vmin=self.variables.vmin, vmax=self.variables.vmax)
+            self.pyplot_panel.update_image(
+                image_data, aspect='auto', vmin=self.variables.vmin, vmax=self.variables.vmax,
+                extent=[times[0], times[-1], frequencies[0], frequencies[-1]])
         else:
-            self.pyplot_panel.update_pcolormesh(
-                times, frequencies, image_data, shading='gouraud', snap=True)
+            self.pyplot_panel.update_image(
+                image_data, aspect='auto',
+                extent=[times[0], times[-1], frequencies[0], frequencies[-1]])
 
     def update_combobox(self, identifiers):
         # Update channels combobox.
