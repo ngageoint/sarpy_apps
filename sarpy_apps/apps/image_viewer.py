@@ -73,25 +73,25 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.set_title()
 
         # define menus
-        menubar = tkinter.Menu()
+        self.menu_bar = tkinter.Menu()
         # file menu
-        filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open Image", command=self.callback_select_files)
-        filemenu.add_command(label="Open Directory", command=self.callback_select_directory)
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.exit)
+        self.file_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.file_menu.add_command(label="Open Image", command=self.callback_select_files)
+        self.file_menu.add_command(label="Open Directory", command=self.callback_select_directory)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.exit)
         # menus for informational popups
-        popups_menu = tkinter.Menu(menubar, tearoff=0)
-        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         self._valid_data_shown = tkinter.IntVar(self, value=0)
-        popups_menu.add_checkbutton(
+        self.metadata_menu.add_checkbutton(
             label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
         # ensure menus cascade
-        menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Metadata", menu=popups_menu)
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
+        self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
 
-        primary.config(menu=menubar)
+        self.root.config(menu=self.menu_bar)
 
         # hide extraneous tool elements
         self.image_panel.hide_tools('shape_drawing')
