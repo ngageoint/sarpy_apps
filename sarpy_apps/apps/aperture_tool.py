@@ -370,14 +370,14 @@ class ApertureTool(WidgetPanel):
         self.animation_panel = AnimationPanel(self.animation_popup_panel)
         self.animation_popup_panel.withdraw()
 
-        menubar = tkinter.Menu()
-        popups_menu = tkinter.Menu(menubar, tearoff=0)
-        popups_menu.add_command(label="Main Controls", command=self.main_controls_popup)
-        popups_menu.add_command(label="Phase History", command=self.ph_popup)
-        popups_menu.add_command(label="Animation", command=self.animation_fast_slow_popup)
-        menubar.add_cascade(label="Details", menu=popups_menu)
+        self.menu_bar = tkinter.Menu()
+        self.controls_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.controls_menu.add_command(label="Main Controls", command=self.main_controls_popup)
+        self.controls_menu.add_command(label="Phase History", command=self.ph_popup)
+        self.controls_menu.add_command(label="Animation", command=self.animation_fast_slow_popup)
+        self.menu_bar.add_cascade(label="Details", menu=self.controls_menu)
 
-        primary.config(menu=menubar)
+        primary.config(menu=self.menu_bar)
         self.phase_history_panel.master.pack(side='left', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.master.pack(side='right', fill=tkinter.BOTH, expand=tkinter.YES)
         self.filtered_panel.canvas.set_canvas_size(300, 400)
@@ -1068,26 +1068,26 @@ class RegionSelection(Frame, WidgetWithMetadata):
         self.aperture_popup_panel.withdraw()
 
         # define menus
-        menubar = tkinter.Menu()
+        self.menu_bar = tkinter.Menu()
         # file menu
-        filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open Image", command=self.callback_select_files)
-        filemenu.add_command(label="Open Directory", command=self.callback_select_directory)
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.exit)
+        self.file_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.file_menu.add_command(label="Open Image", command=self.callback_select_files)
+        self.file_menu.add_command(label="Open Directory", command=self.callback_select_directory)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.exit)
         # menus for informational popups
-        popups_menu = tkinter.Menu(menubar, tearoff=0)
-        popups_menu.add_command(label="Metaicon", command=self.metaicon_popup)
-        popups_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
+        self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
         self._valid_data_shown = tkinter.IntVar(self, value=0)
-        popups_menu.add_checkbutton(
+        self.metadata_menu.add_checkbutton(
             label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
         # ensure menus cascade
-        menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Metadata", menu=popups_menu)
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
+        self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
 
         # handle packing
-        parent.config(menu=menubar)
+        self.root.config(menu=self.menu_bar)
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # define the callbacks
