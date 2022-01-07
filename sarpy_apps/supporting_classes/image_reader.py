@@ -60,7 +60,7 @@ class GeneralCanvasImageReader(CanvasImageReader):
     with the image segments of unexpected type.
     """
 
-    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
+    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size', '_remap_function')
 
     def __init__(self, reader):
         """
@@ -76,6 +76,7 @@ class GeneralCanvasImageReader(CanvasImageReader):
         self._chippers = None
         self._data_size = None
         self._index = None
+        self._remap_function = _get_default_remap()
         # set the reader
         self.base_reader = reader
 
@@ -133,11 +134,11 @@ class GeneralCanvasImageReader(CanvasImageReader):
 
     @property
     def remapable(self):
-        return False
+        return True
 
     @property
     def remap_function(self):
-        return None
+        return self._remap_function
 
     @property
     def image_count(self):
@@ -171,7 +172,8 @@ class GeneralCanvasImageReader(CanvasImageReader):
         return None
 
     def __getitem__(self, item):
-        return self._chippers[self.index].__getitem__(item)
+        data = self._chippers[self.index].__getitem__(item)
+        return self.remap_data(data)
 
     def __del__(self):
         # noinspection PyBroadException
@@ -181,12 +183,40 @@ class GeneralCanvasImageReader(CanvasImageReader):
         except Exception:
             pass
 
+    def remap_data(self, data):
+        """
+        Remap the given data according to the current remap function, unless it has
+        dtype uint8.
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
+        if self._remap_function is None or data.dtype.name == 'uint8':
+            return data
+        return self._remap_function(data)
+
+    def set_remap_type(self, remap_type):
+        if callable(remap_type):
+            self._remap_function = remap_type
+        elif isinstance(remap_type, str):
+            self._remap_function = get_registered_remap(remap_type, _get_default_remap())
+        else:
+            default_remap = _get_default_remap()
+            logging.error(
+                'Got unexpected value for remap `{}`, using `{}`'.format(remap_type, default_remap.name))
+            self._remap_function = default_remap
+
 
 ########
 # general complex type reader structure - really just sets the remap
 
 class ComplexCanvasImageReader(GeneralCanvasImageReader):
-    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size', '_remap_function')
 
     def __init__(self, reader):
         """
@@ -249,44 +279,6 @@ class ComplexCanvasImageReader(GeneralCanvasImageReader):
         self._chippers = value._get_chippers_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
-
-    @property
-    def remapable(self):
-        return True
-
-    @property
-    def remap_function(self):
-        return self._remap_function
-
-    def __getitem__(self, item):
-        cdata = self._chippers[self.index].__getitem__(item)
-        return self.remap_complex_data(cdata)
-
-    def remap_complex_data(self, complex_data):
-        """
-        Perform the remap on the complex data.
-
-        Parameters
-        ----------
-        complex_data : numpy.ndarray
-
-        Returns
-        -------
-        numpy.ndarray
-        """
-
-        return self._remap_function(complex_data)
-
-    def set_remap_type(self, remap_type):
-        if callable(remap_type):
-            self._remap_function = remap_type
-        elif isinstance(remap_type, str):
-            self._remap_function = get_registered_remap(remap_type, _get_default_remap())
-        else:
-            default_remap = _get_default_remap()
-            logging.error(
-                'Got unexpected value for remap `{}`, using `{}`'.format(remap_type, default_remap.name))
-            self._remap_function = default_remap
 
 
 ########
@@ -674,7 +666,6 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
 # SIDD specific type reader
 
 class DerivedCanvasImageReader(GeneralCanvasImageReader):
-    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size')
 
     def __init__(self, reader):
         """
@@ -707,14 +698,6 @@ class DerivedCanvasImageReader(GeneralCanvasImageReader):
         self._chippers = value._get_chippers_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
-
-    @property
-    def remapable(self):
-        return False
-
-    @property
-    def remap_function(self):
-        return None
 
     def get_sidd(self):
         """
