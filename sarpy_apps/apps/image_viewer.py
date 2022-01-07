@@ -263,7 +263,13 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         threshold = self.image_panel.canvas.variables.config.select_size_threshold
 
-        select_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
+        try:
+            select_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
+            if select_id is None:
+                return
+        except KeyError:
+            return
+
         rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
         extent = get_extent(rect_coords)
 
