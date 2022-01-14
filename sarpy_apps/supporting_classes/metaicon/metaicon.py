@@ -431,20 +431,22 @@ class MetaIcon(ImagePanel):
         """
 
         flight_direction_arrow_start = (
-            self.canvas.variables.state.canvas_width * 0.65, self.canvas.variables.state.canvas_height * 0.9)
-        flight_direction_arrow_end = (self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
-        if self.data_container.side_of_track == 'R':
+            self.canvas.variables.state.canvas_width*0.65, self.canvas.variables.state.canvas_height*0.9)
+        flight_direction_arrow_end = (
+            self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
+        if self.data_container.side_of_track.upper()[0] == 'R':
+            text = 'R'
             self.canvas.create_new_arrow(
                 flight_direction_arrow_start + flight_direction_arrow_end,
                 make_current=False, increment_color=False, color=Colors.flight_direction,
                 regular_options={'width': 3}, highlight_options={'width': 3})
-            text = 'R'
         else:
             text = 'L'
             self.canvas.create_new_arrow(
                 flight_direction_arrow_end + flight_direction_arrow_start,
                 make_current=False, increment_color=False, color=Colors.flight_direction,
                 regular_options={'width': 3}, highlight_options={'width': 3})
+
         self.canvas.create_new_text(
             (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
              flight_direction_arrow_start[1]),

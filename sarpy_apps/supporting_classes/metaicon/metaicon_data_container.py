@@ -13,12 +13,12 @@ import numpy
 from scipy.constants import foot
 
 from sarpy.geometry import latlon
-from sarpy.geometry.geocoords import ecf_to_geodetic, geodetic_to_ecf, ecf_to_ned
+from sarpy.geometry.geocoords import ecf_to_geodetic, geodetic_to_ecf
 from sarpy.io.complex.sicd_elements.SICD import SICDType
-from sarpy.io.product.sidd2_elements.SIDD import SIDDType  # version 2.0
-from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1  # version 1.0
-from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType  # version 1.0
-from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3  # version 0.3
+from sarpy.io.product.sidd2_elements.SIDD import SIDDType as SIDDType2
+from sarpy.io.product.sidd1_elements.SIDD import SIDDType as SIDDType1
+from sarpy.io.phase_history.cphd1_elements.CPHD import CPHDType as CPHDType1
+from sarpy.io.phase_history.cphd0_3_elements.CPHD import CPHDType as CPHDType0_3
 from sarpy.io.received.crsd1_elements.CRSD import CRSDType  # version 1.0
 from sarpy.io.complex.sicd_elements.SCPCOA import GeometryCalculator
 from sarpy.io.product.sidd2_elements.ExploitationFeatures import ExploitationCalculator
@@ -236,7 +236,6 @@ class MetaIconDataContainer(object):
             value = getattr(self, angle_type, None)
         if value is None:
             return "{}: No data".format(angle_type.capitalize())
-
         decimals = ANGLE_DECIMALS.get(angle_type, 0)
         frm_str = '{0:s}:{1:0.'+str(decimals)+'f}{2:s}'
         return frm_str.format(angle_type.capitalize(), value, symbol)
@@ -303,8 +302,8 @@ class MetaIconDataContainer(object):
             if layover is not None:
                 variables['layover'] = ((layover-azimuth + 360) % 360)
                 variables['layover_display'] = layover
-
-            variables['shadow'] = 180
+                variables['shadow'] = ((variables['layover'] + 180) % 360.0)
+                variables['shadow_display'] = ((layover + 180) % 360.0)
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:
@@ -371,7 +370,7 @@ class MetaIconDataContainer(object):
 
         Parameters
         ----------
-        cphd : CPHDType|CPHDType0_3
+        cphd : CPHDType1|CPHDType0_3
         index
             The index for the data channel.
 
@@ -380,7 +379,7 @@ class MetaIconDataContainer(object):
         MetaIconDataContainer
         """
 
-        if isinstance(cphd, CPHDType):
+        if isinstance(cphd, CPHDType1):
             return cls._from_cphd1_0(cphd, index)
         elif isinstance(cphd, CPHDType0_3):
             return cls._from_cphd0_3(cphd, index)
@@ -394,7 +393,7 @@ class MetaIconDataContainer(object):
 
         Parameters
         ----------
-        cphd : CPHDType
+        cphd : CPHDType1
         index
             The index of the data channel.
 
@@ -403,7 +402,7 @@ class MetaIconDataContainer(object):
         MetaIconDataContainer
         """
 
-        if not isinstance(cphd, CPHDType):
+        if not isinstance(cphd, CPHDType1):
             raise TypeError(
                 'cphd is expected to be an instance of CPHDType, got type {}'.format(type(cphd)))
 
@@ -565,20 +564,20 @@ class MetaIconDataContainer(object):
 
         Parameters
         ----------
-        sidd : SIDDType|SIDDType1
+        sidd : SIDDType2|SIDDType1
 
         Returns
         -------
         MetaIconDataContainer
         """
 
-        if not isinstance(sidd, (SIDDType, SIDDType1)):
+        if not isinstance(sidd, (SIDDType2, SIDDType1)):
             raise TypeError(
                 'sidd is expected to be an instance of SIDD type, got type {}'.format(type(sidd)))
 
         def extract_location():
             ll_coords = None
-            if isinstance(sidd, SIDDType):
+            if isinstance(sidd, SIDDType2):
                 try:
                     ll_coords = sidd.GeoData.ImageCorners.get_array(dtype=numpy.dtype('float64'))
                 except AttributeError:
@@ -621,7 +620,7 @@ class MetaIconDataContainer(object):
 
             if isinstance(sidd, SIDDType1):
                 north = sidd.ExploitationFeatures.Product.North
-            elif isinstance(sidd, SIDDType):
+            elif isinstance(sidd, SIDDType2):
                 north = sidd.ExploitationFeatures.Products[0].North
             else:
                 raise TypeError('Unhandled sidd type `{}`'.format(sidd.__class__))
