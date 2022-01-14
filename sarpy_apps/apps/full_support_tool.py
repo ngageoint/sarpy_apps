@@ -574,7 +574,7 @@ if __name__ == '__main__':
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument(
-        '-i', '--input', metavar='input', default=None, help='The path to the optional image file for opening.')
+        'input', metavar='input', default=None, help='The path to the optional image file for opening.')
     args = parser.parse_args()
 
     main(reader=args.input)
