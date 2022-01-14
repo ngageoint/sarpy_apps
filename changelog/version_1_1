@@ -1,6 +1,7 @@
 # This details the important differences introduced in sarpy_apps 1.1
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .12 - Correcting metaicon shadow display bug and streamlining commandline args
 * .11 - Expanding use of remap functions to avoid failures
 * .10 - Bug fix for rcs tool metadata menu
 * .9 - Adding pulse explorer tool for CRSD file exploration
