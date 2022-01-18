@@ -905,7 +905,7 @@ if __name__ == '__main__':
             formatter_class=argparse.RawTextHelpFormatter)
 
         parser.add_argument(
-            'input', metavar='input', default=None,
+            'input', metavar='input', default=None,  nargs='?',
             help='The path to the existing schema file for opening.')
         args = parser.parse_args()
 
