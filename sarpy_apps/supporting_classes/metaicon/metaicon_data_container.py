@@ -302,8 +302,12 @@ class MetaIconDataContainer(object):
             if layover is not None:
                 variables['layover'] = ((layover-azimuth + 360) % 360)
                 variables['layover_display'] = layover
-                variables['shadow'] = ((variables['layover'] + 180) % 360.0)
-                variables['shadow_display'] = ((layover + 180) % 360.0)
+
+            shadow = sicd.SCPCOA.Shadow
+            if shadow is None:
+                shadow = 180.0
+            variables['shadow'] = shadow
+            variables['shadow_display'] = ((sicd.SCPCOA.Shadow + azimuth + 360) % 360.0)
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:

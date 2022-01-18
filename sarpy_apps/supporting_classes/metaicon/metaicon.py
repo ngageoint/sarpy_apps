@@ -434,6 +434,9 @@ class MetaIcon(ImagePanel):
             self.canvas.variables.state.canvas_width*0.65, self.canvas.variables.state.canvas_height*0.9)
         flight_direction_arrow_end = (
             self.canvas.variables.state.canvas_width * 0.95, flight_direction_arrow_start[1])
+        if self.data_container.side_of_track is None:
+            return
+
         if self.data_container.side_of_track.upper()[0] == 'R':
             text = 'R'
             self.canvas.create_new_arrow(
