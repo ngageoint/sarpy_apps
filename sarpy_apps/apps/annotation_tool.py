@@ -1786,6 +1786,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
                         message='Annotation requires that all images in the reader have the same size. Aborting.')
                     return
 
+        self.set_annotations(None)  # clear any previous existing data
         # change the tool to view
         self.image_panel.canvas.current_tool = 'VIEW'
         self.image_panel.canvas.current_tool = 'VIEW'
