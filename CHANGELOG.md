@@ -1,6 +1,10 @@
 # Change Log
 
 
+## [1.1.14] - 2022-01-27
+### Fixed
+Correcting annotation type tool bug to allow resetting the image reader
+
 ## [1.1.13] - 2022-01-18
 Correcting command-line argument bug
 
