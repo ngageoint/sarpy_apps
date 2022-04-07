@@ -412,8 +412,7 @@ class LabelPanel(AnnotationPanel):
 
         Parameters
         ----------
-        master
-            tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         app_variables : AppVariables
         kwargs
         """
@@ -538,8 +537,7 @@ class LabelingTool(AnnotationTool):
 
         Parameters
         ----------
-        master
-            tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         reader : None|str|BaseReader|GeneralCanvasImageReader
         annotation_collection : None|str|FileLabelCollection
         kwargs

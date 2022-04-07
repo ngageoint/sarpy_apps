@@ -246,7 +246,7 @@ class LabelEntryPanel(Frame):
 
         Parameters
         ----------
-        master : tkinter.Tk|tkinter.ToplLevel
+        master : tkinter.Tk|tkinter.Toplevel
         app_variables : AppVariables
         kwargs
             keyword arguments passed through for frame
@@ -436,7 +436,7 @@ class SchemaEditor(Frame):
 
         Parameters
         ----------
-        master : tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         label_schema : None|str|LabelSchema
         kwargs
             keyword arguments for Frame

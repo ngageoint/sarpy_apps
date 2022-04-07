@@ -71,8 +71,7 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         Parameters
         ----------
-        primary
-            tkinter.Tk|tkinter.TopLevel
+        primary : tkinter.Tk|tkinter.Toplevel
         reader : None|str|SICDTypeReader|SICDTypeImageCanvasReader
         kwargs
         """

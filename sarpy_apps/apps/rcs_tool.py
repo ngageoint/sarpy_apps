@@ -178,8 +178,7 @@ class RCSPanel(AnnotationPanel):
 
         Parameters
         ----------
-        master
-            tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         app_variables : AppVariables
         kwargs
         """
@@ -342,8 +341,7 @@ class RCSTool(AnnotationTool):
 
         Parameters
         ----------
-        master
-            tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         reader : None|str|SICDTypeReader|SICDTypeCanvasImageReader
         annotation_collection : None|str|FileRCSCollection
         kwargs

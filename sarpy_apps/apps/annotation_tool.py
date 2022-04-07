@@ -1120,8 +1120,7 @@ class AnnotationPanel(Frame):
 
         Parameters
         ----------
-        master
-            tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         app_variables : AppVariables
         kwargs
         """
@@ -1591,8 +1590,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         Parameters
         ----------
-        master
-            tkinter.Tk|tkinter.TopLevel
+        master : tkinter.Tk|tkinter.Toplevel
         reader : None|str|BaseReader|GeneralCanvasImageReader
         annotation_collection : None|str|FileAnnotationCollection
         kwargs
