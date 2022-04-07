@@ -14,9 +14,9 @@ from tkinter.filedialog import askopenfilenames, askdirectory
 
 from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import CanvasImageReader
-from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame
+from tk_builder.widgets.image_panel_detail import ImagePanelDetail
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
@@ -53,7 +53,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         self.root = primary
         Frame.__init__(self, primary, **kwargs)
-        WidgetWithMetadata.__init__(self, primary)
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.primary = tkinter.PanedWindow(self, sashrelief=tkinter.RIDGE, orient=tkinter.HORIZONTAL)
 
@@ -63,13 +62,12 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.primary.add(
             self.image_panel, width=700, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
             stretch=tkinter.FIRST)
-
-        self.detail_popup = tkinter.Toplevel(primary)
-        self.detail_popup.geometry('700x500')
-        self.pyplot_panel = PyplotImagePanel(self.detail_popup, navigation=True)  # type: PyplotImagePanel
-        self.pyplot_panel.set_title('Detail View')
-        self.detail_popup.protocol("WM_DELETE_WINDOW", self.detail_popup.withdraw)
-        self.detail_popup.withdraw()
+        WidgetWithMetadata.__init__(self, primary, self.image_panel)
+        self.image_panel_detail = ImagePanelDetail(primary,
+                                                   self.image_panel.canvas,
+                                                   on_selection_changed=False,
+                                                   on_selection_finalized=True,
+                                                   fetch_full_resolution=False)
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
@@ -91,7 +89,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.metadata_menu.add_checkbutton(
             label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
         self.metadata_menu.add_separator()
-        self.metadata_menu.add_command(label="Detail", command=self.detail_popup_callback)
+        self.metadata_menu.add_command(label="View Detail", command=self.detail_popup_callback)
 
         # ensure menus cascade
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
@@ -103,13 +101,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.image_panel.hide_tools('shape_drawing')
         self.image_panel.hide_shapes()
 
-        # bind canvas events for proper functionality
-        # this makes for bad performance on a larger image - do not activate
-        # self.image_panel.canvas.bind('<<SelectionChanged>>', self.handle_selection_change)
-        self.image_panel.canvas.bind('<<SelectionFinalized>>', self.handle_selection_change)
-        self.image_panel.canvas.bind('<<RemapChanged>>', self.handle_remap_change)
-        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed)
-
+        self.image_panel.canvas.bind('<<ImageIndexChanged>>', self.handle_image_index_changed, '+')
         self.update_reader(reader, update_browse=None)
 
     def set_title(self):
@@ -130,13 +122,8 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.primary.destroy()
         self.root.destroy()
 
-    def _set_focus_on_detail_popup(self):
-        self.detail_popup.focus_set()
-        self.detail_popup.lift()
-
     def detail_popup_callback(self):
-        self.detail_popup.deiconify()
-        self._set_focus_on_detail_popup()
+        self.image_panel_detail.set_focus_on_detail_popup()
 
     def show_valid_data(self):
         if self.variables.image_reader is None or \
@@ -158,37 +145,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
                 pass
 
     # noinspection PyUnusedLocal
-    def handle_selection_change(self, event):
-        """
-        Handle a change in the selection area.
-
-        Parameters
-        ----------
-        event
-        """
-
-        if self.variables.image_reader is None:
-            return
-
-        full_image_width = self.image_panel.canvas.variables.state.canvas_width
-        fill_image_height = self.image_panel.canvas.variables.state.canvas_height
-        self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
-        self.display_canvas_rect_selection_in_pyplot_frame()
-        self.detail_popup_callback()
-
-    # noinspection PyUnusedLocal
-    def handle_remap_change(self, event):
-        """
-        Handle that the remap for the image canvas has changed.
-
-        Parameters
-        ----------
-        event
-        """
-        if self.variables.image_reader is not None:
-            self.display_canvas_rect_selection_in_pyplot_frame()
-
-    # noinspection PyUnusedLocal
     def handle_image_index_changed(self, event):
         """
         Handle that the image index has changed.
@@ -198,7 +154,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         event
         """
 
-        self.my_populate_metaicon()
+        self.populate_metaicon()
         self.show_valid_data()
 
     def update_reader(self, the_reader, update_browse=None):
@@ -244,9 +200,9 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.image_panel.set_image_reader(the_reader)
         self.set_title()
         # refresh appropriate GUI elements
-        self.pyplot_panel.make_blank()
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.image_panel_detail.make_blank()
+        self.populate_metaicon()
+        self.populate_metaviewer()
         self.show_valid_data()
 
     def callback_select_files(self):
@@ -267,49 +223,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
         # NB: handle non-complex data possibilities here?
         the_reader = SICDTypeCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
-
-    def display_canvas_rect_selection_in_pyplot_frame(self):
-        def get_extent(coords):
-            left = min(coords[1::2])
-            right = max(coords[1::2])
-            top = max(coords[0::2])
-            bottom = min(coords[0::2])
-            return left, right, top, bottom
-
-        threshold = self.image_panel.canvas.variables.config.select_size_threshold
-
-        try:
-            select_id = self.image_panel.canvas.variables.get_tool_shape_id_by_name('SELECT')
-            if select_id is None:
-                return
-        except KeyError:
-            return
-
-        rect_coords = self.image_panel.canvas.get_shape_image_coords(select_id)
-        extent = get_extent(rect_coords)
-
-        if abs(extent[1] - extent[0]) < threshold or abs(extent[2] - extent[3]) < threshold:
-            self.pyplot_panel.make_blank()
-        else:
-            image_data = self.image_panel.canvas.get_image_data_in_canvas_rect_by_id(select_id)
-            if image_data is not None:
-                self.pyplot_panel.update_image(image_data, extent=extent)
-            else:
-                self.pyplot_panel.make_blank()
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main(reader=None):

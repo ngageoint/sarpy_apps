@@ -1,5 +1,6 @@
 """
-A general use generally abstract class for metaicon and metaviewer functionality.
+A general use class for metaicon and metaviewer functionality, intended to be
+used only by extension.
 """
 
 __author__ = "Thomas McCullough"
@@ -7,6 +8,7 @@ __classification__ = "UNCLASSIFIED"
 
 import tkinter
 
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_reader import CanvasImageReader
 
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
@@ -20,12 +22,14 @@ class WidgetWithMetadata(object):
     Common use framework for handling metaicon and metaviewer functionality.
     """
 
-    def __init__(self, master):
+    def __init__(self, master, image_panel=None):
         """
 
         Parameters
         ----------
         master : tkinter.Tk|tkinter.Toplevel
+        image_panel : None|ImagePanel
+            An associated image panel
         """
 
         self.metaicon_popup_panel = tkinter.Toplevel(master)
@@ -37,6 +41,8 @@ class WidgetWithMetadata(object):
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
         self.metaviewer.hide_on_close()
         self.metaviewer_popup_panel.withdraw()
+
+        self.image_panel = image_panel
 
     def _set_focus_on_metaicon_popup(self):
         self.metaicon_popup_panel.focus_set()
@@ -54,17 +60,14 @@ class WidgetWithMetadata(object):
         self.metaviewer_popup_panel.deiconify()
         self._set_focus_on_metaviewer_popup()
 
-    def populate_metaicon(self, image_reader):
+    def populate_metaicon_from_reader(self, image_reader):
         """
-        Populate the metaicon.
+        Populate the metaicon from the given reader.
 
         Parameters
         ----------
-        image_reader : CanvasImageReader
+        image_reader : None|CanvasImageReader
         """
-
-        if image_reader is None:
-            self.metaicon.make_empty()
 
         if isinstance(image_reader, ComplexCanvasImageReader):
             self.metaicon.create_from_reader(image_reader.base_reader, index=image_reader.index)
@@ -73,13 +76,23 @@ class WidgetWithMetadata(object):
         else:
             self.metaicon.make_empty()
 
-    def populate_metaviewer(self, image_reader):
+    def populate_metaicon(self):
         """
-        Populate the metaviewer.
+        Populate the metaicon.
+        """
+
+        if self.image_panel is None:
+            self.populate_metaicon_from_reader(None)
+        else:
+            self.populate_metaicon_from_reader(self.image_panel.image_reader)
+
+    def populate_metaviewer_from_reader(self, image_reader):
+        """
+        Populate the metaviewer from the given reader.
 
         Parameters
         ----------
-        image_reader : CanvasImageReader
+        image_reader : None|CanvasImageReader
         """
 
         if image_reader is None:
@@ -89,3 +102,13 @@ class WidgetWithMetadata(object):
             self.metaviewer.populate_from_reader(image_reader.base_reader)
         else:
             self.metaviewer.empty_entries()
+
+    def populate_metaviewer(self):
+        """
+        Populate the metaviewer.
+        """
+
+        if self.image_panel is None:
+            self.populate_metaviewer_from_reader(None)
+        else:
+            self.populate_metaviewer_from_reader(self.image_panel.image_reader)

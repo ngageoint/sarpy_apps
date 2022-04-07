@@ -1039,7 +1039,6 @@ class RegionSelection(Frame, WidgetWithMetadata):
         # set the parent frame
         self.root = parent
         Frame.__init__(self, parent, **kwargs)
-        WidgetWithMetadata.__init__(self, parent)
 
         self.variables = AppVariables()
 
@@ -1052,6 +1051,8 @@ class RegionSelection(Frame, WidgetWithMetadata):
 
         self.image_panel = ImagePanel(self)  # type: ImagePanel
         self.image_panel.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
+        WidgetWithMetadata.__init__(self, parent, self.image_panel)
+
         self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         # jazz up the instruction a little
@@ -1211,7 +1212,7 @@ class RegionSelection(Frame, WidgetWithMetadata):
         event
         """
 
-        self.my_populate_metaicon()
+        self.populate_metaicon()
         self.aperture_tool.handle_reader_update()
         self.show_valid_data()
 
@@ -1268,24 +1269,10 @@ class RegionSelection(Frame, WidgetWithMetadata):
         self.image_panel.set_image_reader(the_reader)
         self.set_title()
         # refresh appropriate GUI elements
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon()
+        self.populate_metaviewer()
         self.aperture_tool.handle_reader_update()
         self.show_valid_data()
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main(reader=None):

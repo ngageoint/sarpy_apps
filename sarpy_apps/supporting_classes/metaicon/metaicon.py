@@ -60,6 +60,7 @@ class MetaIcon(ImagePanel):
         self.hide_tools()
         self.hide_shapes()
         self.hide_remap_combo()
+        self.hide_save_image()
         self.hide_select_index()
 
         self.toolbar.save_canvas.config(text="save metaicon")

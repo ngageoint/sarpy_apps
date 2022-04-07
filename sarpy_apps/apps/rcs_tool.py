@@ -20,6 +20,7 @@ from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
+from tk_builder.widgets.image_panel_detail import ImagePanelDetail
 
 from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotate, \
     NamePanel, AnnotateButtons, AnnotateTabControl, AnnotationPanel, \
@@ -354,13 +355,18 @@ class RCSTool(AnnotationTool):
         if 'orient' not in kwargs:
             kwargs['orient'] = tkinter.HORIZONTAL
         PanedWindow.__init__(self, master, **kwargs)
-        WidgetWithMetadata.__init__(self, master)
         self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         self.image_panel = ImagePanel(self)
         self.image_panel.canvas.set_canvas_size(400, 500)
         self.add(
             self.image_panel, width=400, height=700, padx=3, pady=3, sticky='NSEW', stretch=tkinter.FIRST)
+        WidgetWithMetadata.__init__(self, master, self.image_panel)
+        self.image_panel_detail = ImagePanelDetail(master,
+                                                   self.image_panel.canvas,
+                                                   on_selection_changed=False,
+                                                   on_selection_finalized=True,
+                                                   fetch_full_resolution=False)
 
         self.collection_panel = RCSCollectionPanel(self, self.variables)  # type: RCSCollectionPanel
 
@@ -391,6 +397,9 @@ class RCSTool(AnnotationTool):
         self._valid_data_shown = tkinter.IntVar(self, value=0)
         self.metadata_menu.add_checkbutton(
             label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
+        self.metadata_menu.add_separator()
+        self.metadata_menu.add_command(label="View Detail", command=self.detail_popup_callback)
+
         # configure menubar
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
@@ -398,7 +407,7 @@ class RCSTool(AnnotationTool):
         self.master.config(menu=self.menu_bar)
 
         # hide unwanted elements on the panel toolbars
-        self.image_panel.hide_tools(['new_shape', 'select'])
+        self.image_panel.hide_tools(['new_shape', ])
         self.image_panel.hide_shapes()
         self.image_panel.hide_select_index()
         # disable tools until an image is selected
@@ -500,9 +509,10 @@ class RCSTool(AnnotationTool):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        self.image_panel_detail.make_blank()
         self.set_title()
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon()
+        self.populate_metaviewer()
 
         self.set_annotations(None)
         self.show_valid_data()

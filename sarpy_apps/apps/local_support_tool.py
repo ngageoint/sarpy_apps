@@ -86,12 +86,13 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
             kwargs['orient'] = tkinter.HORIZONTAL
 
         tkinter.PanedWindow.__init__(self, primary, **kwargs)
-        WidgetWithMetadata.__init__(self, primary)
 
         self.image_panel = ImagePanel(self, borderwidth=0)  # type: ImagePanel
         self.add(
             self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
             stretch=tkinter.FIRST)
+        WidgetWithMetadata.__init__(self, primary, self.image_panel)
+
         self.frequency_panel = ImagePanel(self, borderwidth=0)  # type: ImagePanel
         self.add(
             self.frequency_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
@@ -222,7 +223,7 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
         event
         """
 
-        self.my_populate_metaicon()
+        self.populate_metaicon()
         self.set_default_selection()
         self.show_valid_data()
 
@@ -262,8 +263,8 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
         self.set_title()
         # refresh appropriate GUI elements
         self.set_default_selection()
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon()
+        self.populate_metaviewer()
         self.show_valid_data()
 
     def callback_select_files(self):
@@ -423,20 +424,6 @@ class LocalFrequencySupportTool(tkinter.PanedWindow, WidgetWithMetadata):
                 junk_data = numpy.zeros((100, 100), dtype='uint8')
                 self.frequency_panel.set_image_reader(NumpyCanvasImageReader(junk_data))
                 self._initialize_bandwidth_lines()
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main(reader=None):
