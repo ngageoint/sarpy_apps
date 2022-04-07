@@ -61,12 +61,15 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         self.image_panel = ImagePanel(self.primary, borderwidth=0)  # type: ImagePanel
         self.primary.add(
-            self.image_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
+            self.image_panel, width=700, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
             stretch=tkinter.FIRST)
 
-        self.pyplot_panel = PyplotImagePanel(self.primary)  # type: PyplotImagePanel
-        self.primary.add(
-            self.pyplot_panel, width=400, height=700, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.detail_popup = tkinter.Toplevel(primary)
+        self.detail_popup.geometry('700x500')
+        self.pyplot_panel = PyplotImagePanel(self.detail_popup, navigation=True)  # type: PyplotImagePanel
+        self.pyplot_panel.set_title('Detail View')
+        self.detail_popup.protocol("WM_DELETE_WINDOW", self.detail_popup.withdraw)
+        self.detail_popup.withdraw()
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
@@ -87,6 +90,9 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self._valid_data_shown = tkinter.IntVar(self, value=0)
         self.metadata_menu.add_checkbutton(
             label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
+        self.metadata_menu.add_separator()
+        self.metadata_menu.add_command(label="Detail", command=self.detail_popup_callback)
+
         # ensure menus cascade
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
@@ -124,6 +130,14 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.primary.destroy()
         self.root.destroy()
 
+    def _set_focus_on_detail_popup(self):
+        self.detail_popup.focus_set()
+        self.detail_popup.lift()
+
+    def detail_popup_callback(self):
+        self.detail_popup.deiconify()
+        self._set_focus_on_detail_popup()
+
     def show_valid_data(self):
         if self.variables.image_reader is None or \
                 not isinstance(self.variables.image_reader, SICDTypeCanvasImageReader):
@@ -160,6 +174,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         fill_image_height = self.image_panel.canvas.variables.state.canvas_height
         self.image_panel.canvas.zoom_to_canvas_selection((0, 0, full_image_width, fill_image_height))
         self.display_canvas_rect_selection_in_pyplot_frame()
+        self.detail_popup_callback()
 
     # noinspection PyUnusedLocal
     def handle_remap_change(self, event):

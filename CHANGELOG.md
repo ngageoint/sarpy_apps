@@ -1,5 +1,8 @@
 # Change Log
 
+## [1.1.15] - 2022-04-06
+### Changed
+Refined the Image Viewer tool to separate the detail panel from basic view
 
 ## [1.1.14] - 2022-01-27
 ### Fixed
