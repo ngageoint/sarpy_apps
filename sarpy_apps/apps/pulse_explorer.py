@@ -593,7 +593,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         self._refresh_vdata()
         self.variables.animating = False
         self.variables.image_reader.index = self.slider.cbx_channel.current()
-        self.my_populate_metaicon()
+        self.populate_metaicon_from_reader(self.variables.image_reader)
         self.slider.cbx_channel.selection_clear()
         # Update number of pulses
         pulse_count = self.variables.image_reader.pulse_count
@@ -698,8 +698,8 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         self.variables.image_reader = the_reader
         self.display_in_pyplot_frame()
         self.set_title()
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon_from_reader(self.variables.image_reader)
+        self.populate_metaviewer_from_reader(self.variables.image_reader)
         identifiers = [
             entry.Identifier for entry in the_reader.base_reader.crsd_meta.Channel.Parameters]
         self.update_combobox(identifiers)  # which one is set here...
@@ -737,20 +737,6 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         self.slider.cbx_channel['values'] = identifiers
         self.slider.cbx_channel.set(identifiers[0])
         self.slider.cbx_channel.configure(state='readonly')
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
 
 def main(reader=None):

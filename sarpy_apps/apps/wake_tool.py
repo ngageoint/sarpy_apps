@@ -128,8 +128,9 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         self.root = primary
         self.primary_frame = basic_widgets.Frame(primary)
         WidgetPanel.__init__(self, self.primary_frame)
-        WidgetWithMetadata.__init__(self, primary)
         self.image_panel = ImagePanel(self.primary_frame)  # type: ImagePanel
+        WidgetWithMetadata.__init__(self, primary, self.image_panel)
+
         self.side_panel = SidePanel(self.primary_frame)  # type: SidePanel
         self.variables = AppVariables()
         self.set_title()
@@ -226,7 +227,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         if self.variables.point_id is not None:
             self.image_panel.canvas.delete_shape(self.variables.point_id)
         self.update_distance()
-        self.my_populate_metaicon()
+        self.populate_metaicon()
 
     def callback_shape_edited(self, event):
         """
@@ -321,27 +322,13 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
         # refresh appropriate GUI elements
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon()
+        self.populate_metaviewer()
         # initialize our shape tracking
         self.variables.point_id = None
         self.variables.arrow_id = None
         self.variables.horizontal_line_id = None
         self.set_title()
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
     def arrow_draw_command(self):
         """

@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.1.16] - 2022-04-07
+### Changed
+Extended application of new tk_builder ImagePanelDetail object, and simplified 
+the metaicon/viewer implementation
+
 ## [1.1.15] - 2022-04-06
 ### Changed
 Refined the Image Viewer tool to separate the detail panel from basic view

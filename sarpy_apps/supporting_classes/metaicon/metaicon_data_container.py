@@ -307,7 +307,7 @@ class MetaIconDataContainer(object):
             if shadow is None:
                 shadow = 180.0
             variables['shadow'] = shadow
-            variables['shadow_display'] = ((sicd.SCPCOA.Shadow + azimuth + 360) % 360.0)
+            variables['shadow_display'] = ((shadow + azimuth + 360) % 360.0)
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:

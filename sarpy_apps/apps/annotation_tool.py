@@ -18,6 +18,7 @@ from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
 
 from tk_builder.base_elements import StringDescriptor, BooleanDescriptor
 from tk_builder.widgets.image_canvas_tool import ShapeTypeConstants
+from tk_builder.widgets.image_panel_detail import ImagePanelDetail
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.image_panel import ImagePanel
 
@@ -1603,13 +1604,18 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         if 'orient' not in kwargs:
             kwargs['orient'] = tkinter.HORIZONTAL
         PanedWindow.__init__(self, master, **kwargs)
-        WidgetWithMetadata.__init__(self, master)
         self.pack(expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         self.image_panel = ImagePanel(self)
         self.image_panel.canvas.set_canvas_size(400, 500)
         self.add(
             self.image_panel, width=400, height=700, padx=3, pady=3, sticky='NSEW', stretch=tkinter.FIRST)
+        WidgetWithMetadata.__init__(self, master, self.image_panel)
+        self.image_panel_detail = ImagePanelDetail(master,
+                                                   self.image_panel.canvas,
+                                                   on_selection_changed=False,
+                                                   on_selection_finalized=True,
+                                                   fetch_full_resolution=False)
 
         self.collection_panel = AnnotationCollectionPanel(self, self.variables)
 
@@ -1639,6 +1645,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self._valid_data_shown = tkinter.IntVar(self, value=0)
         self.metadata_menu.add_checkbutton(
             label='ValidData', variable=self._valid_data_shown, command=self.show_valid_data)
+        self.metadata_menu.add_separator()
+        self.metadata_menu.add_command(label="View Detail", command=self.detail_popup_callback)
         # configure menubar
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
@@ -1646,7 +1654,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.master.config(menu=self.menu_bar)
 
         # hide unwanted elements on the panel toolbars
-        self.image_panel.hide_tools(['new_shape', 'select'])
+        self.image_panel.hide_tools(['new_shape', ])
         self.image_panel.hide_shapes()
         # disable tools until an image is selected
         self.image_panel.disable_tools()
@@ -1791,26 +1799,13 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        self.image_panel_detail.make_blank()
         self.set_title()
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon()
+        self.populate_metaviewer()
 
         self.set_annotations(None)
         self.show_valid_data()
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
     def _verify_image_selected(self, popup=True):
         """
@@ -2533,7 +2528,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         self._initialize_annotation_file(
             self.variables.annotation_file_name, self.variables.file_annotation_collection)
-        self.my_populate_metaicon()
+        self.populate_metaicon()
         self.show_valid_data()
 
     def shape_create_on_canvas(self, event):
@@ -2647,6 +2642,9 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         current_geometry_id = self.variables.current_geometry_id
         self.set_current_geometry_id(current_geometry_id, check_popup=False)
+
+    def detail_popup_callback(self):
+        self.image_panel_detail.set_focus_on_detail_popup()
 
 
 def main(reader=None, annotation=None):

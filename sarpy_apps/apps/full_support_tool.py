@@ -462,7 +462,7 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
         Handle that the image index has changed.
         """
 
-        self.my_populate_metaicon()
+        self.populate_metaicon_from_reader(self.variables.image_reader)
         self._calculate_fourier_data()
 
     def update_reader(self, the_reader, update_browse=None):
@@ -501,8 +501,8 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
         self.set_title()
         # refresh appropriate GUI elements
         self._calculate_fourier_data()
-        self.my_populate_metaicon()
-        self.my_populate_metaviewer()
+        self.populate_metaicon_from_reader(self.variables.image_reader)
+        self.populate_metaviewer_from_reader(self.variables.image_reader)
 
     def callback_select_files(self):
         fnames = askopenfilenames(initialdir=self.variables.browse_directory, filetypes=common_use_collection)
@@ -528,20 +528,6 @@ class FullFrequencySupportTool(Frame, WidgetWithMetadata):
 
         the_reader = SICDTypeCanvasImageReader(dirname)
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
-
-    def my_populate_metaicon(self):
-        """
-        Populate the metaicon.
-        """
-
-        self.populate_metaicon(self.variables.image_reader)
-
-    def my_populate_metaviewer(self):
-        """
-        Populate the metaviewer.
-        """
-
-        self.populate_metaviewer(self.variables.image_reader)
 
     def __del__(self):
         self._delete_files()
