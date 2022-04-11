@@ -308,6 +308,18 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             return self._pulse_data.__getitem__(item)
         return self.remap_complex_data(self._pulse_data.__getitem__(item))
 
+    def get_raw_pulse(self, start_row, end_row):
+        """
+        Fetch the raw pulse data for the given range of pulses.
+
+        Parameters
+        ----------
+        start_row : int
+        end_row : int
+        """
+
+        return self._chippers[self.index].__getitem__(slice(start_row, end_row))
+
 
 ###########
 # The main app
@@ -441,6 +453,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
 
         self.root = primary
         self.variables = AppVariables()
+        self.pulse_profile = None
 
         Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
@@ -587,6 +600,8 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         ----------
         event
         """
+
+        self.pulse_profile = None
         if self.variables.image_reader is None:
             return
 
@@ -676,6 +691,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         update_browse : None|str
         """
 
+        self.pulse_profile = None
         if the_reader is None:
             return
 
