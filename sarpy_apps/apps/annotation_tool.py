@@ -18,7 +18,7 @@ from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
 
 from tk_builder.base_elements import StringDescriptor, BooleanDescriptor
 from tk_builder.widgets.image_canvas_tool import ShapeTypeConstants
-from tk_builder.widgets.image_panel_detail import ImagePanelDetail
+from tk_builder.widgets.pyplot_frame import ImagePanelDetail
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.image_panel import ImagePanel
 

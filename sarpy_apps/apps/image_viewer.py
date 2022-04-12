@@ -16,7 +16,7 @@ from tk_builder.base_elements import StringDescriptor, TypedDescriptor
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame
-from tk_builder.widgets.image_panel_detail import ImagePanelDetail
+from tk_builder.widgets.pyplot_frame import ImagePanelDetail
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \

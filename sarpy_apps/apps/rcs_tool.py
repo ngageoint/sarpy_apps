@@ -20,7 +20,7 @@ from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox
 from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
-from tk_builder.widgets.image_panel_detail import ImagePanelDetail
+from tk_builder.widgets.pyplot_frame import ImagePanelDetail
 
 from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotate, \
     NamePanel, AnnotateButtons, AnnotateTabControl, AnnotationPanel, \

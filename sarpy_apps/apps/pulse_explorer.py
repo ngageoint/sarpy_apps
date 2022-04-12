@@ -19,7 +19,7 @@ from tkinter.filedialog import askopenfilename
 
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor, \
     BooleanDescriptor, IntegerDescriptor, FloatDescriptor
-from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
+from tk_builder.widgets.pyplot_frame import PyplotImagePanel, PlotPopup
 from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Combobox, Button, Scale
 
 from sarpy_apps.supporting_classes.file_filters import crsd_files, all_files
@@ -158,6 +158,10 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
         self._frequencies = None
         self.pulse_display = _PULSE_DISPLAY_VALUES[0]
         CRSDTypeCanvasImageReader.__init__(self, reader)
+
+    @property
+    def channel_id(self):
+        return self.get_crsd().Channel.Parameters[self.index].Identifier
 
     @property
     def pulse_display(self):
@@ -308,17 +312,23 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
             return self._pulse_data.__getitem__(item)
         return self.remap_complex_data(self._pulse_data.__getitem__(item))
 
-    def get_raw_pulse(self, start_row, end_row):
+    def get_raw_pulse(self, start_row=None, end_row=None, start_col=None, end_col=None):
         """
         Fetch the raw pulse data for the given range of pulses.
 
         Parameters
         ----------
-        start_row : int
-        end_row : int
+        start_row : None|int
+        end_row : None|int
+        start_col : None|int
+        end_col : None|int
+
+        Returns
+        -------
+        numpy.ndarray
         """
 
-        return self._chippers[self.index].__getitem__(slice(start_row, end_row))
+        return self._chippers[self.index].__getitem__((slice(start_row, end_row), slice(start_col, end_col)))
 
 
 ###########
@@ -458,6 +468,11 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         Frame.__init__(self, primary, **kwargs)
         WidgetWithMetadata.__init__(self, primary)
 
+        self.pulse_profile_plot = PlotPopup(primary)  # type: PlotPopup
+        self.pulse_profile_plot.plot_window.set_xlabel('Pulse Number')
+        self.pulse_profile_plot.plot_window.set_ylabel('Average Power')
+        self.pulse_profile_plot.plot_window.clear()
+
         self.pyplot_panel = PyplotImagePanel(self, navigation=True)  # type: PyplotImagePanel
 
         self.pyplot_panel.cmap_name = 'turbo'
@@ -501,6 +516,9 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         self.metadata_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.metadata_menu.add_command(label="Metaicon", command=self.metaicon_popup)
         self.metadata_menu.add_command(label="Metaviewer", command=self.metaviewer_popup)
+        self.metadata_menu.add_separator()
+        self.metadata_menu.add_command(label="View Time Profile", command=self.detail_popup_callback)
+
         # ensure menus cascade
         self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Metadata", menu=self.metadata_menu)
@@ -519,6 +537,35 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         self.dir_buttons.button_prev.config(command=self.pulse_step_prev)
         self.dir_buttons.button_next.config(command=self.pulse_step_next)
         self.dir_buttons.button_fwd.config(command=self.pulse_animate_forward)
+
+    def calculate_pulse_profile(self):
+        pulse_count = self.variables.image_reader.pulse_count
+        avg_pulse_power = numpy.zeros((pulse_count, ), dtype='float64')
+
+        chunk_size = 200
+        start_chunk = 0
+
+        while start_chunk < pulse_count:
+            end_chunk = min(start_chunk + chunk_size, pulse_count)
+            pulses = self.variables.image_reader.get_raw_pulse(start_chunk, end_chunk)
+            pulse_power = pulses.real * pulses.real + pulses.imag * pulses.imag
+            avg_pulse_power[start_chunk:end_chunk] = numpy.mean(pulse_power, axis=1)
+            start_chunk = end_chunk
+        self.pulse_profile = avg_pulse_power
+
+    def detail_popup_callback(self):
+        if self.pulse_profile is not None:
+            self.pulse_profile_plot.set_focus_on_detail_popup()
+        else:
+            file_name_stem = os.path.split(self.variables.image_reader.file_name)[1]
+            self.pulse_profile_plot.plot_window.set_title(
+                'Pulse Profile - Channel `{}`\n{}'.format(
+                    self.variables.image_reader.channel_id, file_name_stem))
+            self.calculate_pulse_profile()
+            self.pulse_profile_plot.plot_window.clear()
+            self.pulse_profile_plot.plot_window.ax.plot(self.pulse_profile, 'r')
+            self.pulse_profile_plot.plot_window.draw()
+            self.pulse_profile_plot.set_focus_on_detail_popup()
 
     def set_title(self):
         """
