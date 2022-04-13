@@ -555,7 +555,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
 
     def detail_popup_callback(self):
         if self.pulse_profile is not None:
-            self.pulse_profile_plot.set_focus_on_detail_popup()
+            self.pulse_profile_plot.set_focus_on_popup()
         else:
             file_name_stem = os.path.split(self.variables.image_reader.file_name)[1]
             self.pulse_profile_plot.plot_window.set_title(
@@ -565,7 +565,11 @@ class PulseExplorer(Frame, WidgetWithMetadata):
             self.pulse_profile_plot.plot_window.clear()
             self.pulse_profile_plot.plot_window.ax.plot(self.pulse_profile, 'r')
             self.pulse_profile_plot.plot_window.draw()
-            self.pulse_profile_plot.set_focus_on_detail_popup()
+            self.pulse_profile_plot.set_focus_on_popup()
+
+    def clear_pulse_profile(self):
+        self.pulse_profile = None
+        self.pulse_profile_plot.withdraw()
 
     def set_title(self):
         """
@@ -648,7 +652,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         event
         """
 
-        self.pulse_profile = None
+        self.clear_pulse_profile()
         if self.variables.image_reader is None:
             return
 
@@ -738,7 +742,7 @@ class PulseExplorer(Frame, WidgetWithMetadata):
         update_browse : None|str
         """
 
-        self.pulse_profile = None
+        self.clear_pulse_profile()
         if the_reader is None:
             return
 

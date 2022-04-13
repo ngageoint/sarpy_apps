@@ -10,6 +10,7 @@ import tkinter
 
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_reader import CanvasImageReader
+from tk_builder.widgets.derived_widgets import PopupWindow
 
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
     DerivedCanvasImageReader
@@ -32,33 +33,19 @@ class WidgetWithMetadata(object):
             An associated image panel
         """
 
-        self.metaicon_popup_panel = tkinter.Toplevel(master)
+        self.metaicon_popup_panel = PopupWindow(master)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
-        self.metaicon.hide_on_close()
-        self.metaicon_popup_panel.withdraw()
 
-        self.metaviewer_popup_panel = tkinter.Toplevel(master)
+        self.metaviewer_popup_panel = PopupWindow(master)
         self.metaviewer = Metaviewer(self.metaviewer_popup_panel)
-        self.metaviewer.hide_on_close()
-        self.metaviewer_popup_panel.withdraw()
 
         self.image_panel = image_panel
 
-    def _set_focus_on_metaicon_popup(self):
-        self.metaicon_popup_panel.focus_set()
-        self.metaicon_popup_panel.lift()
-
     def metaicon_popup(self):
-        self.metaicon_popup_panel.deiconify()
-        self._set_focus_on_metaicon_popup()
-
-    def _set_focus_on_metaviewer_popup(self):
-        self.metaviewer_popup_panel.focus_set()
-        self.metaviewer_popup_panel.lift()
+        self.metaviewer_popup_panel.popup_callback()
 
     def metaviewer_popup(self):
-        self.metaviewer_popup_panel.deiconify()
-        self._set_focus_on_metaviewer_popup()
+        self.metaviewer_popup_panel.popup_callback()
 
     def populate_metaicon_from_reader(self, image_reader):
         """

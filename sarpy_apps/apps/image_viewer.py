@@ -123,7 +123,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.root.destroy()
 
     def detail_popup_callback(self):
-        self.image_panel_detail.set_focus_on_detail_popup()
+        self.image_panel_detail.set_focus_on_popup()
 
     def show_valid_data(self):
         if self.variables.image_reader is None or \

@@ -24,7 +24,7 @@ from tk_builder.panels.image_panel import ImagePanel
 
 from tk_builder.widgets.basic_widgets import Frame, Label, Entry, Button, \
     Combobox, Notebook
-from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling
+from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, TextWithScrolling, PopupWindow
 from tk_builder.widgets.widget_descriptors import LabelDescriptor, EntryDescriptor, TypedDescriptor
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection, all_files, json_files
@@ -1165,12 +1165,6 @@ class AnnotationPanel(Frame):
         self.name_panel.save()
         self.tab_panel.save()
 
-    def hide_on_close(self):
-        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
-
-    def close_window(self):
-        self.master.withdraw()
-
 
 ##################
 # Annotation collection panel for display and interaction
@@ -1675,10 +1669,8 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         # set up the label_panel viewer event listeners
         self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
-        self.annotate_popup = tkinter.Toplevel(master)
+        self.annotate_popup = PopupWindow(master)
         self.annotate = AnnotationPanel(self.annotate_popup, self.variables)
-        self.annotate.hide_on_close()
-        self.annotate_popup.withdraw()
 
         # bind actions/listeners from annotate popup
         self.annotate.tab_panel.geometry_tab.bind('<<GeometryPropertyChanged>>', self.geometry_selected_on_viewer)
@@ -2378,10 +2370,6 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
             return False  # cancel
         return True
 
-    def _set_focus_on_annotation_popup(self):
-        self.annotate_popup.focus_set()
-        self.annotate_popup.lift()
-
     def _set_focus_on_main(self):
         self.master.focus_set()
         self.master.lift()
@@ -2491,8 +2479,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self._set_focus_on_main()
 
     def callback_popup_annotation(self):
-        self.annotate_popup.deiconify()
-        self._set_focus_on_annotation_popup()
+        self.annotate_popup.popup_callback()
 
     def callback_popup_apply(self):
         self.annotate.save()
@@ -2644,7 +2631,7 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
         self.set_current_geometry_id(current_geometry_id, check_popup=False)
 
     def detail_popup_callback(self):
-        self.image_panel_detail.set_focus_on_detail_popup()
+        self.image_panel_detail.set_focus_on_popup()
 
 
 def main(reader=None, annotation=None):

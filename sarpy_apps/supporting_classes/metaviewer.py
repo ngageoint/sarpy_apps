@@ -41,13 +41,6 @@ class Metaviewer(basic_widgets.Treeview):
         self.master.geometry("800x600")
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
-    def hide_on_close(self):
-        """
-        Sets the condition so that the close button does not destroy the tool.
-        """
-
-        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
-
     def empty_entries(self):
         """
         Empty all entries - for the purpose of reinitializing.
@@ -58,9 +51,6 @@ class Metaviewer(basic_widgets.Treeview):
         """
 
         self.delete(*self.get_children())
-
-    def close_window(self):
-        self.master.withdraw()
 
     def add_node(self, the_parent, the_key, the_value):
         """
