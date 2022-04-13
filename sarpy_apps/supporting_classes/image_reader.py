@@ -621,6 +621,14 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
         ComplexCanvasImageReader.__init__(self, reader)
 
     @property
+    def channel_id(self):
+        """
+        str: Get the selected channel id
+        """
+
+        return self.get_crsd().Channel.Parameters[self.index].Identifier
+
+    @property
     def base_reader(self):
         # type: () -> CRSDTypeReader
         """

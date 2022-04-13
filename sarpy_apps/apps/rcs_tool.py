@@ -19,8 +19,8 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tk_builder.base_elements import TypedDescriptor, StringDescriptor
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame, Button, Label, Combobox
-from tk_builder.widgets.derived_widgets import TreeviewWithScrolling
-from tk_builder.widgets.image_panel_detail import ImagePanelDetail
+from tk_builder.widgets.derived_widgets import TreeviewWithScrolling, PopupWindow
+from tk_builder.widgets.pyplot_frame import ImagePanelDetail
 
 from sarpy_apps.apps.annotation_tool import AppVariables as AppVariables_Annotate, \
     NamePanel, AnnotateButtons, AnnotateTabControl, AnnotationPanel, \
@@ -430,11 +430,9 @@ class RCSTool(AnnotationTool):
         # set up the label_panel viewer event listeners
         self.collection_panel.viewer.bind('<<TreeviewSelect>>', self.feature_selected_on_viewer)
 
-        self.annotate_popup = tkinter.Toplevel(master)
+        self.annotate_popup = PopupWindow(master)
         self.annotate_popup.geometry('600x400')
         self.annotate = RCSPanel(self.annotate_popup, self.variables)  # type: RCSPanel
-        self.annotate.hide_on_close()
-        self.annotate_popup.withdraw()
 
         # bind actions/listeners from annotate popup
         self.annotate.tab_panel.geometry_tab.bind('<<GeometryPropertyChanged>>', self.geometry_selected_on_viewer)

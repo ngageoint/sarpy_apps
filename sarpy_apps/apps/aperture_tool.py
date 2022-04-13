@@ -590,18 +590,16 @@ class ApertureTool(WidgetPanel):
 
         the_sicd = self.app_variables.image_reader.get_sicd()
 
-        # handle the case of no deskew:
+        # handle the case of no deskew information populated
         if the_sicd.Grid.Row.DeltaKCOAPoly is None or the_sicd.Grid.Col.DeltaKCOAPoly is None:
-            self._can_use_tool = False
             showinfo(
                 'DeltaKCOAPolys not populated',
-                message='At least one of the DeltaKCOAPolys is unpopulated. There is nothing to do.')
-            self.app_variables.aperture_filter = None
-            self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="disabled")
-            self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="disabled")
-            self.image_info_panel.phd_options.apply_deskew.config(state="disabled")
-            self.image_info_panel.phd_options.uniform_weighting.config(state="disabled")
-            return
+                message='At least one of the DeltaKCOAPolys is unpopulated,\n\t'
+                        'and will be populated as [[0]] (maybe incorrectly so) for our purposes')
+            if the_sicd.Grid.Row.DeltaKCOAPoly is None:
+                the_sicd.Grid.Row.DeltaKCOAPoly = [[0, ], ]
+            if the_sicd.Grid.Col.DeltaKCOAPoly is None:
+                the_sicd.Grid.Col.DeltaKCOAPoly = [[0, ], ]
 
         self.image_info_panel.phd_options.deskew_fast_slow.fast.configure(state="normal")
         self.image_info_panel.phd_options.deskew_fast_slow.slow.configure(state="normal")

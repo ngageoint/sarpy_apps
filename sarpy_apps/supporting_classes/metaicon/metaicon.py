@@ -28,19 +28,20 @@ from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaI
 logger = logging.getLogger(__name__)
 
 
-class Colors(object):
-    layover = rgb_to_hex((1, 0.65, 0))
-    shadow = rgb_to_hex((0, 0.65, 1))
-    multipath = rgb_to_hex((1, 0, 0))
-    north = rgb_to_hex((0.58, 0.82, 0.31))
-    flight_direction = rgb_to_hex((1, 1, 0))
+_COLORS = {
+    'layover': rgb_to_hex((1, 0.65, 0)),
+    'shadow': rgb_to_hex((0, 0.65, 1)),
+    'multipath': rgb_to_hex((1, 0, 0)),
+    'north': rgb_to_hex((0.58, 0.82, 0.31)),
+    'flight_direction': rgb_to_hex((1, 1, 0))
+}
 
-
-class ArrowWidths(object):
-    layover_width = 2
-    shadow_width = 2
-    multipath_width = 2
-    north_width = 2
+_ARROW_WIDTH = {
+    'layover_width': 2,
+    'shadow_width': 2,
+    'multipath_width': 2,
+    'north_width': 2,
+}
 
 
 class MetaIcon(ImagePanel):
@@ -68,12 +69,6 @@ class MetaIcon(ImagePanel):
 
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.parent.minsize(600, 450)
-
-    def hide_on_close(self):
-        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)
-
-    def close_window(self):
-        self.parent.withdraw()
 
     # noinspection PyUnusedLocal
     def callback_resize(self, event):
@@ -173,13 +168,13 @@ class MetaIcon(ImagePanel):
             line_positions[5], self.data_container.get_angle_line('graze'), color="white",
             regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[6], self.data_container.get_angle_line('layover'), color=Colors.layover,
+            line_positions[6], self.data_container.get_angle_line('layover'), color=_COLORS['layover'],
             regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[7], self.data_container.get_angle_line('shadow'), color=Colors.shadow,
+            line_positions[7], self.data_container.get_angle_line('shadow'), color=_COLORS['shadow'],
             regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
         self.canvas.create_new_text(
-            line_positions[8], self.data_container.get_angle_line('multipath'), color=Colors.multipath,
+            line_positions[8], self.data_container.get_angle_line('multipath'), color=_COLORS['multipath'],
             regular_options={'anchor': 'nw', 'font': self.font}, highlight_options={'anchor': 'nw', 'font': self.font})
 
         self.draw_layover_arrow()
@@ -371,8 +366,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.layover_arrow_coords, make_current=False, increment_color=False, color=Colors.layover,
-            regular_options={'width': ArrowWidths.layover_width}, highlight_options={'width': ArrowWidths.layover_width})
+            self.layover_arrow_coords, make_current=False, increment_color=False, color=_COLORS['layover'],
+            regular_options={'width': _ARROW_WIDTH['layover_width']}, 
+            highlight_options={'width': _ARROW_WIDTH['layover_width']})
 
     def draw_shadow_arrow(self):
         """
@@ -384,8 +380,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.shadow_arrow_coords, increment_color=False, make_current=False, color=Colors.shadow,
-            regular_options={'width': ArrowWidths.shadow_width}, highlight_options={'width': ArrowWidths.shadow_width})
+            self.shadow_arrow_coords, increment_color=False, make_current=False, color=_COLORS['shadow'],
+            regular_options={'width': _ARROW_WIDTH['shadow_width']}, 
+            highlight_options={'width': _ARROW_WIDTH['shadow_width']})
 
     def draw_multipath_arrow(self):
         """
@@ -397,8 +394,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.multipath_arrow_coords, make_current=False, increment_color=False, color=Colors.multipath,
-            regular_options={'width': ArrowWidths.multipath_width}, highlight_options={'width': ArrowWidths.multipath_width})
+            self.multipath_arrow_coords, make_current=False, increment_color=False, color=_COLORS['multipath'],
+            regular_options={'width': _ARROW_WIDTH['multipath_width']}, 
+            highlight_options={'width': _ARROW_WIDTH['multipath_width']})
 
     def draw_north_arrow(self):
         """
@@ -410,8 +408,9 @@ class MetaIcon(ImagePanel):
         """
 
         self.canvas.create_new_arrow(
-            self.north_arrow_coords, make_current=False, increment_color=False, color=Colors.north,
-            regular_options={'width': ArrowWidths.north_width}, highlight_options={'width': ArrowWidths.north_width})
+            self.north_arrow_coords, make_current=False, increment_color=False, color=_COLORS['north'],
+            regular_options={'width': _ARROW_WIDTH['north_width']}, 
+            highlight_options={'width': _ARROW_WIDTH['north_width']})
         # label the north arrow
         x_start = self.north_arrow_coords[0]
         x_end = self.north_arrow_coords[2]
@@ -419,7 +418,7 @@ class MetaIcon(ImagePanel):
         y_end = self.north_arrow_coords[3]
         text_pos = x_end + (x_end - x_start) * 0.2, y_end + (y_end - y_start) * 0.2
         self.canvas.create_new_text(
-            (text_pos[0], text_pos[1]), 'N', color=Colors.north,
+            (text_pos[0], text_pos[1]), 'N', color=_COLORS['north'],
             regular_options={'font': self.font}, highlight_options={'font': self.font})
 
     def draw_direction_arrow(self):
@@ -442,19 +441,19 @@ class MetaIcon(ImagePanel):
             text = 'R'
             self.canvas.create_new_arrow(
                 flight_direction_arrow_start + flight_direction_arrow_end,
-                make_current=False, increment_color=False, color=Colors.flight_direction,
+                make_current=False, increment_color=False, color=_COLORS['flight_direction'],
                 regular_options={'width': 3}, highlight_options={'width': 3})
         else:
             text = 'L'
             self.canvas.create_new_arrow(
                 flight_direction_arrow_end + flight_direction_arrow_start,
-                make_current=False, increment_color=False, color=Colors.flight_direction,
+                make_current=False, increment_color=False, color=_COLORS['flight_direction'],
                 regular_options={'width': 3}, highlight_options={'width': 3})
 
         self.canvas.create_new_text(
             (flight_direction_arrow_start[0] - self.canvas.variables.state.canvas_width * 0.04,
              flight_direction_arrow_start[1]),
-            text, make_current=False, color=Colors.flight_direction,
+            text, make_current=False, color=_COLORS['flight_direction'],
             regular_options={'font': self.font}, highlight_options={'font': self.font})
 
     def _adjust_arrow_aspect_ratio(self, origin, arrow_length, arrow_angle):
