@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.1.17] - 2022-04-13
+### Changed
+Addition of time profile plot in pulse explorer, and usage of clarified 
+tk_builder constructs
+
 ## [1.1.16] - 2022-04-07
 ### Changed
 Extended application of new tk_builder ImagePanelDetail object, and simplified 
