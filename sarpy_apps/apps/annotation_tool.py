@@ -2088,7 +2088,6 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         def insert_line():
             # type: () -> (int, str)
-            print('insert line called')
             image_coords = the_geometry.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
             self.line = self.image_panel.canvas.create_new_line(
@@ -2100,7 +2099,6 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         def insert_polygon():
             # type: () -> (int, str)
-
             # this will only render an outer ring
             image_coords = the_geometry.outer_ring.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
