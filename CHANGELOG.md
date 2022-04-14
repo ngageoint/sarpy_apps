@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.18] - 2022-04-14
+### Changed
+Improved default shape drawing defaults in annotation
+
 ## [1.1.17] - 2022-04-13
 ### Changed
 Addition of time profile plot in pulse explorer, and usage of clarified 

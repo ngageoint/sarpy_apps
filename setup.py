@@ -29,7 +29,7 @@ setup(name=parameters['__title__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
       install_requires=[
-          'numpy', 'matplotlib', 'Pillow', 'sarpy>=1.2.36', 'tk_builder>=1.1.11'],
+          'numpy', 'matplotlib', 'Pillow', 'sarpy>=1.2.36', 'tk_builder>=1.1.12'],
       zip_safe=True,
       test_suite="tests",
       tests_require=[],
@@ -41,7 +41,8 @@ setup(name=parameters['__title__'],
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
-          'Programming Language :: Python :: 3.9'
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10'
       ],
       platforms=['any'],
       license='MIT'
