@@ -1611,6 +1611,11 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
                                                    on_selection_finalized=True,
                                                    fetch_full_resolution=False)
 
+        self.image_panel.canvas.variables.state.line_options.update(
+            {'arrow': tkinter.LAST, 'arrowshape': '9 10 4'})
+        self.image_panel.canvas.variables.state.highlight_line_options.update(
+            {'arrow': tkinter.LAST, 'arrowshape': '10 12 6'})
+
         self.collection_panel = AnnotationCollectionPanel(self, self.variables)
 
         self.add(self.collection_panel, width=200, height=700, padx=3, pady=3, sticky='NSEW')
@@ -2083,10 +2088,11 @@ class AnnotationTool(PanedWindow, WidgetWithMetadata):
 
         def insert_line():
             # type: () -> (int, str)
+            print('insert line called')
             image_coords = the_geometry.coordinates[:, :2].flatten().tolist()
             # create the shape on the annotate panel
-            self.line = self.image_panel.canvas.create_new_line((0, 0, 0, 0), make_current=False,
-                                                                color=geometry_properties.color)
+            self.line = self.image_panel.canvas.create_new_line(
+                (0, 0, 0, 0), make_current=False, color=geometry_properties.color)
             canvas_id = self.line
             self.image_panel.canvas.modify_existing_shape_using_image_coords(
                 canvas_id, image_coords)

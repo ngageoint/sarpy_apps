@@ -143,7 +143,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         self.side_panel.buttons.line_draw.config(command=self.arrow_draw_command)
         self.side_panel.buttons.point_draw.config(command=self.draw_point_command)
 
-        self.image_panel.canvas.variables.state.line_width = self.variables.line_width
+        self.image_panel.canvas.variables.state.line_options['width'] = self.variables.line_width
         # hide unnecessary tools
         self.image_panel.hide_tools(['shape_drawing', 'select'])
         self.image_panel.hide_shapes()
@@ -373,7 +373,7 @@ class WakeTool(WidgetPanel, WidgetWithMetadata):
         if self.variables.horizontal_line_id is None:
             self.variables.horizontal_line_id = self.image_panel.canvas.create_new_line(
                 horizontal_line_coords, increment_color=False, color=self.variables.horizontal_line_color,
-                regular_options={'width': self.variables.horizontal_line_width})
+                regular_options={'width': self.variables.horizontal_line_width, 'dash': ()})
         else:
             self.image_panel.canvas.modify_existing_shape_using_canvas_coords(
                 self.variables.horizontal_line_id, horizontal_line_coords)

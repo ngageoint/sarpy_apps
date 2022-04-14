@@ -564,6 +564,11 @@ class LabelingTool(AnnotationTool):
                                                    on_selection_finalized=True,
                                                    fetch_full_resolution=False)
 
+        self.image_panel.canvas.variables.state.line_options.update(
+            {'arrow': tkinter.LAST, 'arrowshape': '9 10 4'})
+        self.image_panel.canvas.variables.state.highlight_line_options.update(
+            {'arrow': tkinter.LAST, 'arrowshape': '10 12 6'})
+
         self.collection_panel = LabelCollectionPanel(self, self.variables)  # type: LabelCollectionPanel
 
         self.add(self.collection_panel, width=200, height=700, padx=3, pady=3, sticky='NSEW')
