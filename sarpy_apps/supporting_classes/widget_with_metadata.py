@@ -42,7 +42,7 @@ class WidgetWithMetadata(object):
         self.image_panel = image_panel
 
     def metaicon_popup(self):
-        self.metaviewer_popup_panel.popup_callback()
+        self.metaicon_popup_panel.popup_callback()
 
     def metaviewer_popup(self):
         self.metaviewer_popup_panel.popup_callback()

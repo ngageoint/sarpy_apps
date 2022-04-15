@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.19] - 2022-04-15
+### Fixed
+Fixed a typo which caused the metaicon callback to open the metaviewer instead
+
 ## [1.1.18] - 2022-04-14
 ### Changed
 Improved default shape drawing defaults in annotation
