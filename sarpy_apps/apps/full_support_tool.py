@@ -32,7 +32,7 @@ from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader,
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.complex.base import FlatSICDReader
-from sarpy.processing.fft_base import fft_sicd, fft2_sicd, fftshift
+from sarpy.processing.sicd.fft_base import fft_sicd, fft2_sicd, fftshift
 from sarpy.processing.normalize_sicd import DeskewCalculator
 from sarpy.io.complex.base import SICDTypeReader
 

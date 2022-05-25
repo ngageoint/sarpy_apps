@@ -9,11 +9,10 @@ __author__ = "Thomas McCullough"
 import logging
 import numpy
 from typing import List, Tuple
-import gc
 
 from tk_builder.image_reader import CanvasImageReader
 
-from sarpy.io.general.base import AbstractReader, SarpyIOError
+from sarpy.io.general.base import BaseReader, SarpyIOError
 from sarpy.visualization.remap import get_remap_list, get_registered_remap, RemapFunction
 
 from sarpy.io.complex.converter import open_complex
@@ -60,20 +59,20 @@ class GeneralCanvasImageReader(CanvasImageReader):
     with the image segments of unexpected type.
     """
 
-    __slots__ = ('_base_reader', '_chippers', '_index', '_data_size', '_remap_function')
+    __slots__ = ('_base_reader', '_data_segments', '_index', '_data_size', '_remap_function')
 
     def __init__(self, reader):
         """
 
         Parameters
         ----------
-        reader : str|AbstractReader
+        reader : str|BaseReader
             The reader, or path to appropriate data file.
         """
 
         # initialize
         self._base_reader = None
-        self._chippers = None
+        self._data_segments = None
         self._data_size = None
         self._index = None
         self._remap_function = _get_default_remap()
@@ -82,9 +81,9 @@ class GeneralCanvasImageReader(CanvasImageReader):
 
     @property
     def base_reader(self):
-        # type: () -> AbstractReader
+        # type: () -> BaseReader
         """
-        AbstractReader: The reader object
+        BaseReader: The reader object
         """
 
         return self._base_reader
@@ -93,11 +92,10 @@ class GeneralCanvasImageReader(CanvasImageReader):
     def base_reader(self, value):
         if isinstance(value, str):
             value = open_general(value)
-        if not isinstance(value, AbstractReader):
-            raise TypeError('base_reader must be of type AbstractReader, got type {}'.format(type(value)))
+        if not isinstance(value, BaseReader):
+            raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self.index = 0
 
     @property
@@ -142,7 +140,7 @@ class GeneralCanvasImageReader(CanvasImageReader):
 
     @property
     def image_count(self):
-        return 0 if self._chippers is None else len(self._chippers)
+        return 0 if self._data_segments is None else len(self._data_segments)
 
     def get_meta_data(self):
         """
@@ -172,16 +170,11 @@ class GeneralCanvasImageReader(CanvasImageReader):
         return None
 
     def __getitem__(self, item):
-        data = self._chippers[self.index].__getitem__(item)
+        data = self._data_segments[self.index].__getitem__(item)
         return self.remap_data(data)
 
     def __del__(self):
-        # noinspection PyBroadException
-        try:
-            del self._chippers
-            gc.collect()
-        except Exception:
-            pass
+        self._data_segments = None
 
     def remap_data(self, data):
         """
@@ -223,7 +216,7 @@ class ComplexCanvasImageReader(GeneralCanvasImageReader):
 
         Parameters
         ----------
-        reader : str|AbstractReader
+        reader : str|BaseReader
             The complex valued reader, or path to appropriate data file.
         """
 
@@ -232,9 +225,9 @@ class ComplexCanvasImageReader(GeneralCanvasImageReader):
 
     @property
     def base_reader(self):
-        # type: () -> AbstractReader
+        # type: () -> BaseReader
         """
-        AbstractReader: The complex-valued reader object
+        BaseReader: The complex-valued reader object
         """
 
         return self._base_reader
@@ -269,14 +262,13 @@ class ComplexCanvasImageReader(GeneralCanvasImageReader):
         elif isinstance(value, (tuple, list)):
             value = AggregateComplexReader(value)
 
-        if not isinstance(value, AbstractReader):
-            raise TypeError('base_reader must be of type AbstractReader, got type {}'.format(type(value)))
+        if not isinstance(value, BaseReader):
+            raise TypeError('base_reader must be of type BaseReader, got type {}'.format(type(value)))
         if value.reader_type not in ["SICD", "CPHD", "CRSD"]:
             raise SarpyIOError(
                 'base_reader.reader_type must be "SICD", "CPHD", or "CRSD", got {}'.format(value.reader_type))
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
 
@@ -324,8 +316,7 @@ class SICDTypeCanvasImageReader(ComplexCanvasImageReader):
         if not isinstance(value, SICDTypeReader):
             raise TypeError('base_reader must be a SICDTypeReader, got type {}'.format(type(value)))
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
 
@@ -352,7 +343,7 @@ class SICDTypeCanvasImageReader(ComplexCanvasImageReader):
 
 class QuadPolCanvasImageReader(ComplexCanvasImageReader):
     __slots__ = (
-        '_base_reader', '_chippers', '_sicd_partitions', '_index', '_index_ordering',
+        '_base_reader', '_data_segments', '_sicd_partitions', '_index', '_index_ordering',
         '_data_size', '_remap_function')
 
     def __init__(self, reader):
@@ -385,8 +376,7 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
             raise TypeError('Requires that the input is a sicd type reader object. Got type {}'.format(type(value)))
 
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self._sicd_partitions = value.get_sicd_partitions()
         try:
             self.index = 0
@@ -488,7 +478,7 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
 
     def __getitem__(self, item):
         def get_cdata(the_index):
-            return self._chippers[the_index].__getitem__(item)
+            return self._data_segments[the_index].__getitem__(item)
 
         if self._index_ordering is None:
             return None
@@ -504,6 +494,7 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
         data_mean = float(max(numpy.mean(numpy.abs(entry)) for entry in complex_data))
         rgb_image = numpy.zeros(out_size + (3, ), dtype='uint8')
         if len(self._index_ordering) == 2:
+            # noinspection PyBroadException
             try:
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0], data_mean=data_mean)
                 rgb_image[:, :, 2] = self._remap_function(complex_data[1], data_mean=data_mean)
@@ -511,15 +502,16 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0])
                 rgb_image[:, :, 2] = self._remap_function(complex_data[1])
         elif len(self._index_ordering) == 4:
+            # noinspection PyBroadException
             try:
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0], data_mean=data_mean)
                 rgb_image[:, :, 1] = self._remap_function(complex_data[1], data_mean=data_mean)/2 + \
-                                     self._remap_function(complex_data[2], data_mean=data_mean)/2
+                    self._remap_function(complex_data[2], data_mean=data_mean)/2
                 rgb_image[:, :, 2] = self._remap_function(complex_data[3], data_mean=data_mean)
             except Exception:
                 rgb_image[:, :, 0] = self._remap_function(complex_data[0])
                 rgb_image[:, :, 1] = self._remap_function(complex_data[1])/2 + \
-                                     self._remap_function(complex_data[2])/2
+                    self._remap_function(complex_data[2])/2
                 rgb_image[:, :, 2] = self._remap_function(complex_data[3])
         else:
             raise ValueError('Got unhandled case for collection {}'.format(self._index_ordering))
@@ -587,8 +579,7 @@ class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
         if not isinstance(value, CPHDTypeReader):
             raise TypeError('base_reader must be a CPHDReader, got type {}'.format(type(value)))
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
 
@@ -653,8 +644,7 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
         if not isinstance(value, CRSDTypeReader):
             raise TypeError('base_reader must be a CRSDReader, got type {}'.format(type(value)))
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
 
@@ -702,8 +692,7 @@ class DerivedCanvasImageReader(GeneralCanvasImageReader):
         if not isinstance(value, SIDDTypeReader):
             raise TypeError('base_reader must be a SIDDTypeReader, got type {}'.format(type(value)))
         self._base_reader = value
-        # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._data_segments = value.get_data_segment_as_tuple()
         self._index = 0
         self._data_size = value.get_data_size_as_tuple()[0]
 

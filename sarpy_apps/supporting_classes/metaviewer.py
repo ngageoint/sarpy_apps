@@ -9,7 +9,7 @@ import tkinter
 
 from tk_builder.widgets import basic_widgets
 
-from sarpy.io.general.base import AbstractReader
+from sarpy.io.general.base import BaseReader
 from sarpy.io.general.nitf import NITFDetails, NITFReader
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.phase_history.base import CPHDTypeReader
@@ -92,13 +92,13 @@ class Metaviewer(basic_widgets.Treeview):
         else:
             self.insert(the_parent, "end", real_key, text="{}: {}".format(the_key, the_value))
 
-    def populate_from_reader(self, reader):
+    def populate_from_reader(self, reader: BaseReader) -> None:
         """
         Populate the entries from a reader implementation.
 
         Parameters
         ----------
-        reader : AbstractReader
+        reader : BaseReader
         """
 
         # empty any present entries
@@ -140,6 +140,7 @@ class Metaviewer(basic_widgets.Treeview):
             else:
                 self.add_node("", "CRSD", crsd.to_dict())
 
+        # TODO: image segment details?
         if isinstance(reader, NITFReader):
             nitf_details = reader.nitf_details  # type: NITFDetails
             self.add_node("", "NITF", nitf_details.get_headers_json())
