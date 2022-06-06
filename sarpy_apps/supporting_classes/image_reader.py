@@ -125,6 +125,7 @@ class GeneralCanvasImageReader(CanvasImageReader):
             value = 0
         self._index = value
         self._data_size = data_sizes[value]
+        print(f'self._index - {self._index}, self._data-size - {self._data_size}')
 
     @property
     def file_name(self):
@@ -270,8 +271,7 @@ class ComplexCanvasImageReader(GeneralCanvasImageReader):
                 'base_reader.reader_type must be "SICD", "CPHD", or "CRSD", got {}'.format(value.reader_type))
         self._base_reader = value
         self._data_segments = value.get_data_segment_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
+        self.index = 0
 
 
 ########
@@ -318,8 +318,7 @@ class SICDTypeCanvasImageReader(ComplexCanvasImageReader):
             raise TypeError('base_reader must be a SICDTypeReader, got type {}'.format(type(value)))
         self._base_reader = value
         self._data_segments = value.get_data_segment_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
+        self.index = 0
 
     def get_sicd(self):
         """
@@ -581,8 +580,7 @@ class CPHDTypeCanvasImageReader(ComplexCanvasImageReader):
             raise TypeError('base_reader must be a CPHDReader, got type {}'.format(type(value)))
         self._base_reader = value
         self._data_segments = value.get_data_segment_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
+        self.index = 0
 
     def get_cphd(self):
         """
@@ -646,8 +644,7 @@ class CRSDTypeCanvasImageReader(ComplexCanvasImageReader):
             raise TypeError('base_reader must be a CRSDReader, got type {}'.format(type(value)))
         self._base_reader = value
         self._data_segments = value.get_data_segment_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
+        self.index = 0
 
     def get_crsd(self):
         """
@@ -694,8 +691,7 @@ class DerivedCanvasImageReader(GeneralCanvasImageReader):
             raise TypeError('base_reader must be a SIDDTypeReader, got type {}'.format(type(value)))
         self._base_reader = value
         self._data_segments = value.get_data_segment_as_tuple()
-        self._index = 0
-        self._data_size = value.get_data_size_as_tuple()[0]
+        self.index = 0
 
     def get_sidd(self):
         """
