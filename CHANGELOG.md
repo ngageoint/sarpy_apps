@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.20] - 2022-06-06
+### Changed
+Updates for compliance with sarpy 1.3.0 changes
+
 ## [1.1.19] - 2022-04-15
 ### Fixed
 Fixed a typo which caused the metaicon callback to open the metaviewer instead
