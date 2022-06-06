@@ -170,7 +170,8 @@ class GeneralCanvasImageReader(CanvasImageReader):
         return None
 
     def __getitem__(self, item):
-        data = self._data_segments[self.index].__getitem__(item)
+        print(item)
+        data = self._data_segments[self.index].read(*item)
         return self.remap_data(data)
 
     def __del__(self):
@@ -478,7 +479,7 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
 
     def __getitem__(self, item):
         def get_cdata(the_index):
-            return self._data_segments[the_index].__getitem__(item)
+            return self._data_segments[the_index].read(*item)
 
         if self._index_ordering is None:
             return None
