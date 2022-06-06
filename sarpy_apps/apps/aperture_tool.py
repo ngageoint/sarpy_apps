@@ -10,7 +10,7 @@ __author__ = ("Jason Casey", "Thomas McCullough")
 import os
 import time
 import numpy
-from typing import Union, Tuple
+from typing import Union, Tuple, List, Optional
 
 from scipy.constants import foot, inch
 
@@ -34,7 +34,7 @@ from tk_builder.widgets.basic_widgets import Frame, RadioButton, CheckButton, \
     Label, Entry, Button
 
 from sarpy.visualization.remap import NRL
-from sarpy.processing.subaperture import ApertureFilter
+from sarpy.processing.sicd.subaperture import ApertureFilter
 from sarpy.io.complex.base import SICDTypeReader
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
@@ -454,7 +454,7 @@ class ApertureTool(WidgetPanel):
         extension = filename[-4:]
         if extension.lower() != ".gif":
             filename = filename + ".gif"
-        frame_sequence = []
+        frame_sequence = []  # type: List[numpy.ndarray]
         direction_forward_or_back = "forward"
         if self.animation_panel.mode_panel.reverse.is_selected():
             direction_forward_or_back = "back"
@@ -815,13 +815,15 @@ class ApertureTool(WidgetPanel):
             filter_image = numpy.zeros((full_n_rows, full_n_cols), dtype='uint8')
         self.filtered_panel.set_image_reader(NumpyCanvasImageReader(filter_image))
 
-    def get_filtered_image(self):
+    def get_filtered_image(self) -> Optional[numpy.ndarray]:
         """
         Fetches the actual underlying reconstructed image
+
         Returns
         -------
-
+        Optional[numpy.ndarray]
         """
+
         if self.app_variables.aperture_filter is None:
             return None
 

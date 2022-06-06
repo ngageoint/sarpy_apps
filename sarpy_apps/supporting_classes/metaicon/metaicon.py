@@ -13,7 +13,7 @@ import tkinter
 import numpy
 
 from sarpy.io.complex.converter import open_complex
-from sarpy.io.general.base import AbstractReader
+from sarpy.io.general.base import BaseReader
 
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.product.base import SIDDTypeReader
@@ -189,7 +189,7 @@ class MetaIcon(ImagePanel):
 
         Parameters
         ----------
-        reader : str|AbstractReader
+        reader : str|BaseReader
             A file name or reader object.
         index : int
             The meta object index in the reader.
@@ -202,7 +202,7 @@ class MetaIcon(ImagePanel):
         if isinstance(reader, str):
             reader = open_complex(reader)
 
-        if not isinstance(reader, AbstractReader):
+        if not isinstance(reader, BaseReader):
             raise TypeError('Got unexpected type {}'.format(type(reader)))
 
         if isinstance(reader, SICDTypeReader):

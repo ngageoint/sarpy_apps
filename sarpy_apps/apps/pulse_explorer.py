@@ -29,8 +29,8 @@ from sarpy_apps.supporting_classes.widget_with_metadata import \
 from sarpy.io.general.base import SarpyIOError, FlatReader
 from sarpy.io.received.converter import open_received
 from sarpy.io.received.base import CRSDTypeReader
-from sarpy.processing.windows import kaiser
-from sarpy.processing.fft_base import fftshift
+from sarpy.processing.sicd.windows import kaiser
+from sarpy.processing.sicd.fft_base import fftshift
 
 from sarpy_apps.supporting_classes.image_reader import CRSDTypeCanvasImageReader
 

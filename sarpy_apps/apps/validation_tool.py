@@ -31,7 +31,7 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
-from sarpy.io.product.kmz_product_creation import create_kmz_view
+from sarpy.visualization.kmz_product_creation import create_kmz_view
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.sicd import SICDReader
 from sarpy.consistency.sicd_consistency import check_file

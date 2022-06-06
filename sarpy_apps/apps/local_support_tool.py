@@ -28,7 +28,7 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 from sarpy.io.complex.base import SICDTypeReader
 from sarpy.io.complex.utils import get_physical_coordinates
 from sarpy.visualization.remap import NRL
-from sarpy.processing.fft_base import fft2_sicd, fftshift
+from sarpy.processing.sicd.fft_base import fft2_sicd, fftshift
 
 
 class AppVariables(object):
