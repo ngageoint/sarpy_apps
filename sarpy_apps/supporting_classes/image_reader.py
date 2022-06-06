@@ -125,7 +125,6 @@ class GeneralCanvasImageReader(CanvasImageReader):
             value = 0
         self._index = value
         self._data_size = data_sizes[value]
-        print(f'self._index - {self._index}, self._data-size - {self._data_size}')
 
     @property
     def file_name(self):
@@ -170,9 +169,8 @@ class GeneralCanvasImageReader(CanvasImageReader):
             return self.base_reader.crsd_meta
         return None
 
-    def __getitem__(self, item):
-        print(item)
-        data = self._data_segments[self.index].read(*item)
+    def __getitem__(self, subscript):
+        data = self._data_segments[self.index].__getitem__(subscript)
         return self.remap_data(data)
 
     def __del__(self):
@@ -476,9 +474,9 @@ class QuadPolCanvasImageReader(ComplexCanvasImageReader):
                 'Got unhandled polarization states for partition {}'.format(pols, index))
         self._index_ordering = ordered_indices
 
-    def __getitem__(self, item):
+    def __getitem__(self, subscript):
         def get_cdata(the_index):
-            return self._data_segments[the_index].read(*item)
+            return self._data_segments[the_index].__getitem__(subscript)
 
         if self._index_ordering is None:
             return None
