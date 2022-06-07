@@ -33,7 +33,7 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 
 from sarpy.io.complex.base import FlatSICDReader
 from sarpy.processing.sicd.fft_base import fft_sicd, fft2_sicd, fftshift
-from sarpy.processing.normalize_sicd import DeskewCalculator
+from sarpy.processing.sicd.normalize_sicd import DeskewCalculator
 from sarpy.io.complex.base import SICDTypeReader
 
 logger = logging.getLogger(__name__)
