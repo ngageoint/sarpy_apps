@@ -6,6 +6,8 @@ This module provides a tool for doing some basic validation for a CPHD file.
 __classification__ = "UNCLASSIFIED"
 __author__ = "Valkyrie Systems Corporation"
 
+import contextlib
+import io
 import logging
 import os
 
@@ -27,6 +29,7 @@ from sarpy_apps.supporting_classes.file_filters import cphd_files
 from sarpy_apps.supporting_classes.image_reader import CPHDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
+import sarpy.consistency.cphd_consistency
 from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.general.base import SarpyIOError
 
@@ -178,7 +181,17 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         if self.variables.image_reader is None:
             return
 
-        # TODO Run and log CPHD consistency
+        fname = self.variables.image_reader.base_reader.file_name
+        self.logger.info('Starting validation for {}\n'.format(fname))
+        cphd_con = sarpy.consistency.cphd_consistency.CphdConsistency.from_file(fname)
+        cphd_con.check()
+        with contextlib.redirect_stdout(io.StringIO()) as buffered_stdout:
+            cphd_con.print_result(color=False)
+        if buffered_stdout.getvalue():
+            self.logger.info(buffered_stdout.getvalue())
+        else:
+            self.logger.info('***{} appears to be valid***'.format(fname))
+        self.logger.info('Completed validation for {}\n'.format(fname))
         return
 
     def update_reader(self, the_reader, update_browse=None):
