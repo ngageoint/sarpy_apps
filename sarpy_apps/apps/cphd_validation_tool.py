@@ -11,6 +11,7 @@ import io
 import logging
 import os
 
+import plotly.offline
 import tkinter
 from tkinter import ttk
 from tkinter.filedialog import askdirectory, askopenfilename, asksaveasfilename
@@ -25,6 +26,7 @@ from tk_builder.widgets.basic_widgets import Label, CheckButton, Text, Button
 from tk_builder.widgets.widget_descriptors import LabelDescriptor, CheckButtonDescriptor, \
     TextDescriptor, ButtonDescriptor
 
+from sarpy_apps.supporting_classes import cphd_plotting
 from sarpy_apps.supporting_classes.file_filters import cphd_files
 from sarpy_apps.supporting_classes.image_reader import CPHDTypeCanvasImageReader
 from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
@@ -40,14 +42,14 @@ class _Buttons(WidgetPanelNoLabel):
     """
 
     _widget_list = (
-        ('plot_metadata_label', 'plot_metadata_button'),
+        ('plot_image_area_label', 'plot_image_area_button'),
     )
 
-    plot_metadata_label = LabelDescriptor(
-        'plot_metadata_label', default_text='Plot Metadata',
+    plot_image_area_label = LabelDescriptor(
+        'plot_image_area_label', default_text='Plot ImageArea and Boresights',
         docstring='')  # type: Label
-    plot_metadata_button = ButtonDescriptor(
-        'plot_metadata_button', default_text='CPHD Metadata Plotter',
+    plot_image_area_button = ButtonDescriptor(
+        'plot_image_area_button', default_text='CPHD ImageArea Plot',
         docstring='')  # type: Button
 
     def __init__(self, parent):
@@ -135,7 +137,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         self.master.config(menu=self.menu_bar)
 
         # set the callbacks for the button panel
-        self.button_panel.plot_metadata_button.config(command=self.callback_plot_metadata)
+        self.button_panel.plot_image_area_button.config(command=self.callback_plot_image_area)
 
         self.update_reader(reader)
 
@@ -268,7 +270,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
             return
         self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
 
-    def callback_plot_metadata(self):
+    def callback_plot_image_area(self):
         """
         Enable the plot metadata analysis
         """
@@ -276,14 +278,9 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         if not self._verify_reader():
             return
 
-        import plotly.graph_objects as go
         reader = self.variables.image_reader.base_reader
-        channel_index = 0
-
-        fig = go.Figure()
-        txtime = reader.read_pvp_variable('TxTime', channel_index)
-        fig.add_trace(go.Scatter(y=txtime))
-        fig.show()
+        fig = cphd_plotting.plot_image_area(reader)
+        plotly.offline.plot(fig)
 
     def my_populate_metaicon(self):
         """
