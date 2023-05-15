@@ -9,6 +9,7 @@ import functools
 import itertools
 import pathlib
 import tkinter
+from tkinter import messagebox
 from tkinter import ttk
 
 import matplotlib.backends.backend_tkagg as mpl_tk
@@ -232,43 +233,59 @@ def _vdot(vec1, vec2, axis=-1, keepdims=False):
     return (np.asarray(vec1) * np.asarray(vec2)).sum(axis=axis, keepdims=keepdims)
 
 
-class CphdPowerSpectralDensity:
+class CphdVectorPower:
     """
-    Create a tool to visualize a CPHD's per-vector power spectral density
+    Create a tool to visualize a CPHD vector's power
     """
     def __init__(self, root, cphd_reader):
         self.cphd_reader = cphd_reader
+        cphd_domain = cphd_reader.cphd_meta.Global.DomainType
+        if cphd_domain != 'FX':
+            root.destroy()
+            raise NotImplementedError(f'{cphd_domain}-domain CPHDs have not been implemented yet. '
+                                      'Only FX-domain CPHDs are supported')
         ref_ch_id = cphd_reader.cphd_meta.Channel.RefChId
         self.channel_datas = {x.Identifier: x for x in cphd_reader.cphd_meta.Data.Channels}
         self.channel_parameters = {x.Identifier: x for x in cphd_reader.cphd_meta.Channel.Parameters}
         assert ref_ch_id in self.channel_datas
         self.has_signal = cphd_reader.cphd_meta.PVP.SIGNAL is not None
-        self.pn_ref = None
-        self.bn_ref = None
-        self.sn_ref = None
+        self._get_noise_parameters(ref_ch_id)
 
         # prepare figure
         fig = mpl_fig.Figure(figsize=(5, 7), dpi=100)
-        self.ax = fig.add_subplot()
-        self.ax.set_xlabel("ΔTOA [s]" if cphd_reader.cphd_meta.Global.DomainType == 'FX' else "f_x [Hz]")
-        self.ax.set_ylabel("Power Spectral Density")
-        self.ax.set_yscale("log")
-        self.ax.grid()
-        self.vector_psd_line, = self.ax.plot(0, 0, label='Estimated Vector PSD')
-        sn_ref_label = 'SNRef' if self.channel_parameters[ref_ch_id].NoiseLevel is not None else None
-        self.sn_ref_line, = self.ax.plot(0, 0, label=sn_ref_label)
-        self.sn_ref_line.set(visible=self.channel_parameters[ref_ch_id].NoiseLevel is not None)
+        self.ax = dict(zip(('FX', 'TOA'), fig.subplots(2, 1)))
+        self.ax['FX'].set_xlabel('FX Hz')
+        self.ax['TOA'].set_xlabel('ΔTOA [s]')
+        self.power_line = {}
+        self.power_line['FX'], = self.ax['FX'].plot(0, 0)
+        self.power_line['TOA'], = self.ax['TOA'].plot(0, 0)
 
-        box = self.ax.get_position()
-        self.ax.set_position([box.x0, box.y0 + box.height * 0.2, box.width, box.height * 0.8])
-        self.ax.legend(loc='upper center', bbox_to_anchor=((0.5, -0.2)), ncol=2,
-                       title=pathlib.Path(cphd_reader.file_name).name)
+        self.span = {}
+        self.span['FX'] = self.ax['FX'].axvspan(0, 10, label='FX Bandwidth', color='gray', alpha=0.5)
+        self.span['TOA'] = self.ax['TOA'].axvspan(0, 10, label='TOA Swath', color='gray', alpha=0.5)
 
-        mainframe = ttk.Frame(root, padding="3 3 12 12")
+        self.pn_ref_marker = None
+        self.pn_ref_line = None
+        self.sn_ref_line = None
+
+        if self.sn_ref is not None:
+            pn_domain = self.cphd_reader.cphd_meta.Global.DomainType
+            sn_domain = 'TOA' if pn_domain == 'FX' else 'FX'
+            self.pn_ref_marker, = self.ax[pn_domain].plot(0, 0, marker='+', color='orange')
+            self.pn_ref_line = self.ax[pn_domain].axhline(0, color='orange')
+            self.sn_ref_line, = self.ax[sn_domain].plot(0, 0, color='magenta')
+
+        for ax in self.ax.values():
+            ax.set_ylabel("digital power")
+            ax.set_yscale("log")
+            ax.grid()
+        fig.subplots_adjust(bottom=0.15, hspace=0.6)
+
+        mainframe = ttk.Frame(root, padding="3 3 3 3")
         mainframe.grid(column=0, row=0, sticky=tkinter.NSEW)
         root.columnconfigure(index=0, weight=1)
         root.rowconfigure(index=0, weight=1)
-        root.wm_title("CPHD - Power Spectral Density")
+        root.wm_title("CPHD - Vector Power")
         self.canvas = mpl_tk.FigureCanvasTkAgg(fig, master=mainframe)  # A tk.DrawingArea.
         self.canvas.draw()
 
@@ -289,82 +306,165 @@ class CphdPowerSpectralDensity:
                                                 variable=self.should_autoscale,
                                                 command=functools.partial(self._autoscale, draw=True))
 
-        self.selected_vector = tkinter.IntVar(value=0)
-        self.selected_vector.trace('w', self._update_plot)
-        self.vector_slider = tkinter.Scale(mainframe, from_=0, to=self.channel_datas[ref_ch_id].NumVectors-1,
-                                           orient=tkinter.HORIZONTAL,
-                                           variable=self.selected_vector,
-                                           length=256,
-                                           showvalue=False)
-        self.vector_entry = ttk.Spinbox(mainframe, textvariable=self.selected_vector,
-                                        from_=0, to=self.channel_datas[ref_ch_id].NumVectors-1)
 
         toolbar.grid(column=0, row=0, columnspan=4, sticky=tkinter.NSEW)
         self.canvas.get_tk_widget().grid(column=0, row=1, columnspan=4, sticky=tkinter.NSEW)
         self.channel_select.grid(column=0, row=2, columnspan=3, sticky=tkinter.NSEW)
         autoscale_control.grid(column=3, row=2, sticky=tkinter.NSEW)
-        label = tkinter.Label(master=mainframe, text='Vector Select:')
-        label.grid(column=0, row=3, sticky=tkinter.NSEW)
-        self.vector_slider.grid(column=1, row=3, columnspan=2, sticky=tkinter.NSEW)
-        self.vector_entry.grid(column=3, row=3, sticky=tkinter.NSEW)
+
+        vectorframe = ttk.LabelFrame(mainframe, text='Vector Selection', padding="3 3 3 3")
+        vectorframe.grid(column=0, row=3, columnspan=4, pady=8, sticky=tkinter.NSEW)
+        self.selected_vector = tkinter.IntVar(value=0)
+        self.selected_vector.trace_add('write', self._update_plot)
+        self.vector_slider = tkinter.Scale(vectorframe, from_=0, to=self.channel_datas[ref_ch_id].NumVectors-1,
+                                           orient=tkinter.HORIZONTAL,
+                                           variable=self.selected_vector,
+                                           length=256,
+                                           showvalue=False)
+        self.vector_entry = ttk.Spinbox(vectorframe, textvariable=self.selected_vector,
+                                        from_=0, to=self.channel_datas[ref_ch_id].NumVectors-1)
+        self.vector_slider.grid(column=0, row=0, columnspan=3, sticky=tkinter.NSEW)
+        self.vector_entry.grid(column=3, row=0, padx=3, sticky=tkinter.EW)
+
+        avgframe = ttk.Labelframe(mainframe, text='Averaging', padding="3 3 3 3")
+        avgframe.grid(column=0, row=4, columnspan=4, sticky=tkinter.NSEW)
+        ttk.Label(avgframe, text="# pre/post vectors").grid(column=0, row=0, columnspan=1)
+
+        def show_vector_avg_warning():
+            messagebox.showwarning(parent=root, message=(
+                'Vector averaging assumes that the domain coordinate value PVPs (SC0, SCSS) are constant across the '
+                'span of selected vectors. Take care or disable vector averaging when these vary.'
+            ))
+        self.vector_avg_warn_button = ttk.Button(avgframe, text="?",
+                                                 command=show_vector_avg_warning)
+        self.vector_avg_warn_button.grid(column=1, row=0, sticky=(tkinter.S, tkinter.W))
+        self.num_adjacent_vec_slider = tkinter.Scale(avgframe, from_=0, to=32,
+                                                     orient=tkinter.HORIZONTAL,
+                                                     showvalue=True,
+                                                     command=self._update_plot)
+        self.num_adjacent_vec_slider.grid(column=0, row=1, columnspan=2, padx=3, sticky=tkinter.EW)
+        ttk.Label(avgframe, text="# samples").grid(column=2, row=0, columnspan=2)
+        self.num_avg_samples_slider = tkinter.Scale(avgframe, from_=1, to=self.channel_datas[ref_ch_id].NumSamples//16,
+                                                    orient=tkinter.HORIZONTAL,
+                                                    showvalue=True,
+                                                    command=self._update_plot)
+        self.num_avg_samples_slider.grid(column=2, row=1, columnspan=2, padx=3, sticky=tkinter.EW)
 
         for col in range(4):
             mainframe.columnconfigure(col, weight=1)
+            vectorframe.columnconfigure(col, weight=1)
+            avgframe.columnconfigure(col, weight=1)
         mainframe.rowconfigure(1, weight=10)
 
         self._update_channel()
 
-    def _update_sn_ref(self, vector_index):
-        if self.sn_ref is not None:
-            sn_ref_bw = self.bn_ref / self.scss[vector_index] * np.array([-1/2, 1/2])
-            self.sn_ref_line.set_data(sn_ref_bw, self.sn_ref * np.ones_like(sn_ref_bw))
+    def _update_legend(self, ax):
+        ax.legend(bbox_to_anchor=(0.5, -0.4), loc='lower center', borderaxespad=0, ncol=10)
 
-    def _update_channel(self, *args, **kwargs):
-        channel_id = self.selected_channel.get()
-
-        these_channel_parameters = self.channel_parameters[self.channel_select.get()]
+    def _get_noise_parameters(self, channel_id):
+        these_channel_parameters = self.channel_parameters[channel_id]
+        self.pn_ref = None
+        self.bn_ref = None
+        self.sn_ref = None
         if these_channel_parameters.NoiseLevel is not None:
             self.pn_ref = these_channel_parameters.NoiseLevel.PNRef
             self.bn_ref = these_channel_parameters.NoiseLevel.BNRef
             if self.pn_ref is not None and self.bn_ref is not None:
                 self.sn_ref = self.pn_ref / self.bn_ref
 
-        self.scss = self.cphd_reader.read_pvp_variable('SCSS', index=channel_id)
+    def _update_channel(self, *args, **kwargs):
+        channel_id = self.selected_channel.get()
+        self._get_noise_parameters(channel_id)
+        if self.sn_ref is not None:
+            self.pn_ref_line.set_ydata([self.pn_ref] * 2)
+            self.pn_ref_marker.set_label(f'PNRef={self.pn_ref}')
+            self.sn_ref_line.set_label(f'SNRef={self.sn_ref}')
+
+        pvp_fields = ['FX1', 'FX2', 'SC0', 'SCSS', 'TOA1', 'TOA2']
         if self.has_signal:
-            self.signal = self.cphd_reader.read_pvp_variable('SIGNAL', index=channel_id)
+            pvp_fields.append('SIGNAL')
+        self.pvps = {k: self.cphd_reader.read_pvp_variable(k, index=channel_id) for k in pvp_fields}
 
         self.selected_vector.set(0)
         self._update_slider(0)
         self.channel_select.selection_clear()
 
     def _update_slider(self, vector_index):
-        self.vector_slider.configure(to=self.channel_datas[self.selected_channel.get()].NumVectors - 1)
+        this_channel_data = self.channel_datas[self.selected_channel.get()]
+        self.vector_slider.configure(to=this_channel_data.NumVectors - 1)
         self.vector_slider.set(vector_index)
+        self.num_avg_samples_slider.configure(to=this_channel_data.NumSamples//16)
+        self.num_avg_samples_slider.set(1)
+        self.num_adjacent_vec_slider.set(0)
 
     def _autoscale(self, draw=False):
         if self.should_autoscale.get():
-            self.ax.relim()
-            self.ax.autoscale_view(True, True, True)
+            for ax in self.ax.values():
+                ax.autoscale()
+                ax.relim()
+                ax.autoscale_view(True, True, True)
             if draw:
                 self.canvas.draw()
 
     def _update_plot(self, *args):
         vector_index = self.selected_vector.get()
-        vector = self.cphd_reader.read(slice(vector_index, vector_index + 1), None, index=self.selected_channel.get())
-        scss = self.scss[vector_index]
-        f, z = scipy.signal.welch(vector, fs=1/scss, window='boxcar',
-                                  scaling='spectrum', return_onesided=False, detrend=False)
-        self.vector_psd_line.set_data(np.fft.fftshift(f), np.fft.fftshift(z * len(z)))
-        self._update_sn_ref(vector_index)
+        channel_id = self.selected_channel.get()
+        num_avg_vectors = int(self.num_adjacent_vec_slider.get())
+        num_avg_samples = int(self.num_avg_samples_slider.get())
+        num_vectors = self.channel_datas[channel_id].NumVectors
+        num_samples = self.channel_datas[channel_id].NumSamples
+        signal_chunk = self.cphd_reader.read(slice(np.maximum(vector_index - num_avg_vectors, 0),
+                                                   np.minimum(vector_index + num_avg_vectors + 1, num_vectors)),
+                                             slice(None, num_samples//num_avg_samples * num_avg_samples),
+                                             index=channel_id, squeeze=False)
+        domain = self.cphd_reader.cphd_meta.Global.DomainType
+        spectral_domain = 'TOA' if domain == 'FX' else 'FX'
+        scss = self.pvps['SCSS'][vector_index]
+        domain_samples = self.pvps['SC0'][vector_index] + np.arange(signal_chunk.shape[-1]) * scss
+
+        cphd_power = (signal_chunk * np.conj(signal_chunk)).real
+        cphd_power_averaged = cphd_power.reshape(cphd_power.shape[0], -1, num_avg_samples).mean(axis=(2, 0))
+        domain_averaged = domain_samples.reshape(-1, num_avg_samples).mean(-1)
+        self.power_line[domain].set_data(domain_averaged, cphd_power_averaged)
+
+        sc1, sc2 = [self.pvps[f'{domain}{n}'][vector_index] for n in (1, 2)]
+        is_in_span = (sc1 <= domain_samples) & (domain_samples <= sc2)
+        in_span_chunk = signal_chunk[:, is_in_span]
+        in_span_chunk = in_span_chunk[:, :in_span_chunk.shape[-1]//num_avg_samples * num_avg_samples]
+        spectral_chunk = np.fft.fftshift(np.fft.fft(in_span_chunk, axis=-1), axes=-1)
+        spectral_chunk /= np.sqrt(spectral_chunk.shape[-1])
+        spectral_power = (spectral_chunk * np.conj(spectral_chunk)).real
+        spectral_power_averaged = spectral_power.reshape(spectral_power.shape[0], -1, num_avg_samples).mean(axis=(2, 0))
+        spectral_domain_samples = np.linspace(-1/(2*scss), 1/(2*scss), num=in_span_chunk.shape[-1], endpoint=False)
+        spectral_domain_averaged = spectral_domain_samples.reshape(-1, num_avg_samples).mean(-1)
+
+        self.power_line[spectral_domain].set_data(spectral_domain_averaged, spectral_power_averaged)
+
+        if self.sn_ref is not None:
+            self.pn_ref_marker.set_data((sc1 + sc2) / 2, self.pn_ref)
+            sn_ref_bw = self.bn_ref / scss * np.array([-1/2, 1/2])
+            self.sn_ref_line.set_data(sn_ref_bw, self.sn_ref * np.ones_like(sn_ref_bw))
+
+        for domain, span in self.span.items():
+            vertices = span.get_xy()
+            b1 = self.pvps[f'{domain}1'][vector_index]
+            b2 = self.pvps[f'{domain}2'][vector_index]
+            vertices[:, 0] = [b1, b1, b2, b2, b1]
+            span.set_xy(vertices)
+
         self._autoscale()
 
-        # update title
-        title_parts = [self.selected_channel.get()]
-        if self.sn_ref is not None:
-            title_parts.extend([f'PNRef={self.pn_ref}', f'BNRef={self.bn_ref}'])
+        # update titles
+        title_parts = [pathlib.Path(self.cphd_reader.file_name).name]
         if self.has_signal:
-            title_parts.append(f'SIGNAL[{vector_index}]={self.signal[vector_index]}')
-        self.ax.set_title('\n'.join(title_parts))
+            title_parts.append(f"SIGNAL[{vector_index}]={self.pvps['SIGNAL'][vector_index]}")
+        self.ax['FX'].set_title('\n'.join(title_parts))
+
+        if self.sn_ref is not None:
+            self.ax['TOA'].set_title(f'BNRef={self.bn_ref}')
+
+        for ax in self.ax.values():
+            self._update_legend(ax)
 
         # required to update canvas and attached toolbar!
-        self.canvas.draw()
+        self.canvas.draw_idle()
