@@ -43,7 +43,7 @@ class _Buttons(WidgetPanelNoLabel):
 
     _widget_list = (
         ('plot_image_area_label', 'plot_image_area_button'),
-        ('plot_psd_label', 'plot_psd_button'),
+        ('plot_vector_power_label', 'plot_vector_power_button'),
     )
 
     plot_image_area_label = LabelDescriptor(
@@ -52,11 +52,11 @@ class _Buttons(WidgetPanelNoLabel):
     plot_image_area_button = ButtonDescriptor(
         'plot_image_area_button', default_text='CPHD ImageArea Plot',
         docstring='')  # type: Button
-    plot_psd_label = LabelDescriptor(
-        'plot_psd_label', default_text='Plot CPHD Power Spectral Density',
+    plot_vector_power_label = LabelDescriptor(
+        'plot_vector_power_label', default_text='Plot CPHD Vector Power',
         docstring='')  # type: Label
-    plot_psd_button = ButtonDescriptor(
-        'plot_psd_button', default_text='CPHD Power Spectral Density Plot',
+    plot_vector_power_button = ButtonDescriptor(
+        'plot_vector_power_button', default_text='CPHD Vector Power Plot',
         docstring='')  # type: Button
 
     def __init__(self, parent):
@@ -145,7 +145,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         # set the callbacks for the button panel
         self.button_panel.plot_image_area_button.config(command=self.callback_plot_image_area)
-        self.button_panel.plot_psd_button.config(command=self.callback_plot_psd)
+        self.button_panel.plot_vector_power_button.config(command=self.callback_plot_vector_power)
 
         self.update_reader(reader)
 
@@ -290,9 +290,9 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         fig = cphd_plotting.plot_image_area(reader)
         plotly.offline.plot(fig)
 
-    def callback_plot_psd(self):
+    def callback_plot_vector_power(self):
         """
-        Enable the PSD visualization
+        Enable the vector power visualization
         """
 
         if not self._verify_reader():
@@ -300,7 +300,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         reader = self.variables.image_reader.base_reader
         root = tkinter.Toplevel(self.master)
-        cphd_plotting.CphdPowerSpectralDensity(root, reader)
+        cphd_plotting.CphdVectorPower(root, reader)
 
     def my_populate_metaicon(self):
         """
