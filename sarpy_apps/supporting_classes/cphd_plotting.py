@@ -249,10 +249,12 @@ class CphdVectorPower:
         self.channel_parameters = {x.Identifier: x for x in cphd_reader.cphd_meta.Channel.Parameters}
         assert ref_ch_id in self.channel_datas
         self.has_signal = cphd_reader.cphd_meta.PVP.SIGNAL is not None
+        self.has_fxn = cphd_reader.cphd_meta.PVP.FXN1 is not None and cphd_reader.cphd_meta.PVP.FXN2 is not None
+        self.has_toae = cphd_reader.cphd_meta.PVP.TOAE1 is not None and cphd_reader.cphd_meta.PVP.TOAE2 is not None
         self._get_noise_parameters(ref_ch_id)
 
         # prepare figure
-        fig = mpl_fig.Figure(figsize=(5, 7), dpi=100)
+        fig = mpl_fig.Figure(figsize=(7, 7), dpi=100)
         self.ax = dict(zip(('FX', 'TOA'), fig.subplots(2, 1)))
         self.ax['FX'].set_xlabel('FX Hz')
         self.ax['TOA'].set_xlabel('ΔTOA [s]')
@@ -261,8 +263,16 @@ class CphdVectorPower:
         self.power_line['TOA'], = self.ax['TOA'].plot(0, 0)
 
         self.span = {}
-        self.span['FX'] = self.ax['FX'].axvspan(0, 10, label='FX Bandwidth', color='gray', alpha=0.5)
-        self.span['TOA'] = self.ax['TOA'].axvspan(0, 10, label='TOA Swath', color='gray', alpha=0.5)
+        if self.has_fxn:
+            self.span['FXN'] = self.ax['FX'].axvspan(0, 10, label='FX Noise Bandwidth',
+                                                     color='cyan', alpha=0.3, hatch='\\')
+        if self.has_toae:
+            self.span['TOAE'] = self.ax['TOA'].axvspan(0, 10, label='TOA Extended Saved',
+                                                       color='cyan', alpha=0.3, hatch='\\')
+        self.span['FX'] = self.ax['FX'].axvspan(0, 10, label='FX Bandwidth',
+                                                color='gray', alpha=0.3, hatch='/')
+        self.span['TOA'] = self.ax['TOA'].axvspan(0, 10, label='TOA Saved',
+                                                  color='gray', alpha=0.3, hatch='/')
 
         self.pn_ref_marker = None
         self.pn_ref_line = None
@@ -383,6 +393,10 @@ class CphdVectorPower:
         pvp_fields = ['FX1', 'FX2', 'SC0', 'SCSS', 'TOA1', 'TOA2']
         if self.has_signal:
             pvp_fields.append('SIGNAL')
+        if self.has_fxn:
+            pvp_fields.extend(['FXN1', 'FXN2'])
+        if self.has_toae:
+            pvp_fields.extend(['TOAE1', 'TOAE2'])
         self.pvps = {k: self.cphd_reader.read_pvp_variable(k, index=channel_id) for k in pvp_fields}
 
         self.selected_vector.set(0)
@@ -431,6 +445,8 @@ class CphdVectorPower:
         is_in_span = (sc1 <= domain_samples) & (domain_samples <= sc2)
         in_span_chunk = signal_chunk[:, is_in_span]
         in_span_chunk = in_span_chunk[:, :in_span_chunk.shape[-1]//num_avg_samples * num_avg_samples]
+        if self.cphd_reader.cphd_meta.Global.SGN == -1:
+            in_span_chunk = np.conj(in_span_chunk)
         spectral_chunk = np.fft.fftshift(np.fft.fft(in_span_chunk, axis=-1), axes=-1)
         spectral_chunk /= np.sqrt(spectral_chunk.shape[-1])
         spectral_power = (spectral_chunk * np.conj(spectral_chunk)).real
