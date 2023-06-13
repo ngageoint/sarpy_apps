@@ -17,7 +17,6 @@ import matplotlib.figure as mpl_fig
 import numpy as np
 import plotly.colors
 import plotly.graph_objects as go
-import scipy.signal
 
 
 def plot_image_area(reader):
@@ -315,7 +314,6 @@ class CphdVectorPower:
         autoscale_control = tkinter.Checkbutton(master=mainframe, text="Autoscale axes?",
                                                 variable=self.should_autoscale,
                                                 command=functools.partial(self._autoscale, draw=True))
-
 
         toolbar.grid(column=0, row=0, columnspan=4, sticky=tkinter.NSEW)
         self.canvas.get_tk_widget().grid(column=0, row=1, columnspan=4, sticky=tkinter.NSEW)

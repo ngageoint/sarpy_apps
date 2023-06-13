@@ -34,6 +34,7 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 import sarpy.consistency.cphd_consistency
 from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.general.base import SarpyIOError
+import tempfile
 
 
 class _Buttons(WidgetPanelNoLabel):
@@ -288,7 +289,9 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         reader = self.variables.image_reader.base_reader
         fig = cphd_plotting.plot_image_area(reader)
-        plotly.offline.plot(fig)
+        dir_name = tempfile.mkdtemp()
+        temp_file = os.path.join(dir_name, 'temp-plot.html')
+        plotly.offline.plot(fig, filename=temp_file)
 
     def callback_plot_vector_power(self):
         """
