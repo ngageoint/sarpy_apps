@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.1.22] - 2023-06-13
+### Added
+- Added cphd_validation_tool and cphd_plotting.
+- Added plotly to requirements.
+
 ## [1.1.21] - 2022-06-07
 ### Fixed
 Broken import from sarpy
