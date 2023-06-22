@@ -10,6 +10,7 @@ import contextlib
 import io
 import logging
 import os
+import tempfile
 
 import plotly.offline
 import tkinter
@@ -34,7 +35,7 @@ from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadat
 import sarpy.consistency.cphd_consistency
 from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.general.base import SarpyIOError
-import tempfile
+from sarpy.visualization.cphd_kmz_product_creation import cphd_create_kmz_view
 
 
 class _Buttons(WidgetPanelNoLabel):
@@ -45,6 +46,7 @@ class _Buttons(WidgetPanelNoLabel):
     _widget_list = (
         ('plot_image_area_label', 'plot_image_area_button'),
         ('plot_vector_power_label', 'plot_vector_power_button'),
+        ('kmz_label', 'kmz_button'),
     )
 
     plot_image_area_label = LabelDescriptor(
@@ -53,11 +55,19 @@ class _Buttons(WidgetPanelNoLabel):
     plot_image_area_button = ButtonDescriptor(
         'plot_image_area_button', default_text='CPHD ImageArea Plot',
         docstring='')  # type: Button
+
     plot_vector_power_label = LabelDescriptor(
         'plot_vector_power_label', default_text='Plot CPHD Vector Power',
         docstring='')  # type: Label
     plot_vector_power_button = ButtonDescriptor(
         'plot_vector_power_button', default_text='CPHD Vector Power Plot',
+        docstring='')  # type: Button
+
+    kmz_label = LabelDescriptor(
+        'kmz_label', default_text='Create KMZ of collection geometry',
+        docstring='')  # type: Label
+    kmz_button = ButtonDescriptor(
+        'kmz_button', default_text='Create kmz',
         docstring='')  # type: Button
 
     def __init__(self, parent):
@@ -109,7 +119,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         # handle packing manually
         self.button_panel = _Buttons(self)
-        self.add(self.button_panel, width=700, height=100, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.add(self.button_panel, width=700, height=170, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # create the scrolled text widget for logging output
         self.text_log_widget = ScrolledText(self)  # TODO: other configuration?
@@ -147,6 +157,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         # set the callbacks for the button panel
         self.button_panel.plot_image_area_button.config(command=self.callback_plot_image_area)
         self.button_panel.plot_vector_power_button.config(command=self.callback_plot_vector_power)
+        self.button_panel.kmz_button.config(command=self.callback_kmz)
 
         self.update_reader(reader)
 
@@ -304,6 +315,28 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         reader = self.variables.image_reader.base_reader
         root = tkinter.Toplevel(self.master)
         cphd_plotting.CphdVectorPower(root, reader)
+
+    def callback_kmz(self):
+        """Generate KMZ file"""
+        if not self._verify_reader():
+            return
+
+        # find a place to save the kmz, then produce it
+        initialdir, fstem = os.path.split(os.path.abspath(self.variables.image_reader.file_name))
+        dirname = askdirectory(initialdir=initialdir, mustexist=True)
+        if dirname is None or dirname in [(), '']:
+            return
+
+        fstem_part = os.path.splitext(fstem)[0]
+        kmz_file_stem = 'View-{}'.format(fstem_part)
+        showinfo('KMZ creation',
+                 message='This may be somewhat time consuming.\n'
+                         'KMZ file(s) being created in directory {}\n'
+                         'The created filename will begin with {}\n'.format(dirname, kmz_file_stem))
+        cphd_create_kmz_view(self.variables.image_reader.base_reader, dirname, file_stem=kmz_file_stem)
+        showinfo('KMZ creation complete',
+                 message='KMZ file(s) created in directory {}\n'
+                         'The created filename(s) begin with {}\n'.format(dirname, kmz_file_stem))
 
     def my_populate_metaicon(self):
         """
