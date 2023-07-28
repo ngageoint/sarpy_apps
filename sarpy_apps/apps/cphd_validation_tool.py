@@ -67,7 +67,7 @@ class _Buttons(WidgetPanelNoLabel):
         'kmz_label', default_text='Create KMZ of collection geometry',
         docstring='')  # type: Label
     kmz_button = ButtonDescriptor(
-        'kmz_button', default_text='Create kmz',
+        'kmz_button', default_text='Create KMZ',
         docstring='')  # type: Button
 
     def __init__(self, parent):
@@ -317,7 +317,10 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         cphd_plotting.CphdVectorPower(root, reader)
 
     def callback_kmz(self):
-        """Generate KMZ file"""
+        """
+        Generate KMZ file
+        """
+
         if not self._verify_reader():
             return
 
@@ -332,7 +335,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         showinfo('KMZ creation',
                  message='This may be somewhat time consuming.\n'
                          'KMZ file(s) being created in directory {}\n'
-                         'The created filename will begin with {}\n'.format(dirname, kmz_file_stem))
+                         'The created filename(s) will begin with {}\n'.format(dirname, kmz_file_stem))
         cphd_create_kmz_view(self.variables.image_reader.base_reader, dirname, file_stem=kmz_file_stem)
         showinfo('KMZ creation complete',
                  message='KMZ file(s) created in directory {}\n'
