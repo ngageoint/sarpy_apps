@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.23] - 2023-07-28
+### Added
+- Added button to generate KMZ file to cphd_validation_tool.
+
 ## [1.1.22] - 2023-06-13
 ### Added
 - Added cphd_validation_tool and cphd_plotting.
