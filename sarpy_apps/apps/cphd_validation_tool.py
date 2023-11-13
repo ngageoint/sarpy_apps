@@ -46,6 +46,7 @@ class _Buttons(WidgetPanelNoLabel):
     _widget_list = (
         ('plot_image_area_label', 'plot_image_area_button'),
         ('plot_vector_power_label', 'plot_vector_power_button'),
+        ('plot_vector_tfr_label', 'plot_vector_tfr_button'),
         ('kmz_label', 'kmz_button'),
     )
 
@@ -61,6 +62,13 @@ class _Buttons(WidgetPanelNoLabel):
         docstring='')  # type: Label
     plot_vector_power_button = ButtonDescriptor(
         'plot_vector_power_button', default_text='CPHD Vector Power Plot',
+        docstring='')  # type: Button
+
+    plot_vector_tfr_label = LabelDescriptor(
+        'plot_vector_tfr_label', default_text='Plot CPHD Vector Time-Frequency Representation',
+        docstring='')  # type: Label
+    plot_vector_tfr_button = ButtonDescriptor(
+        'plot_vector_tfr_button', default_text='CPHD Vector Time-Frequency Plot',
         docstring='')  # type: Button
 
     kmz_label = LabelDescriptor(
@@ -119,7 +127,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
 
         # handle packing manually
         self.button_panel = _Buttons(self)
-        self.add(self.button_panel, width=700, height=170, padx=5, pady=5, sticky=tkinter.NSEW)
+        self.add(self.button_panel, width=700, height=240, padx=5, pady=5, sticky=tkinter.NSEW)
 
         # create the scrolled text widget for logging output
         self.text_log_widget = ScrolledText(self)  # TODO: other configuration?
@@ -157,6 +165,7 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         # set the callbacks for the button panel
         self.button_panel.plot_image_area_button.config(command=self.callback_plot_image_area)
         self.button_panel.plot_vector_power_button.config(command=self.callback_plot_vector_power)
+        self.button_panel.plot_vector_tfr_button.config(command=self.callback_plot_vector_tfr)
         self.button_panel.kmz_button.config(command=self.callback_kmz)
 
         self.update_reader(reader)
@@ -315,6 +324,18 @@ class ValidationTool(tkinter.PanedWindow, WidgetWithMetadata):
         reader = self.variables.image_reader.base_reader
         root = tkinter.Toplevel(self.master)
         cphd_plotting.CphdVectorPower(root, reader)
+
+    def callback_plot_vector_tfr(self):
+        """
+        Enable the vector TFR visualization
+        """
+
+        if not self._verify_reader():
+            return
+
+        reader = self.variables.image_reader.base_reader
+        root = tkinter.Toplevel(self.master)
+        cphd_plotting.CphdVectorTFR(root, reader)
 
     def callback_kmz(self):
         """
