@@ -15,3 +15,9 @@ Dependencies
 ------------
 The core library functionality depends on the [sarpy](https://github.com/ngageoint/sarpy) 
 and [tk_builder](https://github.com/ngageoint/tk_builder) projects. 
+
+Integration Branches
+--------------------
+Integration branches (branches prefixed with `integration/`) are used to stage content under
+consideration for inclusion in the `master` branch and future releases.
+These branches can be used to access features and bug fixes that have not been fully released.
