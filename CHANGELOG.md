@@ -3,6 +3,8 @@
 ## [1.1.24]
 ### Added
 - Time-frequency visualization to `cphd_validation_tool`
+### Fixed
+- Make `pulse_explorer` compatible with sarpy 1.3.0 changes
 
 ## [1.1.23] - 2023-07-28
 ### Added
