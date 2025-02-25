@@ -23,7 +23,7 @@ from sarpy.io.received.base import CRSDTypeReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.color_utils import rgb_to_hex
 from tk_builder.image_reader import NumpyCanvasImageReader
-from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
+#from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,21 @@ _ARROW_WIDTH = {
     'north_width': 2,
 }
 
+import sys
+import os
+directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
+print("Current dir", directory)
+parent_directory = os.getcwd()
+print("Parent dir", parent_directory)
+classes_dir = 'supporting_classes'
+metaicon_dir = 'metaicon'
+full_class_path = os.path.join(parent_directory, classes_dir)
+print("Full path for classes", full_class_path)
+metaicon_path = os.path.join(full_class_path, metaicon_dir)
+print("Metaicon path", metaicon_path)
+sys.path.append(full_class_path)
+from metaicon.metaicon_data_container import MetaIconDataContainer
+
 
 class MetaIcon(ImagePanel):
     """
@@ -50,9 +65,16 @@ class MetaIcon(ImagePanel):
     """
 
     def __init__(self, parent, **kwargs):
+        logger.warning("MetaIcon __init__")
+        print("Initializing MetaIcon")
         self.parent = parent
+        #print("Data container ", self.metaicon.data_container)
+
         ImagePanel.__init__(self, parent, **kwargs)
         self._metadata_container = MetaIconDataContainer()
+        #print("_metadata_container", self._metadata_container)
+        logger.warning("Made it to MetaIcon init")
+
 
         self._margin_percent = 5
         self._font_family = 'Times New Roman'
@@ -198,6 +220,7 @@ class MetaIcon(ImagePanel):
         -------
         None
         """
+        logger.warning('Create from Reader {}'.format(type(reader)))
 
         if isinstance(reader, str):
             reader = open_complex(reader)
@@ -312,7 +335,7 @@ class MetaIcon(ImagePanel):
         """
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
-
+        print("Shadow arrow coords ", self.shadow_arrow_angle)
         # noinspection PyTypeChecker
         return self._get_arrow_coords(self.shadow_arrow_angle)
 
@@ -378,7 +401,7 @@ class MetaIcon(ImagePanel):
         -------
         None
         """
-
+        print("In draw shadow arrow")
         self.canvas.create_new_arrow(
             self.shadow_arrow_coords, increment_color=False, make_current=False, color=_COLORS['shadow'],
             regular_options={'width': _ARROW_WIDTH['shadow_width']}, 
@@ -475,6 +498,7 @@ class MetaIcon(ImagePanel):
             The arrow pixel coordinates.
         """
 
+        #print("Adjust arrow aspect angle ", arrow_angle)
         if arrow_angle is None:
             return 0., 0., 0., 0.
         if arrow_length <= 0.0:

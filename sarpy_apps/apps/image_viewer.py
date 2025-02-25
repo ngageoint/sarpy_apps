@@ -7,6 +7,8 @@ __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
 import os
+import logging
+import sys
 
 import tkinter
 from tkinter import ttk
@@ -22,7 +24,7 @@ from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
     DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \
     GeneralCanvasImageReader
-from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+#from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.general.base import BaseReader
 from sarpy.io.complex.base import SICDTypeReader
@@ -31,6 +33,28 @@ from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.received.base import CRSDTypeReader
 from sarpy.io import open as open_general
 
+#import supporting_classes
+#import supporting_classes.widget_with_metadata
+
+#from widget_with_metadata import WidgetWithMetadata
+# error 
+#from supporting_classes.widget_with_metadata import WidgetWithMetadata
+import sys
+
+
+directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
+print("Current dir", directory)
+#os.chdir('..')
+parent_directory = os.getcwd()
+print("Parent dir", parent_directory)
+classes_dir = 'supporting_classes'
+full_class_path = os.path.join(parent_directory, classes_dir)
+print("Full path for classes", full_class_path)
+sys.path.append(full_class_path)
+from widget_with_metadata import WidgetWithMetadata
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 class AppVariables(object):
     browse_directory = StringDescriptor(
@@ -62,7 +86,9 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.primary.add(
             self.image_panel, width=700, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
             stretch=tkinter.FIRST)
+        logger.warning("Initializing WidgetWithMetadata")
         WidgetWithMetadata.__init__(self, primary, self.image_panel)
+        logger.warning("Initializing ImagePanelDetail")
         self.image_panel_detail = ImagePanelDetail(primary,
                                                    self.image_panel.canvas,
                                                    on_selection_changed=False,
@@ -71,6 +97,10 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
+        print("Setting title from ImageViewer")
+        logger.debug('This message should go to the log file')
+        logger.info('So should this')
+        logger.warning('And this, too')
         self.set_title()
 
         # define menus
@@ -110,6 +140,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         """
 
         file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        print("File Name is ", file_name)
         if file_name is None:
             the_title = "Image Viewer"
         elif isinstance(file_name, (list, tuple)):
@@ -153,7 +184,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         ----------
         event
         """
-
+        logger.warning("Calling populate_metaicon from handle_image_index_changed")
         self.populate_metaicon()
         self.show_valid_data()
 
@@ -198,9 +229,13 @@ class ImageViewer(Frame, WidgetWithMetadata):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        print("Setting title from update_reader")
         self.set_title()
         # refresh appropriate GUI elements
         self.image_panel_detail.make_blank()
+        #numeric_level = getattr(logging, loglevel.upper(), None)    
+        #print("Numeric Level {numeric_level}")
+        logger.warning("Calling populate_metaicon from update_reader")
         self.populate_metaicon()
         self.populate_metaviewer()
         self.show_valid_data()

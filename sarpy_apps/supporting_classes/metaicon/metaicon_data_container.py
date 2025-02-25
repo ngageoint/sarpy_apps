@@ -5,11 +5,13 @@ The container object for the metaicon object.
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
-
 import logging
+import math
 from datetime import datetime
 
 import numpy
+from scipy import special
+
 from scipy.constants import foot
 
 from sarpy.geometry import latlon
@@ -26,6 +28,13 @@ from sarpy.io.product.sidd2_elements.ExploitationFeatures import ExploitationCal
 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
 
+
+def tand(degrees):
+    radians = math.radians(degrees)
+    return math.tan(radians)
+
+def sind(angle_degrees):
+    return special.sindg(angle_degrees)
 
 class MetaIconDataContainer(object):
     """
@@ -284,35 +293,111 @@ class MetaIconDataContainer(object):
             except AttributeError:
                 pass
 
+        '''
+        Code from metaicon.m in matlab_sar
+        if isfield(meta,'SCPCOA')
+            Azimuth = meta.SCPCOA.AzimAng;
+            Layover = meta.SCPCOA.LayoverAng;
+            MultipathGround = -atan(tand(meta.SCPCOA.TwistAng) * sind(meta.SCPCOA.GrazeAng))*180/pi;
+            Multipath = mod(Azimuth - 180 + MultipathGround, 360);
+            Shadow = mod(Azimuth - 180, 360);
+        End
+        if isfield(meta,'SCPCOA')
+            text(8,105,['Azimuth: '  num2str(Azimuth, '%.1f') char(176)],white_flds{:});
+            text(8,83,['Graze: ' num2str(meta.SCPCOA.GrazeAng, '%.1f') char(176)],white_flds{:});
+            text(8,61,['Layover: ' num2str(Layover, '%.0f') char(176)],text_flds{:},'Color',[1 .66 0]);
+            text(8,39,['Shadow: ' num2str(Shadow, '%.0f') char(176)],text_flds{:},'Color',[0 .65 1]);
+            text(8,17,['Multipath: ' num2str(Multipath, '%.0f') char(176)],text_flds{:},'Color',[1 0 0]);
+            text(100,17,meta.SCPCOA.SideOfTrack,text_flds{:},'Color','y');
+            % Draw flight direction arrow
+            if meta.SCPCOA.SideOfTrack=='R'
+                arrow([120 17],[180 17],'Color',[1 1 0],'Width',2);
+            else
+                arrow([180 17],[120 17],'Color',[1 1 0],'Width',2);
+            end
+
+            if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
+                Shadow = Azimuth - 180 - MultipathGround;
+                Multipath = Azimuth - 180;
+                Layover = Layover - MultipathGround;
+            end
+
+        '''
+    
         def extract_scpcoa():
+            got_multipath = False
+            got_layover = False
+
             if sicd.SCPCOA is None:
                 return
-
+            #print("the whole thing", sicd)
             variables['side_of_track'] = sicd.SCPCOA.SideOfTrack
             azimuth = sicd.SCPCOA.AzimAng
             if azimuth is None:
                 return
+            variables['azimuth'] = azimuth
 
             north = ((360 - azimuth) % 360)
-            variables['azimuth'] = azimuth
             variables['north'] = north
-            variables['graze'] = sicd.SCPCOA.GrazeAng
-
+            
             layover = sicd.SCPCOA.LayoverAng
             if layover is not None:
-                variables['layover'] = ((layover-azimuth + 360) % 360)
-                variables['layover_display'] = layover
-
-            shadow = sicd.SCPCOA.Shadow
-            if shadow is None:
-                shadow = 180.0
-            variables['shadow'] = shadow
-            variables['shadow_display'] = ((shadow + azimuth + 360) % 360.0)
+                got_layover = True
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:
-                variables['multipath'] = ((multipath - azimuth + 360) % 360)
+                got_multipath = True
+
+            graze = sicd.SCPCOA.GrazeAng
+            if graze is not None:
+                variables['graze'] = graze
+
+            shadow = math.fmod(azimuth - 180, 360)
+            print('Azimuth is ', azimuth)
+            print("The layover value is ", layover)
+            print("The multipath is ", multipath)
+            print("The shadow value is ", shadow)
+
+            '''
+            if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
+            '''
+            if sicd.Grid.ImagePlane == 'SLANT':
+                if graze is None:
+                    return
+                twist_angle = sicd.SCPCOA.TwistAng 
+                if twist_angle is None: 
+                    return
+                print("Graze is ", graze)
+                print("The twist_angle is ", twist_angle)
+                #multi_path_ground = (math.atan(math.tan(twist_angle) * math.sin(graze))*-1)*180/math.pi
+                multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
+                shadow = azimuth -180 - multipath_ground
+                multipath = azimuth - 180
+                got_multipath = True
+                if got_layover:
+                    layover = layover - multipath_ground
+                print("Multipath Ground", multipath_ground)                
+                print("New Shadow ", shadow)
+                print("New multipath ", multipath)
+                print("New layover ", multipath)
+
+            #print(f"Shadow {shadow} and Shadow Display {variables['shadow_display']}")
+
+            if got_layover:
+                variables['layover'] = layover
+                #variables['layover'] = ((layover - azimuth + 360) % 360.0)
+                variables['layover_display'] = layover
+                #variables['layover_display'] = ((layover - azimuth + 360) % 360.0)
+            if got_multipath:
+                variables['multipath'] = multipath
+                #variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
                 variables['multipath_display'] = multipath
+                #variables['multipath_display'] = ((multipath - azimuth + 360) % 360.0)
+            variables['shadow'] = shadow
+            #variables['shadow_display'] = ((shadow + azimuth + 360) % 360.0)
+            variables['shadow_display'] = shadow
+
+
 
         def extract_imp_resp():
             if sicd.Grid is not None:
