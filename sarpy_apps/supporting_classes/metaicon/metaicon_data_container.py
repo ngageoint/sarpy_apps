@@ -327,6 +327,7 @@ class MetaIconDataContainer(object):
         def extract_scpcoa():
             got_multipath = False
             got_layover = False
+            ground_project = False
 
             if sicd.SCPCOA is None:
                 return
@@ -361,42 +362,35 @@ class MetaIconDataContainer(object):
             '''
             if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
             '''
-            if sicd.Grid.ImagePlane == 'SLANT':
+            # if sicd.Grid.ImagePlane == 'SLANT':
+
+
+
+            variables['layover_display'] = layover
+            variables['multipath_display'] = multipath
+            variables['shadow_display'] = shadow
+
+            if (sicd.Grid is not None or sicd.Grid.ImagePlane == 'SLANT') and not ground_project:
                 if graze is None:
-                    return
+                    return   
                 twist_angle = sicd.SCPCOA.TwistAng 
                 if twist_angle is None: 
                     return
-                print("Graze is ", graze)
-                print("The twist_angle is ", twist_angle)
-                #multi_path_ground = (math.atan(math.tan(twist_angle) * math.sin(graze))*-1)*180/math.pi
+            
                 multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
-                shadow = azimuth -180 - multipath_ground
+                print("Multipath ground", multipath_ground)
+                layover = layover - multipath_ground
                 multipath = azimuth - 180
-                got_multipath = True
-                if got_layover:
-                    layover = layover - multipath_ground
-                print("Multipath Ground", multipath_ground)                
-                print("New Shadow ", shadow)
-                print("New multipath ", multipath)
-                print("New layover ", multipath)
+                shadow = azimuth - 180 - multipath_ground
 
-            #print(f"Shadow {shadow} and Shadow Display {variables['shadow_display']}")
+            variables['layover'] = ((layover - azimuth + 360) % 360.0)
+            variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
+            variables['shadow'] = ((shadow - azimuth + 360) % 360.0)
 
-            if got_layover:
-                variables['layover'] = layover
-                #variables['layover'] = ((layover - azimuth + 360) % 360.0)
-                variables['layover_display'] = layover
-                #variables['layover_display'] = ((layover - azimuth + 360) % 360.0)
-            if got_multipath:
-                variables['multipath'] = multipath
-                #variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
-                variables['multipath_display'] = multipath
-                #variables['multipath_display'] = ((multipath - azimuth + 360) % 360.0)
-            variables['shadow'] = shadow
-            #variables['shadow_display'] = ((shadow + azimuth + 360) % 360.0)
-            variables['shadow_display'] = shadow
 
+            print("Shadow Arrow is ",variables['shadow'])
+            print("Multipath Arrow is ",variables['multipath'])
+            print("Layover Arrow is ",variables['layover'])
 
 
         def extract_imp_resp():
