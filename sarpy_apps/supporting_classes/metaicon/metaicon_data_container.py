@@ -412,7 +412,7 @@ class MetaIconDataContainer(object):
                 except AttributeError:
                     pass
             try:
-                if sicd.RadarCollection.Waveform[0].TxRFBandwidth is not None: 
+                if sicd.RadarCollection.Waveform is not None: 
                     variables['tx_rf_bandwidth'] = sicd.RadarCollection.Waveform[0].TxRFBandwidth*1e-6
             except AttributeError:
                 pass
