@@ -23,8 +23,7 @@ from sarpy.io.received.base import CRSDTypeReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.color_utils import rgb_to_hex
 from tk_builder.image_reader import NumpyCanvasImageReader
-#from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
-
+from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
 logger = logging.getLogger(__name__)
 
 
@@ -43,20 +42,20 @@ _ARROW_WIDTH = {
     'north_width': 2,
 }
 
-import sys
-import os
-directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
-print("Current dir", directory)
-parent_directory = os.getcwd()
-print("Parent dir", parent_directory)
-classes_dir = 'supporting_classes'
-metaicon_dir = 'metaicon'
-full_class_path = os.path.join(parent_directory, classes_dir)
-print("Full path for classes", full_class_path)
-metaicon_path = os.path.join(full_class_path, metaicon_dir)
-print("Metaicon path", metaicon_path)
-sys.path.append(full_class_path)
-from metaicon.metaicon_data_container import MetaIconDataContainer
+# import sys
+# import os
+# directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
+# print("Current dir", directory)
+# parent_directory = os.getcwd()
+# print("Parent dir", parent_directory)
+# classes_dir = 'supporting_classes'
+# metaicon_dir = 'metaicon'
+# full_class_path = os.path.join(parent_directory, classes_dir)
+# print("Full path for classes", full_class_path)
+# metaicon_path = os.path.join(full_class_path, metaicon_dir)
+# print("Metaicon path", metaicon_path)
+# sys.path.append(full_class_path)
+# from metaicon.metaicon_data_container import MetaIconDataContainer
 
 
 class MetaIcon(ImagePanel):
@@ -65,8 +64,8 @@ class MetaIcon(ImagePanel):
     """
 
     def __init__(self, parent, **kwargs):
+        print("Metaicon init")
         logger.warning("MetaIcon __init__")
-        print("Initializing MetaIcon")
         self.parent = parent
         #print("Data container ", self.metaicon.data_container)
 

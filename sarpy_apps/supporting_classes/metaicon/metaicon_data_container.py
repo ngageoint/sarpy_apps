@@ -119,6 +119,7 @@ class MetaIconDataContainer(object):
             The polarization string.
         """
 
+        print("MetaIconDataContainer init")
         self.lat = lat
         self.lon = lon
 

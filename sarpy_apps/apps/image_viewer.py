@@ -20,11 +20,31 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame
 from tk_builder.widgets.pyplot_frame import ImagePanelDetail
 
+import sys
+directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
+# print("Current dir", directory)
+os.chdir('..')
+parent_directory = os.getcwd()
+# print("Parent dir", parent_directory)
+package_dir = 'sarpy_apps'
+package_path = os.path.join(parent_directory, package_dir)
+print("package path must be in sys path to run locally ", package_path)
+sys.path.append(package_path)
+#sub_package_dir = 'sarpy_apps'
+# sub_package_path = os.path.join(package_path, sub_package_dir)
+# sys.path.append(sub_package_path)
+# classes_dir = 'supporting_classes'
+# full_class_path = os.path.join(parent_directory, package_dir)
+# full_class_path = os.path.join(full_class_path, sub_package_dir)
+# full_class_path = os.path.join(full_class_path, classes_dir)
+# print("Full path for classes", full_class_path)
+# sys.path.append(full_class_path)
+#from widget_with_metadata import WidgetWithMetadata
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
     DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \
     GeneralCanvasImageReader
-#from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
+from sarpy_apps.supporting_classes.widget_with_metadata import WidgetWithMetadata
 
 from sarpy.io.general.base import BaseReader
 from sarpy.io.complex.base import SICDTypeReader
@@ -39,19 +59,7 @@ from sarpy.io import open as open_general
 #from widget_with_metadata import WidgetWithMetadata
 # error 
 #from supporting_classes.widget_with_metadata import WidgetWithMetadata
-import sys
 
-
-directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
-print("Current dir", directory)
-#os.chdir('..')
-parent_directory = os.getcwd()
-print("Parent dir", parent_directory)
-classes_dir = 'supporting_classes'
-full_class_path = os.path.join(parent_directory, classes_dir)
-print("Full path for classes", full_class_path)
-sys.path.append(full_class_path)
-from widget_with_metadata import WidgetWithMetadata
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
