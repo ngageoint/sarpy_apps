@@ -28,18 +28,11 @@ parent_directory = os.getcwd()
 # print("Parent dir", parent_directory)
 package_dir = 'sarpy_apps'
 package_path = os.path.join(parent_directory, package_dir)
+#Take out later, but good reminder for now. Path should be set before run
+#Remover before integration
 print("package path must be in sys path to run locally ", package_path)
 sys.path.append(package_path)
-#sub_package_dir = 'sarpy_apps'
-# sub_package_path = os.path.join(package_path, sub_package_dir)
-# sys.path.append(sub_package_path)
-# classes_dir = 'supporting_classes'
-# full_class_path = os.path.join(parent_directory, package_dir)
-# full_class_path = os.path.join(full_class_path, sub_package_dir)
-# full_class_path = os.path.join(full_class_path, classes_dir)
-# print("Full path for classes", full_class_path)
-# sys.path.append(full_class_path)
-#from widget_with_metadata import WidgetWithMetadata
+
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
     DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \
@@ -52,17 +45,6 @@ from sarpy.io.product.base import SIDDTypeReader
 from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.received.base import CRSDTypeReader
 from sarpy.io import open as open_general
-
-#import supporting_classes
-#import supporting_classes.widget_with_metadata
-
-#from widget_with_metadata import WidgetWithMetadata
-# error 
-#from supporting_classes.widget_with_metadata import WidgetWithMetadata
-
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 class AppVariables(object):
     browse_directory = StringDescriptor(
@@ -94,9 +76,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         self.primary.add(
             self.image_panel, width=700, height=700, padx=5, pady=5, sticky=tkinter.NSEW,
             stretch=tkinter.FIRST)
-        logger.warning("Initializing WidgetWithMetadata")
         WidgetWithMetadata.__init__(self, primary, self.image_panel)
-        logger.warning("Initializing ImagePanelDetail")
         self.image_panel_detail = ImagePanelDetail(primary,
                                                    self.image_panel.canvas,
                                                    on_selection_changed=False,
@@ -105,10 +85,8 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
+        #Remover before integration
         print("Setting title from ImageViewer")
-        logger.debug('This message should go to the log file')
-        logger.info('So should this')
-        logger.warning('And this, too')
         self.set_title()
 
         # define menus
@@ -148,6 +126,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         """
 
         file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
+        #Remover before integration
         print("File Name is ", file_name)
         if file_name is None:
             the_title = "Image Viewer"
@@ -192,7 +171,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
         ----------
         event
         """
-        logger.warning("Calling populate_metaicon from handle_image_index_changed")
         self.populate_metaicon()
         self.show_valid_data()
 
@@ -237,13 +215,11 @@ class ImageViewer(Frame, WidgetWithMetadata):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
+        #Remover before integration
         print("Setting title from update_reader")
         self.set_title()
         # refresh appropriate GUI elements
         self.image_panel_detail.make_blank()
-        #numeric_level = getattr(logging, loglevel.upper(), None)    
-        #print("Numeric Level {numeric_level}")
-        logger.warning("Calling populate_metaicon from update_reader")
         self.populate_metaicon()
         self.populate_metaviewer()
         self.show_valid_data()

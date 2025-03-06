@@ -18,23 +18,6 @@ from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader,
 from sarpy_apps.supporting_classes.metaviewer import Metaviewer
 from sarpy_apps.supporting_classes.metaicon.metaicon import MetaIcon
 
-# import sys
-# import os
-# directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
-# #print("Current dir", directory)
-# parent_directory = os.getcwd()
-# #print("Parent dir", parent_directory)
-# classes_dir = 'supporting_classes'
-# metaicon_dir = 'metaicon'
-# full_class_path = os.path.join(parent_directory, classes_dir)
-# #print("Full path for classes", full_class_path)
-# metaicon_path = os.path.join(full_class_path, metaicon_dir)
-# #print("Metaicon path", metaicon_path)
-# sys.path.append(full_class_path)
-# #print("Sys modules",sys.modules)
-# #print("Sys path", sys.path)
-# from metaicon.metaicon import MetaIcon
-
 
 class WidgetWithMetadata(object):
     """
@@ -50,8 +33,9 @@ class WidgetWithMetadata(object):
         image_panel : None|ImagePanel
             An associated image panel
         """
+        #Remover before integration
         print(f"Hello from Inside {__file__}")
-        print("dir is ",dir())
+        #print("dir is ",dir())
         self.metaicon_popup_panel = PopupWindow(master)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
 

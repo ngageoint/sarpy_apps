@@ -119,7 +119,6 @@ class MetaIconDataContainer(object):
             The polarization string.
         """
 
-        print("MetaIconDataContainer init")
         self.lat = lat
         self.lon = lon
 
@@ -354,11 +353,14 @@ class MetaIconDataContainer(object):
             if graze is not None:
                 variables['graze'] = graze
 
-            shadow = math.fmod(azimuth - 180, 360)
-            print('Azimuth is ', azimuth)
-            print("The layover value is ", layover)
-            print("The multipath is ", multipath)
-            print("The shadow value is ", shadow)
+            shadow = ((azimuth - 180) % 360)
+            #cut and paste output into matlab and get results
+            #Remover before integration
+            print('Azimuth = ', round(azimuth,4))
+            print("Layover = ", round(layover,4))
+            print("Multipath = ", round(multipath,4))
+            print("GrazeAng = ", round(graze, 4))
+            print("Shadow = ", round(shadow, 4))
 
             '''
             if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
@@ -378,8 +380,9 @@ class MetaIconDataContainer(object):
                 if twist_angle is None: 
                     return
             
+                print("TwistAng = ", twist_angle)
                 multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
-                print("Multipath ground", multipath_ground)
+                print("MultipathGround  is", multipath_ground)
                 layover = layover - multipath_ground
                 multipath = azimuth - 180
                 shadow = azimuth - 180 - multipath_ground

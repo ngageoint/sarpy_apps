@@ -42,21 +42,6 @@ _ARROW_WIDTH = {
     'north_width': 2,
 }
 
-# import sys
-# import os
-# directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
-# print("Current dir", directory)
-# parent_directory = os.getcwd()
-# print("Parent dir", parent_directory)
-# classes_dir = 'supporting_classes'
-# metaicon_dir = 'metaicon'
-# full_class_path = os.path.join(parent_directory, classes_dir)
-# print("Full path for classes", full_class_path)
-# metaicon_path = os.path.join(full_class_path, metaicon_dir)
-# print("Metaicon path", metaicon_path)
-# sys.path.append(full_class_path)
-# from metaicon.metaicon_data_container import MetaIconDataContainer
-
 
 class MetaIcon(ImagePanel):
     """
@@ -64,15 +49,10 @@ class MetaIcon(ImagePanel):
     """
 
     def __init__(self, parent, **kwargs):
-        print("Metaicon init")
-        logger.warning("MetaIcon __init__")
         self.parent = parent
-        #print("Data container ", self.metaicon.data_container)
 
         ImagePanel.__init__(self, parent, **kwargs)
         self._metadata_container = MetaIconDataContainer()
-        #print("_metadata_container", self._metadata_container)
-        logger.warning("Made it to MetaIcon init")
 
 
         self._margin_percent = 5
@@ -219,7 +199,6 @@ class MetaIcon(ImagePanel):
         -------
         None
         """
-        logger.warning('Create from Reader {}'.format(type(reader)))
 
         if isinstance(reader, str):
             reader = open_complex(reader)
@@ -334,6 +313,7 @@ class MetaIcon(ImagePanel):
         """
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
+        #Remover before integration
         print("Shadow arrow coords ", self.shadow_arrow_angle)
         # noinspection PyTypeChecker
         return self._get_arrow_coords(self.shadow_arrow_angle)
@@ -400,7 +380,6 @@ class MetaIcon(ImagePanel):
         -------
         None
         """
-        print("In draw shadow arrow")
         self.canvas.create_new_arrow(
             self.shadow_arrow_coords, increment_color=False, make_current=False, color=_COLORS['shadow'],
             regular_options={'width': _ARROW_WIDTH['shadow_width']}, 
