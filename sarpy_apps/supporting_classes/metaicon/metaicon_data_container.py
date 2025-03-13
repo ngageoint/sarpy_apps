@@ -5,6 +5,7 @@ The container object for the metaicon object.
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
+
 import logging
 import math
 from datetime import datetime
@@ -337,35 +338,48 @@ class MetaIconDataContainer(object):
             if azimuth is None:
                 return
             variables['azimuth'] = azimuth
+            print('Azimuth = ', round(azimuth,4))
 
             north = ((360 - azimuth) % 360)
             variables['north'] = north
-            
+
+            print("North = ", round(north,4)) 
+
             layover = sicd.SCPCOA.LayoverAng
             if layover is not None:
                 got_layover = True
+            print("Layover =", round(layover,4))
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:
                 got_multipath = True
+            print("Multipath = ", round(multipath,4))
 
             graze = sicd.SCPCOA.GrazeAng
-            if graze is not None:
-                variables['graze'] = graze
+            if graze is None:
+                return
+            variables['graze'] = graze
+            print("GrazeAng = ", round(graze, 4))
 
+            twist_angle = sicd.SCPCOA.TwistAng 
+            if twist_angle is None: 
+                return
+            print("TwistAng = ", twist_angle)
+
+            multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
+            multipath = (azimuth - 180 + multipath_ground) % 360
             shadow = ((azimuth - 180) % 360)
             #cut and paste output into matlab and get results
             #Remover before integration
-            print('Azimuth = ', round(azimuth,4))
-            print("Layover = ", round(layover,4))
-            print("Multipath = ", round(multipath,4))
-            print("GrazeAng = ", round(graze, 4))
-            print("Shadow = ", round(shadow, 4))
+
+            print("MultipathGround 1 is", multipath_ground)
+            print("Multipath 2 is ", round(multipath,4))
+            print("Shadow 1 is  ", round(shadow, 4))
+
 
             '''
             if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
-            '''
-            # if sicd.Grid.ImagePlane == 'SLANT':
+            ''' 
 
 
 
@@ -374,15 +388,6 @@ class MetaIconDataContainer(object):
             variables['shadow_display'] = shadow
 
             if (sicd.Grid is not None or sicd.Grid.ImagePlane == 'SLANT') and not ground_project:
-                if graze is None:
-                    return   
-                twist_angle = sicd.SCPCOA.TwistAng 
-                if twist_angle is None: 
-                    return
-            
-                print("TwistAng = ", twist_angle)
-                multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
-                print("MultipathGround  is", multipath_ground)
                 layover = layover - multipath_ground
                 multipath = azimuth - 180
                 shadow = azimuth - 180 - multipath_ground
@@ -391,11 +396,24 @@ class MetaIconDataContainer(object):
             variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
             variables['shadow'] = ((shadow - azimuth + 360) % 360.0)
 
+            print("Shadow 2 is ",shadow)
+            print("Multipath 3 is ",multipath)
+            print("Layover 2 is ",layover)
+            print("North 2 is ",north)
 
-            print("Shadow Arrow is ",variables['shadow'])
-            print("Multipath Arrow is ",variables['multipath'])
-            print("Layover Arrow is ",variables['layover'])
+            #This logic is in MATLAB but does not work here 
+            # layover = 90-(layover-azimuth)
+            # shadow = 90-(shadow-azimuth)
+            # north = azimuth+90
+            # multipath = north-multipath;
+            # variables['layover'] = layover
+            # variables['multipath'] = multipath
+            # variables['shadow'] = shadow 
 
+            # print("Shadow 3 is ",variables['shadow'])
+            # print("Multipath 4 is ",variables['multipath'])
+            # print("Layover 3 is ",variables['layover'])
+            # print("North 3 is ",variables['north'])
 
         def extract_imp_resp():
             if sicd.Grid is not None:

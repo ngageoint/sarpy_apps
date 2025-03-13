@@ -46,6 +46,7 @@ from sarpy.io.phase_history.base import CPHDTypeReader
 from sarpy.io.received.base import CRSDTypeReader
 from sarpy.io import open as open_general
 
+
 class AppVariables(object):
     browse_directory = StringDescriptor(
         'browse_directory', default_value=os.path.expanduser('~'),
@@ -171,6 +172,7 @@ class ImageViewer(Frame, WidgetWithMetadata):
         ----------
         event
         """
+
         self.populate_metaicon()
         self.show_valid_data()
 

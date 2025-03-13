@@ -6,8 +6,7 @@ used only by extension.
 __author__ = "Thomas McCullough"
 __classification__ = "UNCLASSIFIED"
 
-#import tkinter
-import logging
+import tkinter
 
 #from tk_builder.panels.image_panel import ImagePanel
 #from tk_builder.image_reader import CanvasImageReader
@@ -58,6 +57,7 @@ class WidgetWithMetadata(object):
         ----------
         image_reader : None|CanvasImageReader
         """
+
         if isinstance(image_reader, ComplexCanvasImageReader):
             self.metaicon.create_from_reader(image_reader.base_reader, index=image_reader.index)
         elif isinstance(image_reader, DerivedCanvasImageReader):
@@ -83,6 +83,7 @@ class WidgetWithMetadata(object):
         ----------
         image_reader : None|CanvasImageReader
         """
+
         if image_reader is None:
             self.metaviewer.empty_entries()
 
@@ -95,9 +96,8 @@ class WidgetWithMetadata(object):
         """
         Populate the metaviewer.
         """
+
         if self.image_panel is None:
             self.populate_metaviewer_from_reader(None)
         else:
             self.populate_metaviewer_from_reader(self.image_panel.image_reader)
-
-

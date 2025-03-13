@@ -24,6 +24,7 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.utils.color_utils import rgb_to_hex
 from tk_builder.image_reader import NumpyCanvasImageReader
 from sarpy_apps.supporting_classes.metaicon.metaicon_data_container import MetaIconDataContainer
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,10 +51,8 @@ class MetaIcon(ImagePanel):
 
     def __init__(self, parent, **kwargs):
         self.parent = parent
-
         ImagePanel.__init__(self, parent, **kwargs)
         self._metadata_container = MetaIconDataContainer()
-
 
         self._margin_percent = 5
         self._font_family = 'Times New Roman'
@@ -380,6 +379,7 @@ class MetaIcon(ImagePanel):
         -------
         None
         """
+
         self.canvas.create_new_arrow(
             self.shadow_arrow_coords, increment_color=False, make_current=False, color=_COLORS['shadow'],
             regular_options={'width': _ARROW_WIDTH['shadow_width']}, 
@@ -476,7 +476,6 @@ class MetaIcon(ImagePanel):
             The arrow pixel coordinates.
         """
 
-        #print("Adjust arrow aspect angle ", arrow_angle)
         if arrow_angle is None:
             return 0., 0., 0., 0.
         if arrow_length <= 0.0:
