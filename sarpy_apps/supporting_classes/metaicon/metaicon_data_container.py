@@ -332,39 +332,38 @@ class MetaIconDataContainer(object):
 
             if sicd.SCPCOA is None:
                 return
-            #print("the whole thing", sicd)
+
             variables['side_of_track'] = sicd.SCPCOA.SideOfTrack
             azimuth = sicd.SCPCOA.AzimAng
             if azimuth is None:
                 return
             variables['azimuth'] = azimuth
-            print('Azimuth = ', round(azimuth,4))
+
 
             north = ((360 - azimuth) % 360)
             variables['north'] = north
-
-            print("North = ", round(north,4)) 
+            variables['graze'] = sicd.SCPCOA.GrazeAng
 
             layover = sicd.SCPCOA.LayoverAng
             if layover is not None:
                 got_layover = True
-            print("Layover =", round(layover,4))
+       
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:
                 got_multipath = True
-            print("Multipath = ", round(multipath,4))
+         
 
             graze = sicd.SCPCOA.GrazeAng
             if graze is None:
                 return
             variables['graze'] = graze
-            print("GrazeAng = ", round(graze, 4))
+
 
             twist_angle = sicd.SCPCOA.TwistAng 
             if twist_angle is None: 
                 return
-            print("TwistAng = ", twist_angle)
+
 
             multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
             multipath = (azimuth - 180 + multipath_ground) % 360
@@ -372,9 +371,7 @@ class MetaIconDataContainer(object):
             #cut and paste output into matlab and get results
             #Remover before integration
 
-            print("MultipathGround 1 is", multipath_ground)
-            print("Multipath 2 is ", round(multipath,4))
-            print("Shadow 1 is  ", round(shadow, 4))
+
 
 
             '''
@@ -396,10 +393,7 @@ class MetaIconDataContainer(object):
             variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
             variables['shadow'] = ((shadow - azimuth + 360) % 360.0)
 
-            print("Shadow 2 is ",shadow)
-            print("Multipath 3 is ",multipath)
-            print("Layover 2 is ",layover)
-            print("North 2 is ",north)
+
 
             #This logic is in MATLAB but does not work here 
             # layover = 90-(layover-azimuth)
@@ -410,10 +404,7 @@ class MetaIconDataContainer(object):
             # variables['multipath'] = multipath
             # variables['shadow'] = shadow 
 
-            # print("Shadow 3 is ",variables['shadow'])
-            # print("Multipath 4 is ",variables['multipath'])
-            # print("Layover 3 is ",variables['layover'])
-            # print("North 3 is ",variables['north'])
+
 
         def extract_imp_resp():
             if sicd.Grid is not None:

@@ -7,7 +7,6 @@ __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
 import os
-import logging
 import sys
 
 import tkinter
@@ -22,15 +21,12 @@ from tk_builder.widgets.pyplot_frame import ImagePanelDetail
 
 import sys
 directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
-# print("Current dir", directory)
 os.chdir('..')
 parent_directory = os.getcwd()
-# print("Parent dir", parent_directory)
 package_dir = 'sarpy_apps'
 package_path = os.path.join(parent_directory, package_dir)
 #Take out later, but good reminder for now. Path should be set before run
 #Remover before integration
-print("package path must be in sys path to run locally ", package_path)
 sys.path.append(package_path)
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
@@ -86,8 +82,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
 
         self.primary.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-        #Remover before integration
-        print("Setting title from ImageViewer")
         self.set_title()
 
         # define menus
@@ -127,8 +121,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
         """
 
         file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
-        #Remover before integration
-        print("File Name is ", file_name)
         if file_name is None:
             the_title = "Image Viewer"
         elif isinstance(file_name, (list, tuple)):
@@ -217,8 +209,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
         # update the reader
         self.variables.image_reader = the_reader
         self.image_panel.set_image_reader(the_reader)
-        #Remover before integration
-        print("Setting title from update_reader")
         self.set_title()
         # refresh appropriate GUI elements
         self.image_panel_detail.make_blank()
