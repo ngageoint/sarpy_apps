@@ -28,6 +28,7 @@ package_path = os.path.join(parent_directory, package_dir)
 #Take out later, but good reminder for now. Path should be set before run
 #Remover before integration
 sys.path.append(package_path)
+print("In local copy of image_viewer.py")
 
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \

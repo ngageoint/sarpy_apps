@@ -342,7 +342,6 @@ class MetaIconDataContainer(object):
 
             north = ((360 - azimuth) % 360)
             variables['north'] = north
-            variables['graze'] = sicd.SCPCOA.GrazeAng
 
             layover = sicd.SCPCOA.LayoverAng
             if layover is not None:
@@ -368,22 +367,14 @@ class MetaIconDataContainer(object):
             multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
             multipath = (azimuth - 180 + multipath_ground) % 360
             shadow = ((azimuth - 180) % 360)
-            #cut and paste output into matlab and get results
-            #Remover before integration
-
-
-
-
-            '''
-            if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
-            ''' 
-
-
-
             variables['layover_display'] = layover
             variables['multipath_display'] = multipath
             variables['shadow_display'] = shadow
 
+            #cut and paste output into matlab and get results
+            '''
+            if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
+            ''' 
             if (sicd.Grid is not None or sicd.Grid.ImagePlane == 'SLANT') and not ground_project:
                 layover = layover - multipath_ground
                 multipath = azimuth - 180
@@ -392,8 +383,6 @@ class MetaIconDataContainer(object):
             variables['layover'] = ((layover - azimuth + 360) % 360.0)
             variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
             variables['shadow'] = ((shadow - azimuth + 360) % 360.0)
-
-
 
             #This logic is in MATLAB but does not work here 
             # layover = 90-(layover-azimuth)
