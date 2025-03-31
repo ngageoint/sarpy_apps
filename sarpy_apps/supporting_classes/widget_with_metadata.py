@@ -32,9 +32,6 @@ class WidgetWithMetadata(object):
         image_panel : None|ImagePanel
             An associated image panel
         """
-        #Remover before integration
-        print(f"Hello from Inside {__file__}")
-        #print("dir is ",dir())
         self.metaicon_popup_panel = PopupWindow(master)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
 
