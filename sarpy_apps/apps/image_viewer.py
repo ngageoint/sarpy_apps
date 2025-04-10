@@ -18,18 +18,6 @@ from tk_builder.image_reader import CanvasImageReader
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.widgets.basic_widgets import Frame
 from tk_builder.widgets.pyplot_frame import ImagePanelDetail
-
-import sys
-directory = os.path.dirname(os.path.abspath(sys.argv[0])) 
-os.chdir('..')
-parent_directory = os.getcwd()
-package_dir = 'sarpy_apps'
-package_path = os.path.join(parent_directory, package_dir)
-#Take out later, but good reminder for now. Path should be set before run
-#Remover before integration
-sys.path.append(package_path)
-print("In local copy of image_viewer.py")
-
 from sarpy_apps.supporting_classes.file_filters import common_use_collection
 from sarpy_apps.supporting_classes.image_reader import SICDTypeCanvasImageReader, \
     DerivedCanvasImageReader, CPHDTypeCanvasImageReader, CRSDTypeCanvasImageReader, \

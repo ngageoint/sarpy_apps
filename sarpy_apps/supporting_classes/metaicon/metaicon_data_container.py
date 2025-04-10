@@ -294,37 +294,6 @@ class MetaIconDataContainer(object):
             except AttributeError:
                 pass
 
-        '''
-        Code from metaicon.m in matlab_sar
-        if isfield(meta,'SCPCOA')
-            Azimuth = meta.SCPCOA.AzimAng;
-            Layover = meta.SCPCOA.LayoverAng;
-            MultipathGround = -atan(tand(meta.SCPCOA.TwistAng) * sind(meta.SCPCOA.GrazeAng))*180/pi;
-            Multipath = mod(Azimuth - 180 + MultipathGround, 360);
-            Shadow = mod(Azimuth - 180, 360);
-        End
-        if isfield(meta,'SCPCOA')
-            text(8,105,['Azimuth: '  num2str(Azimuth, '%.1f') char(176)],white_flds{:});
-            text(8,83,['Graze: ' num2str(meta.SCPCOA.GrazeAng, '%.1f') char(176)],white_flds{:});
-            text(8,61,['Layover: ' num2str(Layover, '%.0f') char(176)],text_flds{:},'Color',[1 .66 0]);
-            text(8,39,['Shadow: ' num2str(Shadow, '%.0f') char(176)],text_flds{:},'Color',[0 .65 1]);
-            text(8,17,['Multipath: ' num2str(Multipath, '%.0f') char(176)],text_flds{:},'Color',[1 0 0]);
-            text(100,17,meta.SCPCOA.SideOfTrack,text_flds{:},'Color','y');
-            % Draw flight direction arrow
-            if meta.SCPCOA.SideOfTrack=='R'
-                arrow([120 17],[180 17],'Color',[1 1 0],'Width',2);
-            else
-                arrow([180 17],[120 17],'Color',[1 1 0],'Width',2);
-            end
-
-            if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
-                Shadow = Azimuth - 180 - MultipathGround;
-                Multipath = Azimuth - 180;
-                Layover = Layover - MultipathGround;
-            end
-
-        '''
-    
         def extract_scpcoa():
             got_multipath = False
             got_layover = False
@@ -338,8 +307,6 @@ class MetaIconDataContainer(object):
             if azimuth is None:
                 return
             variables['azimuth'] = azimuth
-
-
             north = ((360 - azimuth) % 360)
             variables['north'] = north
 
@@ -371,10 +338,6 @@ class MetaIconDataContainer(object):
             variables['multipath_display'] = multipath
             variables['shadow_display'] = shadow
 
-            #cut and paste output into matlab and get results
-            '''
-            if (~isfield(meta,'Grid') || strcmp(meta.Grid.ImagePlane,'SLANT')) && ~p.Results.GroundProject    
-            ''' 
             if (sicd.Grid is not None or sicd.Grid.ImagePlane == 'SLANT') and not ground_project:
                 layover = layover - multipath_ground
                 multipath = azimuth - 180
@@ -383,17 +346,6 @@ class MetaIconDataContainer(object):
             variables['layover'] = ((layover - azimuth + 360) % 360.0)
             variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
             variables['shadow'] = ((shadow - azimuth + 360) % 360.0)
-
-            #This logic is in MATLAB but does not work here 
-            # layover = 90-(layover-azimuth)
-            # shadow = 90-(shadow-azimuth)
-            # north = azimuth+90
-            # multipath = north-multipath;
-            # variables['layover'] = layover
-            # variables['multipath'] = multipath
-            # variables['shadow'] = shadow 
-
-
 
         def extract_imp_resp():
             if sicd.Grid is not None:
