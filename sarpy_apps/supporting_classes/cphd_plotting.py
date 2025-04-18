@@ -14,6 +14,8 @@ from tkinter import ttk
 
 import matplotlib.backends.backend_tkagg as mpl_tk
 import matplotlib.figure as mpl_fig
+import matplotlib.mlab as mpl_mlab
+import matplotlib.pyplot as plt
 import numpy as np
 import plotly.colors
 import plotly.graph_objects as go
@@ -387,15 +389,11 @@ class CphdVectorPower:
             self.pn_ref_line.set_ydata([self.pn_ref] * 2)
             self.pn_ref_marker.set_label(f'PNRef={self.pn_ref}')
             self.sn_ref_line.set_label(f'SNRef={self.sn_ref}')
+        else:
+            self.pn_ref_marker.set_label('_hidden_')
+            self.sn_ref_line.set_label('_hidden_')
 
-        pvp_fields = ['FX1', 'FX2', 'SC0', 'SCSS', 'TOA1', 'TOA2']
-        if self.has_signal:
-            pvp_fields.append('SIGNAL')
-        if self.has_fxn:
-            pvp_fields.extend(['FXN1', 'FXN2'])
-        if self.has_toae:
-            pvp_fields.extend(['TOAE1', 'TOAE2'])
-        self.pvps = {k: self.cphd_reader.read_pvp_variable(k, index=channel_id) for k in pvp_fields}
+        self.pvps = self.cphd_reader.read_pvp_array(index=channel_id)
 
         self.selected_vector.set(0)
         self._update_slider(0)
@@ -454,7 +452,11 @@ class CphdVectorPower:
 
         self.power_line[spectral_domain].set_data(spectral_domain_averaged, spectral_power_averaged)
 
-        if self.sn_ref is not None:
+        has_noise_params = self.sn_ref is not None and vector_index < 500
+        self.pn_ref_line.set_visible(has_noise_params)
+        self.pn_ref_marker.set_visible(has_noise_params)
+        self.sn_ref_line.set_visible(has_noise_params)
+        if has_noise_params:
             self.pn_ref_marker.set_data((sc1 + sc2) / 2, self.pn_ref)
             sn_ref_bw = self.bn_ref / scss * np.array([-1/2, 1/2])
             self.sn_ref_line.set_data(sn_ref_bw, self.sn_ref * np.ones_like(sn_ref_bw))
@@ -474,11 +476,259 @@ class CphdVectorPower:
             title_parts.append(f"SIGNAL[{vector_index}]={self.pvps['SIGNAL'][vector_index]}")
         self.ax['FX'].set_title('\n'.join(title_parts))
 
-        if self.sn_ref is not None:
+        if has_noise_params:
             self.ax['TOA'].set_title(f'BNRef={self.bn_ref}')
 
         for ax in self.ax.values():
             self._update_legend(ax)
 
         # required to update canvas and attached toolbar!
+        self.canvas.draw_idle()
+
+
+class CphdVectorTFR:
+    """
+    Create a tool to visualize a CPHD vector's time-frequency representation
+    """
+    def __init__(self, root, cphd_reader):
+        self.cphd_reader = cphd_reader
+        cphd_domain = cphd_reader.cphd_meta.Global.DomainType
+        if cphd_domain != 'FX':
+            root.destroy()
+            raise NotImplementedError(f'{cphd_domain}-domain CPHDs have not been implemented yet. '
+                                      'Only FX-domain CPHDs are supported')
+        ref_ch_id = cphd_reader.cphd_meta.Channel.RefChId
+        self.channel_datas = {x.Identifier: x for x in cphd_reader.cphd_meta.Data.Channels}
+        self.channel_parameters = {x.Identifier: x for x in cphd_reader.cphd_meta.Channel.Parameters}
+        assert ref_ch_id in self.channel_datas
+        self.has_signal = cphd_reader.cphd_meta.PVP.SIGNAL is not None
+        self.has_fxn = cphd_reader.cphd_meta.PVP.FXN1 is not None and cphd_reader.cphd_meta.PVP.FXN2 is not None
+        self.has_toae = cphd_reader.cphd_meta.PVP.TOAE1 is not None and cphd_reader.cphd_meta.PVP.TOAE2 is not None
+
+        # prepare figure
+        with plt.style.context('dark_background'):
+            fig = mpl_fig.Figure(figsize=(8, 8), dpi=100, facecolor='#0A1B2C')
+            self.ax = fig.add_subplot(xlabel='Frequency [Hz]', ylabel='ΔTOA [s]', facecolor='#0A1B2C')
+            self.ax.set_title('PLACE\nHOLDER', pad=36)
+            _, _, _, self.im = self.ax.specgram(np.random.default_rng().random(1000).astype(np.complex64),
+                                                cmap='gray')
+            self.colorbar = fig.colorbar(self.im, ax=self.ax, location='left')
+
+            pvp_props = {
+                'normal': {
+                    'dashes': (4, 8),
+                    'color': 'cyan',
+                },
+                'extended': {
+                    'dashes': (0, 6, 4, 2),
+                    'color': 'magenta',
+                },
+            }
+
+            self.fx_objects = {}
+            fx_pvps = {p: 'normal' for p in ('FX1', 'FX2')}
+            if self.has_fxn:
+                fx_pvps |= {p: 'extended' for p in ('FXN1', 'FXN2')}
+            for param, style_type in fx_pvps.items():
+                this_style = pvp_props[style_type]
+                self.fx_objects[param] = {
+                    'line': self.ax.axvline(0, **this_style),
+                    'label': self.ax.annotate(param, xy=(0, 1.03 + 0.03 * (style_type == 'extended')),
+                                            xycoords=('data', 'axes fraction'),
+                                            ha='center', color=this_style['color'])
+                }
+
+            self.toa_objects = {}
+            toa_pvps = {p: 'normal' for p in ('TOA1', 'TOA2')}
+            if self.has_toae:
+                toa_pvps |= {p: 'extended' for p in ('TOAE1', 'TOAE2')}
+            for param, style_type in toa_pvps.items():
+                this_style = pvp_props[style_type]
+                self.toa_objects[param] = {
+                    'line': self.ax.axhline(0, **this_style),
+                    'label': self.ax.annotate(param, xy=(1 + 0.07 * (style_type == 'extended'), 0),
+                                            xycoords=('axes fraction', 'data'),
+                                            va='center', color=this_style['color'])
+                }
+
+            self.lfm_eclipse_markers = {}
+            for when, where in itertools.product(('Early', 'Late'), ('Low', 'High')):
+                self.lfm_eclipse_markers[f'Fx{when}{where}'] = self.ax.scatter(
+                    x=0, y=0, color='chartreuse', s=256,
+                    marker={'Low': '4', 'High': '3'}[where],
+                    linewidths=4,
+                )
+            self.ax.legend([next(iter(self.lfm_eclipse_markers.values()))], ['LFMEclipse Frequencies'],
+                        bbox_to_anchor=(0, -0.03), loc='upper center')
+
+            fig.tight_layout()
+
+        mainframe = ttk.Frame(root, padding="3 3 3 3")
+        mainframe.grid(column=0, row=0, sticky=tkinter.NSEW)
+        root.columnconfigure(index=0, weight=1)
+        root.rowconfigure(index=0, weight=1)
+        root.wm_title("CPHD - Vector Spectrogram")
+        self.canvas = mpl_tk.FigureCanvasTkAgg(fig, master=mainframe)  # A tk.DrawingArea.
+        self.canvas.draw()
+
+        # pack_toolbar=False will make it easier to use a layout manager later on.
+        toolbar = mpl_tk.NavigationToolbar2Tk(self.canvas, mainframe, pack_toolbar=False)
+        toolbar.update()
+
+        self.selected_channel = tkinter.StringVar(value=ref_ch_id)
+        self.channel_select = ttk.Combobox(master=mainframe,
+                                           textvariable=self.selected_channel,
+                                           values=list(self.channel_datas),
+                                           width=50,
+                                           state='readonly')
+        self.channel_select.bind('<<ComboboxSelected>>', self._update_channel)
+
+        self.should_autoscale = tkinter.BooleanVar(value=True)
+        autoscale_control = tkinter.Checkbutton(master=mainframe, text="Autoscale axes?",
+                                                variable=self.should_autoscale,
+                                                command=functools.partial(self._autoscale, draw=True))
+
+        self.should_autoremap = tkinter.BooleanVar(value=True)
+        autoremap_control = tkinter.Checkbutton(master=mainframe, text="Autoremap?",
+                                                variable=self.should_autoremap,
+                                                command=functools.partial(self._autoremap, draw=True))
+
+        toolbar.grid(column=0, row=0, columnspan=4, sticky=tkinter.NSEW)
+        self.canvas.get_tk_widget().grid(column=0, row=1, columnspan=4, sticky=tkinter.NSEW)
+        self.channel_select.grid(column=0, row=2, columnspan=2, sticky=tkinter.NSEW)
+        autoscale_control.grid(column=2, row=2, sticky=tkinter.NSEW)
+        autoremap_control.grid(column=3, row=2, sticky=tkinter.NSEW)
+
+        vectorframe = ttk.LabelFrame(mainframe, text='Vector Selection', padding="3 3 3 3")
+        vectorframe.grid(column=0, row=3, columnspan=4, pady=8, sticky=tkinter.NSEW)
+        self.selected_vector = tkinter.IntVar(value=0)
+        self.selected_vector.trace_add('write', self._update_plot)
+        self.vector_slider = tkinter.Scale(vectorframe, from_=0, to=self.channel_datas[ref_ch_id].NumVectors-1,
+                                           orient=tkinter.HORIZONTAL,
+                                           variable=self.selected_vector,
+                                           length=256,
+                                           showvalue=False)
+        self.vector_entry = ttk.Spinbox(vectorframe, textvariable=self.selected_vector,
+                                        from_=0, to=self.channel_datas[ref_ch_id].NumVectors-1)
+        self.vector_slider.grid(column=0, row=0, columnspan=3, sticky=tkinter.NSEW)
+        self.vector_entry.grid(column=3, row=0, padx=3, sticky=tkinter.EW)
+
+        paramframe = ttk.Labelframe(mainframe, text='Parameters', padding="3 3 3 3")
+        paramframe.grid(column=0, row=4, columnspan=4, sticky=tkinter.NSEW)
+        ttk.Label(paramframe, text="# samples").grid(column=0, row=0, columnspan=1)
+
+        self.num_samples_slider = tkinter.Scale(paramframe, from_=8, to=32,
+                                                orient=tkinter.HORIZONTAL,
+                                                showvalue=True,
+                                                command=self._update_num_samples)
+        self.num_samples_slider.grid(column=0, row=1, columnspan=2, padx=3, sticky=tkinter.EW)
+        ttk.Label(paramframe, text="# overlap").grid(column=2, row=0, columnspan=2)
+        self.num_overlap_slider = tkinter.Scale(paramframe, from_=0, to=self.channel_datas[ref_ch_id].NumSamples//16,
+                                                orient=tkinter.HORIZONTAL,
+                                                showvalue=True,
+                                                command=self._update_plot)
+        self.num_overlap_slider.grid(column=2, row=1, columnspan=2, padx=3, sticky=tkinter.EW)
+
+        for col in range(4):
+            mainframe.columnconfigure(col, weight=1)
+            vectorframe.columnconfigure(col, weight=1)
+            paramframe.columnconfigure(col, weight=1)
+        mainframe.rowconfigure(1, weight=10)
+
+        self._update_channel()
+
+    def _update_channel(self, *args, **kwargs):
+        channel_id = self.selected_channel.get()
+
+        this_channel_parameters = self.channel_parameters[channel_id]
+        has_lfm_eclipse = (this_channel_parameters.TOAExtended is not None
+            and this_channel_parameters.TOAExtended.LFMEclipse is not None)
+        self.ax.get_legend().set_visible(has_lfm_eclipse)
+        for name, scatter in self.lfm_eclipse_markers.items():
+            scatter.set_visible(has_lfm_eclipse)
+            if has_lfm_eclipse:
+                scatter.get_offsets().data[0, 0] = getattr(this_channel_parameters.TOAExtended.LFMEclipse, name)
+
+        self.pvps = self.cphd_reader.read_pvp_array(index=channel_id)
+
+        self.selected_vector.set(0)
+        self._update_slider(0)
+        self.channel_select.selection_clear()
+
+    def _update_slider(self, vector_index):
+        this_channel_data = self.channel_datas[self.selected_channel.get()]
+        self.vector_slider.configure(to=this_channel_data.NumVectors - 1)
+        self.vector_slider.set(vector_index)
+        self.num_samples_slider.configure(to=this_channel_data.NumSamples//32)
+        self.num_overlap_slider.configure(to=this_channel_data.NumSamples//2)
+        nfft = min(256, this_channel_data.NumSamples//64)
+        self.num_samples_slider.set(nfft)
+        self.num_overlap_slider.set(nfft//2)
+
+    def _update_num_samples(self, *args):
+        self.num_overlap_slider.configure(to=int(self.num_samples_slider.get()) - 1)
+        self._update_plot()
+
+    def _autoremap(self, draw=False):
+        if self.should_autoremap.get():
+            self.im.autoscale()
+            if draw:
+                self.canvas.draw_idle()
+
+    def _autoscale(self, draw=False):
+        if self.should_autoscale.get():
+            self.ax.relim(visible_only=False)
+            self.ax.autoscale()
+            self.ax.autoscale_view()
+            if draw:
+                self.canvas.draw_idle()
+        else:
+            self.ax.autoscale(False)
+
+    def _update_plot(self, *args):
+        vector_index = self.selected_vector.get()
+        channel_id = self.selected_channel.get()
+        num_fft_samples = int(self.num_samples_slider.get())
+        num_overlap = min(num_fft_samples - 1, int(self.num_overlap_slider.get()))
+        num_samples = self.channel_datas[channel_id].NumSamples
+        signal_chunk = self.cphd_reader.read(slice(vector_index, vector_index+1),
+                                             slice(None, num_samples),
+                                             index=channel_id, squeeze=True)
+        scss = self.pvps['SCSS'][vector_index]
+        if self.cphd_reader.cphd_meta.Global.SGN == -1:
+            signal_chunk = np.conj(signal_chunk)
+
+        spec, freq, t, _ = plt.specgram(signal_chunk,
+                                         NFFT=num_fft_samples, noverlap=num_overlap,
+                                         Fs=1/scss, window=mpl_mlab.window_none,
+                                         scale_by_freq=False)
+        self.im.set_data(np.log10(spec))
+        self.im.set_extent([(t[0] + self.pvps['SC0'][vector_index]),
+                            t[-1] + self.pvps['SC0'][vector_index],
+                            freq[-1],
+                            freq[0]])
+
+        for param, obj in self.fx_objects.items():
+            obj['line'].set_xdata(self.pvps[param][vector_index])
+            obj['label'].set_x(self.pvps[param][vector_index])
+
+        for param, obj in self.toa_objects.items():
+            obj['line'].set_ydata(self.pvps[param][vector_index])
+            obj['label'].set_y(self.pvps[param][vector_index])
+
+        if self.has_toae:
+            for name, scatter in self.lfm_eclipse_markers.items():
+                if name.startswith('FxEarly'):
+                    new_val = self.pvps['TOAE1'][vector_index]
+                else:
+                    new_val = self.pvps['TOAE2'][vector_index]
+                scatter.get_offsets().data[0, 1] = new_val
+
+        # update titles
+        title_parts = [pathlib.Path(self.cphd_reader.file_name).name]
+        if self.has_signal:
+            title_parts.append(f"SIGNAL[{vector_index}]={self.pvps['SIGNAL'][vector_index]}")
+        self.ax.set_title('\n'.join(title_parts), pad=36)
+        self._autoremap()
+        self._autoscale()
         self.canvas.draw_idle()
