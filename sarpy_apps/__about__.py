@@ -26,12 +26,12 @@ __all__ = ['__version__',
            '__title__', '__summary__',
            '__license__', '__copyright__']
 
-__version__ = "1.1.23"
+__version__ = "1.1.24"
 
 __classification__ = "UNCLASSIFIED"  # This should be set appropriately in any high-side version
 __author__ = "National Geospatial-Intelligence Agency"
 __url__ = "https://github.com/ngageoint/sarpy_apps"
-__email__ = "Wade.C.Schwartzkopf@nga.mil"
+__email__ = "richard.m.naething@nga.mil"
 
 
 __title__ = "sarpy_apps"

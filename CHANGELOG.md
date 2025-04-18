@@ -3,6 +3,7 @@
 ## [1.1.24]
 ### Added
 - Time-frequency visualization to `cphd_validation_tool`
+- Delivery automation
 ### Fixed
 - Make `pulse_explorer` compatible with sarpy 1.3.0 changes
 
