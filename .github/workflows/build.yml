@@ -4,6 +4,7 @@ on:
     push:
       branches:
         - master
+        - main
         - 'integration/**'
 
 jobs:
@@ -94,7 +95,7 @@ jobs:
     - name: Upload package
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.extract_version.outputs.version }}
+        tag_name: v${{ steps.extract_version.outputs.version }}
         draft: false
         prerelease: false
         files: dist/*
