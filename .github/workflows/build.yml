@@ -86,8 +86,6 @@ jobs:
         draft: false
         prerelease: false
         files: dist/*
-        body: |
-          Implements fix for MetaIcon.
 #  publish-to-pypi:
 #    name: Publish to PyPI
 #    needs: release
