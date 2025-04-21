@@ -1,0 +1,32 @@
+__pycache__/mitm_controller.cpython-36.pyc
+__pycache__/mitm_model.cpython-36.pyc
+__pycache__/mitm_viewer.cpython-36.pyc
+sample_data/2024-02-26-11-55-07_UMBRA-04_SICD.nitf
+sample_data/sicd_example_1_PFA_RE32F_IM32F_HH.nitf
+sample_data/sicd_example_2_PFA_RE32F_IM32F_HH.nitf
+ui/__pycache__/ui_plot_widget_dock.cpython-311.pyc
+ui/__pycache__/ui_mitm_mainwindow.cpython-311.pyc
+__pycache__/mitm_viewer.cpython-311.pyc
+__pycache__/mitm_model.cpython-311.pyc
+__pycache__/mitm_controller.cpython-311.pyc
+
+# compilation artifacts
+standalone/*/*build/
+standalone/*/*dist/
+standalone/hybrid/pyd/
+standalone/hybrid/pyinstaller/dist/
+standalone/hybrid/pyinstaller/build/
+*.exe
+*.pyd
+
+# module build artifacts
+build/
+python_mitm.egg-info/
+
+# pyc files
+PyMITM/__pycache__/
+PyMITM/mitm_ui/__pycache__/
+
+# other
+mitm.cfg
+PyMITM/utils/__pycache__/log_remap.cpython-311.pyc
