@@ -8,8 +8,8 @@ __classification__ = "UNCLASSIFIED"
 
 import tkinter
 
-from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.image_reader import CanvasImageReader
+#from tk_builder.panels.image_panel import ImagePanel
+#from tk_builder.image_reader import CanvasImageReader
 from tk_builder.widgets.derived_widgets import PopupWindow
 
 from sarpy_apps.supporting_classes.image_reader import ComplexCanvasImageReader, \
@@ -32,7 +32,6 @@ class WidgetWithMetadata(object):
         image_panel : None|ImagePanel
             An associated image panel
         """
-
         self.metaicon_popup_panel = PopupWindow(master)
         self.metaicon = MetaIcon(self.metaicon_popup_panel)
 
