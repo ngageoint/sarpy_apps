@@ -117,7 +117,11 @@ def _rf_signal(reader, index, pulse):
     crsd = reader.crsd_meta
     params = crsd.Channel.Parameters[index]
     sampling_rate = params.Fs
-    pulse_data = reader[pulse, :, index].flatten()
+    data_params = {x.Identifier: x for x in crsd.Data.Channels}[params.Identifier]
+    pulse_data = reader.read(slice(numpy.maximum(pulse, 0),
+                                   numpy.minimum(pulse + 1, data_params.NumVectors)),
+                             slice(None),
+                             index=index, squeeze=True)
     fic_rate = float(reader.read_pvp_variable('FICRate', index, pulse)[0])
     dfic0 = float(reader.read_pvp_variable('DFIC0', index, pulse)[0])
 
@@ -241,7 +245,7 @@ class STFTCanvasImageReader(CRSDTypeCanvasImageReader):
                     type(value)))
         self._base_reader = value
         # noinspection PyProtectedMember
-        self._chippers = value._get_chippers_as_tuple()
+        self._chippers = value.get_data_segment_as_tuple()
         self.index = 0
 
     @property
@@ -443,10 +447,10 @@ class DirectionWidget(Frame):
             'ToggleOn.TButton', font=('Arial', 24), foreground="black",
             background="PaleTurquoise1", width=3, sticky='CENTER')
 
-        self.button_rev = Button(self.parent, text="\u25C0", takefocus=0, style='ToggleOff.TButton')
+        self.button_rev = Button(self.parent, text="<", takefocus=0, style='ToggleOff.TButton')
         self.button_prev = Button(self.parent, text="-1", takefocus=0, style='ToggleOff.TButton')
         self.button_next = Button(self.parent, text="+1", takefocus=0, style='ToggleOff.TButton')
-        self.button_fwd = Button(self.parent, text="\u25B6", takefocus=0, style='ToggleOff.TButton')
+        self.button_fwd = Button(self.parent, text=">", takefocus=0, style='ToggleOff.TButton')
 
 
 class PulseExplorer(Frame, WidgetWithMetadata):

@@ -1,0 +1,119 @@
+name: Build packages
+
+on: 
+    push:
+      branches:
+        - master
+        - main
+        - 'integration/**'
+
+jobs:
+  build:
+    # This section builds the distribution for all versions of Python listed in
+    # the python-version matrix under strategy to confirm that it builds for
+    # all of those versions. It then uploads the package built by Python 3.9
+    # for use in later jobs.
+    name: Build distribution
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract_version.outputs.raw_version }}
+      rc_version: ${{ steps.extract_release_candidate_version.outputs.version }}
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11, 3.12, 3.13, 3.14]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+    - name: Extract version number from __about__.py
+      shell: bash
+      run: echo "raw_version=`sed -n 's/__version__ = \"\(.*\)\"/\1/p' < sarpy_apps/__about__.py`" >> $GITHUB_OUTPUT
+      id: extract_version
+    - name: Set version number for release candidate
+      shell: bash
+      if: contains(github.ref, 'refs/heads/integration/')
+      run: |
+        echo ${{ steps.extract_version.outputs.raw_version }}
+        rc_version=${{ steps.extract_version.outputs.raw_version }}rc0
+        sed -i -e "s/__version__ = \"${{ steps.extract_version.outputs.raw_version }}/__version__ = \"$rc_version/g" sarpy_apps/__about__.py
+        echo "version=$rc_version"  >> $GITHUB_OUTPUT
+      id: extract_release_candidate_version
+    - name: Install pypa/build
+      run: >-
+        python3 -m
+        pip install
+        build
+        --user
+    - name: Build a binary wheel and a source tarball
+      run: python3 -m build
+    - name: Store the distribution packages
+      if: matrix.python-version == 3.9
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+  # This job creates a GitHub release and uploads the package contents created
+  # in the build job to the release.
+  release:    
+    name: Create release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Extract version number from __about__.py
+      shell: bash
+      run: |
+        if "${{endswith(github.ref, 'master')}}"
+        then
+          echo "version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${{ needs.build.outputs.rc_version }}" >> $GITHUB_OUTPUT
+        fi
+      id: extract_version
+    - name: Create a release
+      uses: comnoco/create-release-action@v2.0.5
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: v${{ steps.extract_version.outputs.version }} 
+        release_name: Version ${{ steps.extract_version.outputs.version }}
+        body: |
+          Changes in this Release
+          - Added the CphdVectorTFR class (Create a tool to visualize a CPHD 
+          vector's time-frequency representation)
+          - Added release automation 
+        draft: false
+        prerelease: false
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist
+    - name: Upload package
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.extract_version.outputs.version }}
+        draft: false
+        prerelease: false
+        files: dist/*
+#  publish-to-pypi:
+#    name: Publish to PyPI
+#    needs: release
+#    runs-on: ubuntu-latest
+#    environment:
+#      name: development
+#    permissions:
+#      id-token: write
+#    steps:
+#    - name: Download all the dists
+#      uses: actions/download-artifact@v4
+#      with:
+#        name: python-package-distributions
+#        path: dist
+#    - name: Publish distribution to PyPI
+#      uses: pypa/gh-action-pypi-publish@release/v1
+#      with:
+#        repository-url: https://pypi.org/legacy/
