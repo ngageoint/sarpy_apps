@@ -1,6 +1,6 @@
 # Change Log
 
-## [1.1.24] - 2025-05-25
+## [1.1.25] - 2025-05-25
 ### Fixed
 - MetaIcon error
 
