@@ -1,5 +1,0 @@
-src/build
-src/python_rcs.egg-info
-.venv
-*.dot
-ui/__pycache__

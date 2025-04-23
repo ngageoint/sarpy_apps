@@ -7,12 +7,9 @@ __author__ = ("Jason Casey", "Thomas McCullough")
 
 
 import logging
-import math
 from datetime import datetime
 
 import numpy
-from scipy import special
-
 from scipy.constants import foot
 
 from sarpy.geometry import latlon
@@ -29,13 +26,6 @@ from sarpy.io.product.sidd2_elements.ExploitationFeatures import ExploitationCal
 
 ANGLE_DECIMALS = {'azimuth': 1, 'graze': 1, 'layover': 0, 'shadow': 0, 'multipath': 0}
 
-
-def tand(degrees):
-    radians = math.radians(degrees)
-    return math.tan(radians)
-
-def sind(angle_degrees):
-    return special.sindg(angle_degrees)
 
 class MetaIconDataContainer(object):
     """
@@ -295,10 +285,6 @@ class MetaIconDataContainer(object):
                 pass
 
         def extract_scpcoa():
-            got_multipath = False
-            got_layover = False
-            ground_project = False
-
             if sicd.SCPCOA is None:
                 return
 
@@ -306,46 +292,27 @@ class MetaIconDataContainer(object):
             azimuth = sicd.SCPCOA.AzimAng
             if azimuth is None:
                 return
-            variables['azimuth'] = azimuth
+
             north = ((360 - azimuth) % 360)
+            variables['azimuth'] = azimuth
             variables['north'] = north
+            variables['graze'] = sicd.SCPCOA.GrazeAng
 
             layover = sicd.SCPCOA.LayoverAng
             if layover is not None:
-                got_layover = True
-       
+                variables['layover'] = ((layover-azimuth + 360) % 360)
+                variables['layover_display'] = layover
+
+            shadow = sicd.SCPCOA.Shadow
+            if shadow is None:
+                shadow = 180.0
+            variables['shadow'] = shadow
+            variables['shadow_display'] = ((shadow + azimuth + 360) % 360.0)
 
             multipath = sicd.SCPCOA.Multipath
             if multipath is not None:
-                got_multipath = True
-         
-
-            graze = sicd.SCPCOA.GrazeAng
-            if graze is None:
-                return
-            variables['graze'] = graze
-
-
-            twist_angle = sicd.SCPCOA.TwistAng 
-            if twist_angle is None: 
-                return
-
-
-            multipath_ground = -math.atan(tand(twist_angle) * sind(graze)) *180/math.pi
-            multipath = (azimuth - 180 + multipath_ground) % 360
-            shadow = ((azimuth - 180) % 360)
-            variables['layover_display'] = layover
-            variables['multipath_display'] = multipath
-            variables['shadow_display'] = shadow
-
-            if (sicd.Grid is not None or sicd.Grid.ImagePlane == 'SLANT') and not ground_project:
-                layover = layover - multipath_ground
-                multipath = azimuth - 180
-                shadow = azimuth - 180 - multipath_ground
-
-            variables['layover'] = ((layover - azimuth + 360) % 360.0)
-            variables['multipath'] = ((multipath - azimuth + 360) % 360.0)
-            variables['shadow'] = ((shadow - azimuth + 360) % 360.0)
+                variables['multipath'] = ((multipath - azimuth + 360) % 360)
+                variables['multipath_display'] = multipath
 
         def extract_imp_resp():
             if sicd.Grid is not None:
@@ -366,8 +333,7 @@ class MetaIconDataContainer(object):
                 except AttributeError:
                     pass
             try:
-                if sicd.RadarCollection.Waveform is not None: 
-                    variables['tx_rf_bandwidth'] = sicd.RadarCollection.Waveform[0].TxRFBandwidth*1e-6
+                variables['tx_rf_bandwidth'] = sicd.RadarCollection.Waveform[0].TxRFBandwidth*1e-6
             except AttributeError:
                 pass
 

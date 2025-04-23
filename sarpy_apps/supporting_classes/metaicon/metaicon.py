@@ -302,6 +302,7 @@ class MetaIcon(ImagePanel):
         """
         Tuple[float, float, float, float]: The layover arrow coordinates.
         """
+
         # noinspection PyTypeChecker
         return self._get_arrow_coords(self.layover_arrow_angle)
 
@@ -311,6 +312,7 @@ class MetaIcon(ImagePanel):
         """
         Tuple[float, float, float, float]: The shadow arrow coordinates.
         """
+
         # noinspection PyTypeChecker
         return self._get_arrow_coords(self.shadow_arrow_angle)
 
@@ -320,6 +322,7 @@ class MetaIcon(ImagePanel):
         """
         Tuple[float, float, float, float]: The multipath arrow coordinates.
         """
+
         # noinspection PyTypeChecker
         return self._get_arrow_coords(self.multipath_arrow_angle)
 
