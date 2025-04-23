@@ -84,7 +84,7 @@ jobs:
         generate_release_notes: true
         name: Version ${{ steps.extract_version.outputs.version }}
         draft: false
-        prerelease: true
+        prerelease: false
         files: dist/*
 #  publish-to-pypi:
 #    name: Publish to PyPI
