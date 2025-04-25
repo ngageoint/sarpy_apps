@@ -1,6 +1,10 @@
 # Change Log
 
-## [1.1.24]
+## [1.1.25] - 2025-05-25
+### Fixed
+- MetaIcon error
+
+## [1.1.24] - 2025-05-18
 ### Added
 - Time-frequency visualization to `cphd_validation_tool`
 - Delivery automation

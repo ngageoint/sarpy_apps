@@ -21,7 +21,11 @@ jobs:
       matrix:
         python-version: [3.9, 3.10, 3.11, 3.12, 3.13, 3.14]
     steps:
-    - uses: actions/checkout@v4
+    # Pull the current branch to build the package from.
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{github.ref}}
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -36,7 +40,6 @@ jobs:
       run: |
         echo ${{ steps.extract_version.outputs.raw_version }}
         rc_version=${{ steps.extract_version.outputs.raw_version }}rc0
-        sed -i -e "s/__version__ = \"${{ steps.extract_version.outputs.raw_version }}/__version__ = \"$rc_version/g" sarpy_apps/__about__.py
         echo "version=$rc_version"  >> $GITHUB_OUTPUT
       id: extract_release_candidate_version
     - name: Install pypa/build
@@ -47,12 +50,13 @@ jobs:
         --user
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
-    - name: Store the distribution packages
+    - name: Upload all the dists
       if: matrix.python-version == 3.9
       uses: actions/upload-artifact@v4
       with:
-        name: python-package-distributions
+        name: ${{ steps.extract_version.outputs.raw_version }}
         path: dist/
+        overwrite: true
   # This job creates a GitHub release and uploads the package contents created
   # in the build job to the release.
   release:    
@@ -60,7 +64,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{github.ref}}
     - name: Extract version number from __about__.py
       shell: bash
       run: |
@@ -71,33 +78,24 @@ jobs:
           echo "version=${{ needs.build.outputs.rc_version }}" >> $GITHUB_OUTPUT
         fi
       id: extract_version
-    - name: Create a release
-      uses: comnoco/create-release-action@v2.0.5
-      id: create_release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-      with:
-        tag_name: v${{ steps.extract_version.outputs.version }} 
-        release_name: Version ${{ steps.extract_version.outputs.version }}
-        body: |
-          Changes in this Release
-          - Added the CphdVectorTFR class (Create a tool to visualize a CPHD 
-          vector's time-frequency representation)
-          - Added release automation 
-        draft: false
-        prerelease: false
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
+        name: ${{ needs.build.outputs.version }}
         path: dist
-    - name: Upload package
+    - name: Create a release
+      id: create_release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.extract_version.outputs.version }}
+        tag_name: v${{ steps.extract_version.outputs.version }}
+        generate_release_notes: true
+        name: Version ${{ steps.extract_version.outputs.version }}
         draft: false
         prerelease: false
+        target_commitish: ${{github.ref}}
         files: dist/*
+        body: |
+          Implements fix for MetaIcon.
 #  publish-to-pypi:
 #    name: Publish to PyPI
 #    needs: release
