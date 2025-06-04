@@ -78,7 +78,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
         # file menu
         self.file_menu = tkinter.Menu(self.menu_bar, tearoff=0)
         self.file_menu.add_command(label="Open Image", command=self.callback_select_files)
-        self.file_menu.add_command(label="Open Directory", command=self.callback_select_directory)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=self.exit)
         # menus for informational popups
@@ -112,8 +111,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
         file_name = None if self.variables.image_reader is None else self.variables.image_reader.file_name
         if file_name is None:
             the_title = "Image Viewer"
-        elif isinstance(file_name, (list, tuple)):
-            the_title = "Image Viewer, Multiple Files"
         else:
             the_title = "Image Viewer for {}".format(os.path.split(file_name)[1])
         self.winfo_toplevel().title(the_title)
@@ -215,15 +212,6 @@ class ImageViewer(Frame, WidgetWithMetadata):
             self.update_reader(the_reader, update_browse=os.path.split(fnames[0])[0])
         else:
             self.update_reader(fnames[0], update_browse=os.path.split(fnames[0])[0])
-
-    def callback_select_directory(self):
-        dirname = askdirectory(initialdir=self.variables.browse_directory, mustexist=True)
-        if dirname is None or dirname in [(), '']:
-            return
-        # NB: handle non-complex data possibilities here?
-        the_reader = SICDTypeCanvasImageReader(dirname)
-        self.update_reader(the_reader, update_browse=os.path.split(dirname)[0])
-
 
 def main(reader=None):
     """
